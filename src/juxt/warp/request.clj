@@ -30,13 +30,12 @@
             (respond {:status 404 :body "Not Found"})
 
             :else
-            (respond
-             (h (merge req {:oas/api api
-                            :oas/url url
-                            :oas/servers servers
-                            :oas/path path
-                            :oas/path-item path-item})
-                respond raise))))))))
+            (h (merge req {;;:oas/api api
+                           :oas/url url
+                           :oas/servers servers
+                           :oas/path path
+                           :oas/path-item path-item})
+               respond raise)))))))
 
 (defn wrap-check-405 [h]
   (fn [req respond raise]
@@ -45,18 +44,21 @@
       (cond
         (not (contains? methods (name (:request-method req))))
         (respond {:status 405 :body "Method Not Allowed"})
-        :else (respond (h (merge req {:oas/methods methods}) respond raise))))))
+        :else (h (merge req {:oas/methods methods}) respond raise)))))
 
 (defn wrap-properties [h options]
   (fn [req respond raise]
     (if-let [f (:properties-fn options)]
       (f "foo" (fn [result]
-                 (respond (h (assoc req ::value result) respond raise))))
-      (throw (ex-info "No properties fn!" {})))))
+                    (println "wrap-properties: result is" result)
+                    (h (assoc req ::value result) respond raise)))
+      (raise (ex-info "No properties fn!" {})))))
 
 (defn handler [api options]
   (->
    (fn [req respond raise]
+
+     (println "handler!" (::value req))
 
      (respond {:status 200 :body "OK"})
 
