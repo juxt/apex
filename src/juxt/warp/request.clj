@@ -61,7 +61,7 @@
 (defn handler [api options]
   (->
    (fn [req respond raise]
-     (respond {:status 200 :body (format "value is '%s'" (::value req))}))
+     (respond {:status 200 :body {:message (format "value is '%s'" (::value req))}}))
 
 
    ;; Having determined the status code, we can now do pro-active

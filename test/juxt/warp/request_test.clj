@@ -2,6 +2,7 @@
   (:require
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
+   [jsonista.core :as j]
    [ring.mock.request :as mock]
    [juxt.warp.request :refer [handler]]
    [juxt.warp.yaml :as yaml]))
@@ -57,4 +58,7 @@
                               (mock/request :get "http://petstore.swagger.io/api/pets")
                               (mock/header "accept" "application/json")))]
       ;; We block until promise is delivered
-      (is (= {:status 200, :body "value is 'test'"} @call)))))
+      (is (= {:status 200,
+              :body {"message" "value is 'test'"},
+              :headers {"Content-Type" "application/json; charset=utf-8"}}
+             (update @call :body j/read-value))))))

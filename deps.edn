@@ -8,7 +8,7 @@
   ring/ring-mock {:mvn/version "0.3.2"}
 
   ;; Optional
-  cheshire {:mvn/version "5.8.0"}}
+  }
 
  :aliases
  {:dev {:extra-paths ["test"]}
