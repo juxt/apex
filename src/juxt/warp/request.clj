@@ -14,28 +14,27 @@
 
 (defn wrap-oas-path [h api]
   (fn [req respond raise]
-    (let [url (format "%s://%s%s" (name (:scheme req)) (:server-name req) (:uri req))
-          servers (->> (get-in api ["servers"]) (map #(get % "url")))
-          path (some #(when (.startsWith url %) (subs url (count %))) servers)]
+    (h (merge req {:oas/api api}) respond raise)))
+
+(defn path-map [req api]
+  (let [url (format "%s://%s%s" (name (:scheme req)) (:server-name req) (:uri req))
+        servers (->> (get-in api ["servers"]) (map #(get % "url")))
+        path (some #(when (.startsWith url %) (subs url (count %))) servers)
+        path-item (get-in api ["paths" path])]
+    {:oas/url url
+     :oas/servers servers
+     :oas/path path
+     :oas/path-item path-item}))
+
+(defn wrap-check-404 [h api]
+  (fn [req respond raise]
+    (let [{:keys [:oas/path :oas/path-item] :as path-map} (path-map req api)]
       (cond
-        (nil? path)
         ;; Not served by server in the 'servers' section
+        ;; Or not found in the 'paths' section
+        (or (nil? path) (nil? path-item))
         (respond {:status 404 :body "Not Found"})
-
-        :else
-        (let [path-item (get-in api ["paths" path])]
-          (cond
-            (nil? path-item)
-            ;; Not found in the 'paths' section
-            (respond {:status 404 :body "Not Found"})
-
-            :else
-            (h (merge req {;;:oas/api api
-                           :oas/url url
-                           :oas/servers servers
-                           :oas/path path
-                           :oas/path-item path-item})
-               respond raise)))))))
+        :else (h (merge req path-map) respond raise)))))
 
 (defn wrap-check-405 [h]
   (fn [req respond raise]
@@ -76,6 +75,7 @@
    (wrap-properties options)
 
    wrap-check-405
+   (wrap-check-404 api)
    (wrap-oas-path api)))
 
 
