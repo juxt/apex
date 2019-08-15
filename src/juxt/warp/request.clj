@@ -63,11 +63,15 @@
    (fn [req respond raise]
      (respond {:status 200 :body (format "value is '%s'" (::value req))}))
 
-   ;; Get the resource's properties
-   (wrap-properties options)
 
+   ;; Having determined the status code, we can now do pro-active
+   ;; content negotiation since the available content types are a
+   ;; function of the status code (in OpenAPI).
    (mw/wrap-format (dissoc muuntaja.core/default-options :default-format))
    wrap-catch-negotiate-error
+
+   ;; Get the resource's properties
+   (wrap-properties options)
 
    wrap-check-405
    (wrap-oas-path api)))

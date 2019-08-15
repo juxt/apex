@@ -14,6 +14,12 @@
      (fn [err] (deliver p err)))
     p))
 
+(defn get-property [value]
+  (fn  [propname cb]
+    ;; Hand off to another thread!
+    (future
+      (cb value))))
+
 (deftest responds-with-404-test
   (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
         h (handler api {})]
@@ -29,16 +35,10 @@
 
 (deftest responds-with-406-test
   (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
-        h (handler api {})]
+        h (handler api {:properties-fn (get-property "not-used")})]
     (is (= 406 (:status @(call-handler
                           h (-> (mock/request :get "http://petstore.swagger.io/api/pets")
                                 (mock/header "accept" "application/yaml"))))))))
-
-(defn get-property [value]
-  (fn  [propname cb]
-    ;; Hand off to another thread!
-    (future
-      (cb value))))
 
 (deftest simulate-database-property-access-test
   ;; Here, we provide a properties function that the wrap-properties
