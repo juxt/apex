@@ -15,12 +15,6 @@
      (fn [err] (deliver p err)))
     p))
 
-(defn get-property [value]
-  (fn  [cb]
-    ;; Hand off to another thread!
-    (future
-      (cb value))))
-
 (deftest responds-with-404-test
   (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
         h (handler api {})]
@@ -64,7 +58,13 @@
   ;; response generation function in the case where such a call would
   ;; be strictly unnecessary (e.g. the client has indicated via the
   ;; entity-tag that they have a cache of the result).
-  (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
+  (let [get-property
+        (fn [value]
+          (fn [cb]
+            ;; Hand off to another thread!
+            (future
+              (cb value))))
+        api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
         h (handler api {:properties-fn (get-property "test")})]
     (let [call (call-handler h
                              (->
