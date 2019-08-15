@@ -34,21 +34,27 @@
                           h (-> (mock/request :get "http://petstore.swagger.io/api/pets")
                                 (mock/header "accept" "application/yaml"))))))))
 
+(defn get-property [value]
+  (fn  [propname cb]
+    ;; Hand off to another thread!
+    (future
+      (cb value))))
 
-
-(defn get-property[propname cb]
-  (future
-    (Thread/sleep 500)
-    (println "get-property: dave")
-    (cb "dave")))
-
-
-#_(let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
-      h (handler api {:properties-fn get-property})]
-  (let [p (call-handler h
-                        (->
-                         (mock/request :get "http://petstore.swagger.io/api/pets")
-                         (mock/header "accept" "application/json")))]
-    (Thread/sleep 1000)
-    @p
-    ))
+(deftest simulate-database-property-access-test
+  ;; Here, we provide a properties function that the wrap-properties
+  ;; middleware will expect.  This properties function simulates a
+  ;; fetch of the resource's properties which will be useful in
+  ;; pre-determining the various aspects of the resource -
+  ;; e.g. existence, last-modified, etc. (see yada for this idea). The
+  ;; purpose of this is to avoid calling a potentially expensive
+  ;; response generation function in the case where such a call would
+  ;; be strictly unnecessary (e.g. the client has indicated via the
+  ;; entity-tag that they have a cache of the result).
+  (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
+        h (handler api {:properties-fn (get-property "test")})]
+    (let [call (call-handler h
+                             (->
+                              (mock/request :get "http://petstore.swagger.io/api/pets")
+                              (mock/header "accept" "application/json")))]
+      ;; We block until promise is delivered
+      (is (= {:status 200, :body "value is 'test'"} @call)))))

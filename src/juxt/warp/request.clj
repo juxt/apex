@@ -61,7 +61,7 @@
 (defn handler [api options]
   (->
    (fn [req respond raise]
-     (respond {:status 200 :body "OK"}))
+     (respond {:status 200 :body (format "value is '%s'" (::value req))}))
 
    ;; Get the resource's properties
    (wrap-properties options)
