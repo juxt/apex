@@ -16,7 +16,7 @@
     p))
 
 (defn get-property [value]
-  (fn  [propname cb]
+  (fn  [cb]
     ;; Hand off to another thread!
     (future
       (cb value))))
@@ -36,10 +36,23 @@
 
 (deftest responds-with-406-test
   (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
-        h (handler api {:properties-fn (get-property "not-used")})]
+        h (handler api {})]
     (is (= 406 (:status @(call-handler
                           h (-> (mock/request :get "http://petstore.swagger.io/api/pets")
                                 (mock/header "accept" "application/yaml"))))))))
+
+(deftest coerce-body-to-json-test
+  (let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
+        h (handler api {})]
+    (let [call (call-handler h
+                             (->
+                              (mock/request :get "http://petstore.swagger.io/api/pets")
+                              (mock/header "accept" "application/json")))]
+      ;; We block until promise is delivered
+      (is (= {:status 200,
+              :body {"message" "OK"},
+              :headers {"Content-Type" "application/json; charset=utf-8"}}
+             (update @call :body j/read-value))))))
 
 (deftest simulate-database-property-access-test
   ;; Here, we provide a properties function that the wrap-properties
@@ -58,7 +71,4 @@
                               (mock/request :get "http://petstore.swagger.io/api/pets")
                               (mock/header "accept" "application/json")))]
       ;; We block until promise is delivered
-      (is (= {:status 200,
-              :body {"message" "value is 'test'"},
-              :headers {"Content-Type" "application/json; charset=utf-8"}}
-             (update @call :body j/read-value))))))
+      (is (= {"message" "OK, value is 'test'"} (:body (update @call :body j/read-value)))))))

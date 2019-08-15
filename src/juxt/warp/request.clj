@@ -49,9 +49,9 @@
 (defn wrap-properties [h options]
   (fn [req respond raise]
     (if-let [f (:properties-fn options)]
-      (f "foo" (fn [result]
+      (f (fn [result]
                  (h (assoc req ::value result) respond raise)))
-      (raise (ex-info "No properties fn!" {})))))
+      (h req respond raise))))
 
 ;; The rule for composing 3-arity Ring middleware is as follows:
 ;; If you want to call the delegate, simply pass the respond and raise functions along.
@@ -61,8 +61,10 @@
 (defn handler [api options]
   (->
    (fn [req respond raise]
-     (respond {:status 200 :body {:message (format "value is '%s'" (::value req))}}))
-
+     (respond {:status 200
+               :body (if-let [v (::value req)]
+                       {:message (format "OK, value is '%s'" (::value req))}
+                       {:message "OK"})}))
 
    ;; Having determined the status code, we can now do pro-active
    ;; content negotiation since the available content types are a
