@@ -8,8 +8,8 @@
       (h req respond raise)
       (catch clojure.lang.ExceptionInfo e
         (if (#{:muuntaja/response-format-negotiation} (:type (ex-data e)))
-          {:status 406
-           :body "Not Acceptable"}
+          (respond {:status 406
+                    :body "Not Acceptable"})
           (raise e))))))
 
 (defn wrap-oas-path [h api]
@@ -50,24 +50,18 @@
   (fn [req respond raise]
     (if-let [f (:properties-fn options)]
       (f "foo" (fn [result]
-                    (println "wrap-properties: result is" result)
-                    (h (assoc req ::value result) respond raise)))
+                 (h (assoc req ::value result) respond raise)))
       (raise (ex-info "No properties fn!" {})))))
+
+;; The rule for composing 3-arity Ring middleware is as follows:
+;; If you want to call the delegate, simply pass the respond and raise functions along.
+;; If you want to return a response map, call the respond function with your response map.
+;; If you want to throw an exception, call the raise function with your exception.
 
 (defn handler [api options]
   (->
    (fn [req respond raise]
-
-     (println "handler!" (::value req))
-
-     (respond {:status 200 :body "OK"})
-
-     #_(throw (ex-info "TODO" {:request req})) #_{:url url
-                                                :req req
-                                                :servers servers
-                                                ;;     :path-item path-item
-                                                :path path
-                                                :methods methods})
+     (respond {:status 200 :body "OK"}))
 
    ;; Get the resource's properties
    (wrap-properties options)

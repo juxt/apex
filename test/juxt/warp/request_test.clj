@@ -36,14 +36,14 @@
 
 
 
-(defn get-property [propname cb]
+(defn get-property[propname cb]
   (future
     (Thread/sleep 500)
     (println "get-property: dave")
     (cb "dave")))
 
 
-(let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
+#_(let [api (yaml/parse-string (slurp (io/resource "juxt/warp/openapi-examples/petstore-expanded.yaml")))
       h (handler api {:properties-fn get-property})]
   (let [p (call-handler h
                         (->
