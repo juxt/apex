@@ -5,6 +5,7 @@
 
   metosin/muuntaja {:mvn/version "0.6.4"}
 
+  ring/ring-core {:mvn/version "1.7.1"}
   ring/ring-mock {:mvn/version "0.3.2"}
 
   ;; Optional
