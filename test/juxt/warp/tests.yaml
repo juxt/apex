@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: warp test suite
+servers:
+  - url: https://example.org/api
+paths:
+  /test-1:
+    get:
+      description: Test that a missing required parameter causes a 400
+      operationId: test-1-get
+      parameters:
+        - name: foo
+          in: query
+          required: true
+      responses:
+        default:
+          content:
+            text/plain:
+              schema:
+                type: string

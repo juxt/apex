@@ -1,5 +1,6 @@
 (ns juxt.warp.request
   (:require
+   [ring.middleware.params :refer [wrap-params]]
    [muuntaja.middleware :as mw]))
 
 (defn wrap-catch-negotiate-error [h]
@@ -39,11 +40,11 @@
 (defn wrap-check-405 [h]
   (fn [req respond raise]
     (let [path-item (:oas/path-item req)
-          methods (set (keys path-item))]
+          operation (get path-item (name (:request-method req)))]
       (cond
-        (not (contains? methods (name (:request-method req))))
+        (nil? operation)
         (respond {:status 405 :body "Method Not Allowed"})
-        :else (h (merge req {:oas/methods methods}) respond raise)))))
+        :else (h (merge req {:oas/operation operation}) respond raise)))))
 
 (defn wrap-properties [h options]
   (fn [req respond raise]
@@ -57,6 +58,20 @@
 ;; If you want to return a response map, call the respond function with your response map.
 ;; If you want to throw an exception, call the raise function with your exception.
 
+(defn wrap-validate-query-params [h]
+  (fn [req respond raise]
+    (try
+      (doseq [{:strs [name in required]} (get-in req [:oas/operation "parameters"])
+              :when (= in "query")
+              :when required]
+        (if (not (contains? (set (keys (:query-params req))) name))
+          (throw (ex-info "400" {:status 400 :body (format "Missing required parameter: %s" name)}))))
+
+      (h req respond raise)
+
+      (catch clojure.lang.ExceptionInfo e
+        (raise (ex-data e))))))
+
 (defn handler [api options]
   (->
    (fn [req respond raise]
@@ -68,8 +83,14 @@
    ;; Having determined the status code, we can now do pro-active
    ;; content negotiation since the available content types are a
    ;; function of the status code (in OpenAPI).
-   (mw/wrap-format (dissoc muuntaja.core/default-options :default-format))
+   (mw/wrap-format (-> muuntaja.core/default-options (dissoc :default-format)))
    wrap-catch-negotiate-error
+
+   ;; We need to determine the parameters, in order to work out the
+   ;; status code, which will in turn determine the content
+   ;; negotiation.
+   (wrap-validate-query-params)
+   (wrap-params)
 
    ;; Get the resource's properties
    (wrap-properties options)

@@ -72,3 +72,12 @@
                               (mock/header "accept" "application/json")))]
       ;; We block until promise is delivered
       (is (= {"message" "OK, value is 'test'"} (:body (update @call :body j/read-value)))))))
+
+(deftest responds-with-400-test
+  (testing "Missing required query parameter causes a 400"
+    (let [doc (document (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml"))))
+          h (handler doc {})]
+      (is
+       (= 400 (:status @(call-handler h (->
+                                         (mock/request :get "https://example.org/api/test-1")
+                                         (mock/header "accept" "application/json")))))))))
