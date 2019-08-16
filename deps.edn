@@ -8,7 +8,8 @@
   ring/ring-core {:mvn/version "1.7.1"}
   ring/ring-mock {:mvn/version "0.3.2"}
 
-  ;; Optional
+  jinx {:mvn/version "0.1.5"}
+
   }
 
  :aliases
