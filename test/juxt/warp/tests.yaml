@@ -13,9 +13,12 @@ paths:
         - name: foo
           in: query
           required: true
+          schema:
+            type: string
+            maxLength: 4
       responses:
-        default:
+        '400':
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                type: object

@@ -1,7 +1,8 @@
 (ns juxt.warp.request
   (:require
    [ring.middleware.params :refer [wrap-params]]
-   [muuntaja.middleware :as mw]))
+   [muuntaja.middleware :as mw]
+   [juxt.jinx-alpha :as jinx]))
 
 (defn wrap-catch-negotiate-error [h]
   (fn [req respond raise]
@@ -61,11 +62,28 @@
 (defn wrap-validate-query-params [h]
   (fn [req respond raise]
     (try
-      (doseq [{:strs [name in required]} (get-in req [:oas/operation "parameters"])
+      (doseq [{:strs [name in required schema]} (get-in req [:oas/operation "parameters"])
               :when (= in "query")
               :when required]
-        (if (not (contains? (set (keys (:query-params req))) name))
-          (throw (ex-info "400" {:status 400 :body (format "Missing required parameter: %s" name)}))))
+        (let [entry (find (:query-params req) name)]
+          (when (nil? entry)
+            (throw (ex-info "400" {:status 400 :body (format "Missing required parameter: %s" name)})))
+
+          ;; TODO: This could be precompiled!
+          (let [instance (second entry)
+                jinx-schema (jinx/schema schema)
+                validation (jinx/validate instance jinx-schema)]
+
+            (when-not (:valid? validation)
+              (throw (ex-info
+                      "400"
+                      {:status 400
+                       ;; We could have multiple errors here, for now,
+                       ;; we're just popping out the first error.
+                       ;; Much more work could be done in sending back
+                       ;; detailed error traces from jinx.
+                       :body (format
+                              "Query parameter '%s' failed because: %s" name (-> validation :errors first :message))}))))))
 
       (h req respond raise)
 
@@ -83,6 +101,11 @@
    ;; Having determined the status code, we can now do pro-active
    ;; content negotiation since the available content types are a
    ;; function of the status code (in OpenAPI).
+
+   ;; NOTE: There's a bit of a problem here- in that we want to use
+   ;; muuntaja to format the response of errors, which may not have
+   ;; been generated yet (they're from ring middleware below this
+   ;; point!).
    (mw/wrap-format (-> muuntaja.core/default-options (dissoc :default-format)))
    wrap-catch-negotiate-error
 
