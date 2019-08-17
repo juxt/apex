@@ -75,7 +75,7 @@
 
 (deftest responds-with-400-test
   (testing "Good query parameter causes a 200"
-    (let [doc (document (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml"))))
+    (let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
           h (handler doc {})]
       (is
        (= 200 (:status @(call-handler h (->
@@ -83,7 +83,7 @@
                                          (mock/header "accept" "application/json"))))))))
 
   (testing "Missing required query parameter causes a 400"
-    (let [doc (document (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml"))))
+    (let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
           h (handler doc {})]
       (is
        (= 400 (:status @(call-handler h (->
@@ -91,7 +91,7 @@
                                          (mock/header "accept" "application/json"))))))))
 
   (testing "Malformed query parameter causes a 400"
-    (let [doc (document (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml"))))
+    (let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
           h (handler doc {})]
       (is
        (= 400 (:status @(call-handler h (->
