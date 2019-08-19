@@ -110,15 +110,19 @@
           (select-keys (ex-data e) [:warp.response/status :warp.response/body-generator]))
          respond raise)))))
 
-(def formats (merge (:formats m/default-options)
-                    {"text/plain" (format/format "text/plain")}
-                    {"text/html" (format/format "text/html")}))
+(def formats (merge (:formats m/default-options)))
 
 (defn wrap-format [h]
   (fn [req respond raise]
     (let [oas-response (:oas/response req)
           content-types (some-> oas-response (get "content") keys)
-          formats (select-keys formats content-types)
+          formats
+          (into {} (concat
+                    (for [ct content-types
+                          :when (.startsWith ct "text/")]
+                      [ct (format/text-format ct)])
+                    (select-keys formats content-types)))
+
           m (m/create (-> m/default-options
                           (assoc :formats formats)
                           (dissoc :default-format)))]

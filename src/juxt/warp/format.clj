@@ -5,8 +5,6 @@
   (:import (java.io InputStreamReader PushbackReader InputStream OutputStream))
   )
 
-(defmulti format (fn [content-type] content-type))
-
 (defn decode-str [options]
   (reify
     m/Decode
@@ -23,16 +21,8 @@
       (fn [^OutputStream output-stream]
         (.write output-stream (.getBytes data ^String charset))))))
 
-(defmethod format "text/plain"
-  [content-type]
+(defn text-format [content-type]
   (m/map->Format
-   {:name "text/plain"
-    :decoder [decode-str]
-    :encoder [encode-str]}))
-
-(defmethod format "text/html"
-  [content-type]
-  (m/map->Format
-   {:name "text/html"
+   {:name content-type
     :decoder [decode-str]
     :encoder [encode-str]}))
