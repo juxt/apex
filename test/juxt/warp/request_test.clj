@@ -97,3 +97,37 @@
        (= 400 (:status @(call-handler h (->
                                          (mock/request :get "https://example.org/api/test-1?foo=toolong")
                                          (mock/header "accept" "application/json")))))))))
+
+
+#_(let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
+          h (handler doc {})]
+  @(call-handler h (->
+                    (mock/request :get "https://example.org/api/test-1")
+                    (mock/header "accept" "application/json"))))
+
+;; This shouldn't return a string body!
+#_(let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
+      h (handler doc {})]
+  (->
+   @(call-handler
+       h
+       (->
+        (mock/request :get "https://example.org/api/test-1?foo=too")
+        (mock/header "accept" "application/json")))
+   (update :body j/read-value)
+   ))
+
+
+
+;; This returns a 406, but that's because it's trying (and failing) to
+;; negotiate the error response. The error is still a 400, so it's an
+;; 'internal' 406. I think we should return a 400 with a nil body
+
+
+#_(let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
+      h (handler doc {})]
+  (->
+   @(call-handler h (->
+                     (mock/request :get "https://example.org/api/test-1?foo=too")
+                     (mock/header "accept" "application/json")))
+   (update :body j/read-value)))

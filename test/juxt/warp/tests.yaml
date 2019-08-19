@@ -19,6 +19,28 @@ paths:
       responses:
         '400':
           content:
+            text/plain:
+              schema:
+                type: text
+            text/html:
+              schema:
+                type: text
+        '406':
+          content:
+            text/html:
+              schema:
+                type: text
+
+        default:
+          content:
+            text/plain:
+              schema:
+                type: text
+            text/html:
+              schema:
+                type: text
             application/json:
               schema:
                 type: object
+
+# TODO: test for text/plain response
