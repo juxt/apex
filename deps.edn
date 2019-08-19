@@ -13,7 +13,8 @@
   }
 
  :aliases
- {:dev {:extra-paths ["test"]}
+ {:dev {:extra-paths ["test"]
+        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
 
   :test {:extra-paths ["test"]
          :extra-deps {
