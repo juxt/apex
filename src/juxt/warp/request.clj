@@ -68,7 +68,6 @@
               :when required]
         (let [entry (find (:query-params req) name)]
           (when (nil? entry)
-            (println "didn't find parameter" name)
             (throw (ex-info "400"
                             {:warp.response/status 400
                              :warp.response/body-generator
@@ -82,8 +81,6 @@
           (let [instance (second entry)
                 jinx-schema (jinx/schema schema)
                 validation (jinx/validate instance jinx-schema)]
-
-            (println "validation" validation)
 
             (when-not (:valid? validation)
               (throw (ex-info
@@ -129,15 +126,15 @@
       (try
         (let [req (m/negotiate-and-format-request m req)]
           (h (assoc req :warp/muuntaja-instance m) respond raise))
-        (catch clojure.lang.ExceptionInfo e
 
-          (println "error when muuntaja negotiate-and-format-request" e)
-          ;; We're now in 406 territory
+        (catch clojure.lang.ExceptionInfo e
 
           ;; If status already >= 400, then just don't negotiate a body response
           (let [status (or (:warp.response/status req) 200)]
             (if (< status 400)
+
               (h (assoc req
+                        :warp/muuntaja-instance (m/create)
                         :warp.response/status 406
                         :warp.response/body {:message "Not Acceptable"
                                              :error (ex-data e)})
@@ -155,12 +152,8 @@
               ;; (strictly) acceptable by the client if we cannot
               ;; negotiate one that is. Let's use the first one.
 
-              (do
-                (println "error not negotiable!!!")
-                (h (assoc req :warp.response/status status)
-                   respond raise))
-              ))
-          )))))
+              (h (assoc req :warp/muuntaja-instance (m/create))
+                 respond raise))))))))
 
 ;; Let's try not escaping from a 400...
 

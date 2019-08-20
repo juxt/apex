@@ -98,6 +98,14 @@
                                          (mock/request :get "https://example.org/api/test-1?foo=toolong")
                                          (mock/header "accept" "application/json")))))))))
 
+#_(let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
+      h (handler doc {})]
+  (is
+   @(call-handler
+     h (->
+        (mock/request :get "https://example.org/api/test-1?foo=toolong")
+        (mock/header "accept" "application/json")))))
+
 
 #_(let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
           h (handler doc {})]
