@@ -3,9 +3,9 @@
    [clojure.java.io :as io]
    [clojure.test :refer [deftest is testing]]
    [jsonista.core :as j]
-   [ring.mock.request :as mock]
    [juxt.warp.request :refer [handler]]
-   [juxt.warp.yaml :as yaml]))
+   [juxt.warp.yaml :as yaml]
+   [ring.mock.request :as mock]))
 
 (defn call-handler [handler request]
   (let [p (promise)]
@@ -44,8 +44,9 @@
                               (mock/header "accept" "application/json")))]
       ;; We block until promise is delivered
       (is (= {:status 200,
-              :body {"message" "OK"},
-              :headers {"Content-Type" "application/json; charset=utf-8"}}
+              :body {"message" "OK - here's a JSON response"},
+              :headers {"server" "JUXT warp"
+                        "Content-Type" "application/json; charset=utf-8"}}
              (update @call :body j/read-value))))))
 
 (deftest simulate-database-property-access-test
@@ -97,6 +98,13 @@
        (= 400 (:status @(call-handler h (->
                                          (mock/request :get "https://example.org/api/test-1?foo=toolong")
                                          (mock/header "accept" "application/json")))))))))
+
+
+
+;; We'll write a test for Muuntaja here that shows that it doesn't support wildcards
+;; If it fails, we'll fix up our own version of Muuntaja and eventually send pull requests to it
+
+
 
 #_(let [doc (yaml/parse-string (slurp (io/resource "juxt/warp/tests.yaml")))
       h (handler doc {})]

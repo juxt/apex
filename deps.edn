@@ -12,13 +12,21 @@
   }
 
  :aliases
- {:dev {:extra-paths ["test"]
-        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
+ {:dev {:extra-paths ["dev" "test"]
+        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
+        :override-deps {juxt.edge/logging.dev {:local/root "dev/logging"}}
+        :extra-deps {
+                     ;; TODO: Replace ../edge with a git dep with :deps/root
+                     ;; of 'lib/edge.app.dev':
+                     juxt.edge/lib.app.dev {:local/root "../edge/lib/edge.app.dev"}
+                     juxt.edge/lib.app.logging {:local/root "../edge/lib/edge.app.logging"}
+
+                     org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
+
+                     ring/ring-jetty-adapter {:mvn/version "1.7.1"}}}
 
   :test {:extra-paths ["test"]
          :extra-deps {
                       com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                  :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
-         :main-opts ["-m" "cognitect.test-runner"]}}
-
- }
+         :main-opts ["-m" "cognitect.test-runner"]}}}

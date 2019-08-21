@@ -3,19 +3,33 @@
    [ring.middleware.params :refer [wrap-params]]
    [muuntaja.middleware :as mw]
    [muuntaja.core :as m]
+   [clojure.tools.logging :as log]
    [juxt.jinx-alpha :as jinx]
+   [clojure.pprint :refer [pprint]]
+   [clojure.string :as str]
    [juxt.warp.format :as format]))
 
 (defn wrap-oas-path [h api]
   (fn [req respond raise]
     (h (merge req {:oas/api api}) respond raise)))
 
-(defn wrap-path-map [h api]
+(defn wrap-path-map [h api {:juxt.warp.dev/keys [additional-servers]}]
+  (log/debug "additional-servers is" (pr-str additional-servers))
   (fn [req respond raise]
-    (let [url (format "%s://%s%s" (name (:scheme req)) (:server-name req) (:uri req))
-          servers (->> (get-in api ["servers"]) (map #(get % "url")))
+    (let [url (format "%s://%s%s" (name (:scheme req)) (get-in req [:headers "host"]) (:uri req))
+          servers (->> (get-in api ["servers"])
+                    (concat additional-servers)
+                    (map #(get % "url")))
+
           path (some #(when (.startsWith url %) (subs url (count %))) servers)
           path-item (get-in api ["paths" path])]
+
+      (log/trace "req:" (with-out-str (pprint (dissoc req :oas/api))))
+      (log/trace "url: " url)
+      (log/trace "servers: " servers)
+      (log/trace "path: " path)
+      (log/trace "path-item: " path-item)
+
       (h (merge req {:oas/url url
                      :oas/servers servers
                      :oas/path path
@@ -129,6 +143,8 @@
 
         (catch clojure.lang.ExceptionInfo e
 
+          (log/debug "An exception occured when negging format-request")
+          (log/debug "Request is" (with-out-str (pprint (dissoc req :oas/api))))
           ;; If status already >= 400, then just don't negotiate a body response
           (let [status (or (:warp.response/status req) 200)]
             (if (< status 400)
@@ -136,8 +152,11 @@
               (h (assoc req
                         :warp/muuntaja-instance (m/create)
                         :warp.response/status 406
-                        :warp.response/body {:message "Not Acceptable"
-                                             :error (ex-data e)})
+                        :warp.response/body-generator
+                        (fn [format-and-charset]
+                          (log/debug "format-and-charset is" format-and-charset)
+                          {:message "Not Acceptable"
+                           :error (ex-data e)}))
                  respond raise)
 
               ;; RFC 7231 Section 3.4.1:
@@ -186,25 +205,28 @@
 
 (defn wrap-generate-response-body []
   (fn [req respond raise]
-    ;; Q. Is the content-type available here?
     (let [format-and-charset (:muuntaja/response req)]
-      (respond {:status (or (:warp.response/status req) 200)
-                :body (or
-                       ;; Body can be set already by errors Q.
-                       (when-let [bg (:warp.response/body-generator req)]
-                         (bg format-and-charset))
+      (respond
+       {:status (or (:warp.response/status req) 200)
+        :headers {"server" "JUXT warp"}
+        :body (or
+               ;; Body can be set already by errors Q.
+               (when-let [bg (:warp.response/body-generator req)]
+                 (bg format-and-charset))
 
-                       (when-let [v (::value req)]
-                         {:message (format "OK, value is '%s'" (::value req))})
+               (when-let [v (::value req)]
+                 {:message (format "OK, value is '%s'" (::value req))})
 
-                       ;; TODO: Q. Should we be using :raw-format instead?
-                       (case (:format format-and-charset)
-                         "text/plain" "OK"
-                         "text/html" "<h1>OK</h1>"
-                         ;; default
-                         {:message "OK"}))
+               ;; TODO: Q. Should we be using :raw-format instead?
+               (case (:format format-and-charset)
+                 "text/plain" "OK"
+                 "text/html" "<h1>OK</h1>"
+                 ;; default
+                 {:message "OK - here's a JSON response"
+                  ;;:request req
+                  }))
 
-                :warp/request req}))))
+        :warp/request req}))))
 
 (defn wrap-clean-response [h]
   (fn [req respond raise]
@@ -212,8 +234,14 @@
        (fn [response] (respond (select-keys response [:status :headers :body])))
        raise)))
 
+
 (defn handler [api options]
   (->
+   ;; TODO: We should be careful not to overuse the Ring middleware
+   ;; higher-order function concept. It's OK for Ring middleware to be
+   ;; coarse-grained, for performance and coherence reasons. Multiple
+   ;; Ring middleware that have implicit dependency relationships
+   ;; should be combined where appropriate.
    (wrap-generate-response-body)
 
    ;; Having determined the status code, we can now do pro-active
@@ -225,7 +253,6 @@
    ;; been generated yet (they're from ring middleware below this
    ;; point!).
    (wrap-format)
-   #_(mw/wrap-format (-> muuntaja.core/default-options (dissoc :default-format)))
 
    (wrap-determine-oas-response)
 
@@ -244,7 +271,7 @@
    wrap-check-405
 
    (wrap-check-404 api)
-   (wrap-path-map api)
+   (wrap-path-map api options)
 
    (wrap-oas-path api)
 
