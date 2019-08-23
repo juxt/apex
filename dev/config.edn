@@ -6,7 +6,7 @@
    ;; This declaration ensures that the service can be accessed using
    ;; localhost without requiring the OpenAPI document itself to be
    ;; altered. Defaults to nil.
-   :juxt.warp.dev/additional-servers [{"url" #join ["http://localhost:" #ref [:port]]}]
+   :juxt.warp.dev/additional-servers #profile {:dev [{"url" #join ["http://localhost:" #ref [:port]]}]}
 
    ;; This declaration is for convenience during development. It will
    ;; recreate the handler from the document every time, which allows
@@ -15,7 +15,7 @@
    ;; significantly impact performance and therefore should not be
    ;; enabled in production or test environments where accepted
    ;; performance is required. Defaults to nil.
-   :juxt.warp.dev/new-handler-on-each-request? true}
+   :juxt.warp.dev/new-handler-on-each-request? #profile {:dev true :default false}}
 
   :juxt.warp.dev.server/jetty {:port #ref [:port], :handler #ig/ref :juxt.warp.dev.api/api}
   }}
