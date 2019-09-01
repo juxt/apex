@@ -1,4 +1,4 @@
-(ns juxt.warp.request
+(ns juxt.apex.request
   (:require
    [ring.middleware.params :refer [wrap-params]]
    [muuntaja.middleware :as mw]
@@ -7,13 +7,13 @@
    [juxt.jinx-alpha :as jinx]
    [clojure.pprint :refer [pprint]]
    [clojure.string :as str]
-   [juxt.warp.format :as format]))
+   [juxt.apex.format :as format]))
 
 (defn wrap-oas-path [h api]
   (fn [req respond raise]
     (h (merge req {:oas/api api}) respond raise)))
 
-(defn wrap-path-map [h api {:juxt.warp.dev/keys [additional-servers]}]
+(defn wrap-path-map [h api {:juxt.apex.dev/keys [additional-servers]}]
   (log/debug "additional-servers is" (pr-str additional-servers))
   (fn [req respond raise]
     (let [url (format "%s://%s%s" (name (:scheme req)) (get-in req [:headers "host"]) (:uri req))
@@ -24,11 +24,11 @@
           path (some #(when (.startsWith url %) (subs url (count %))) servers)
           path-item (get-in api ["paths" path])]
 
-      (log/trace "req:" (with-out-str (pprint (dissoc req :oas/api))))
-      (log/trace "url: " url)
-      (log/trace "servers: " servers)
-      (log/trace "path: " path)
-      (log/trace "path-item: " path-item)
+;;      (log/trace "req:" (with-out-str (pprint (dissoc req :oas/api))))
+;;      (log/trace "url: " url)
+;;      (log/trace "servers: " servers)
+;;      (log/trace "path: " path)
+;;      (log/trace "path-item: " path-item)
 
       (h (merge req {:oas/url url
                      :oas/servers servers
@@ -83,8 +83,8 @@
         (let [entry (find (:query-params req) name)]
           (when (nil? entry)
             (throw (ex-info "400"
-                            {:warp.response/status 400
-                             :warp.response/body-generator
+                            {:apex.response/status 400
+                             :apex.response/body-generator
                              (fn [format-and-charset]
                                (let [message (format "Missing required parameter: %s" name)]
                                  (case (:format format-and-charset)
@@ -99,12 +99,12 @@
             (when-not (:valid? validation)
               (throw (ex-info
                       "400"
-                      {:warp.response/status 400
+                      {:apex.response/status 400
                        ;; We could have multiple errors here, for now,
                        ;; we're just popping out the first error.
                        ;; Much more work could be done in sending back
                        ;; detailed error traces from jinx.
-                       :warp.response/body-generator
+                       :apex.response/body-generator
                        (fn [format-and-charset]
                          (let [message (format "Query parameter '%s' failed because: %s" name (-> validation :errors first :message))]
                            (case (:format format-and-charset)
@@ -118,61 +118,65 @@
         (h
          (merge
           req
-          (select-keys (ex-data e) [:warp.response/status :warp.response/body-generator]))
+          (select-keys (ex-data e) [:apex.response/status :apex.response/body-generator]))
          respond raise)))))
 
 (def formats (merge (:formats m/default-options)))
 
-(defn wrap-format [h]
-  (fn [req respond raise]
-    (let [oas-response (:oas/response req)
-          content-types (some-> oas-response (get "content") keys)
-          formats
-          (into {} (concat
-                    (for [ct content-types
-                          :when (.startsWith ct "text/")]
-                      [ct (format/text-format ct)])
-                    (select-keys formats content-types)))
+(defn wrap-format
+  ([h]
+   (wrap-format h {}))
+  ([h {:keys [default-format]}]
+   (fn [req respond raise]
+     (let [oas-response (:oas/response req)
+           content-types (some-> oas-response (get "content") keys)
+           formats
+           (into {} (concat
+                     (for [ct content-types
+                           :when (.startsWith ct "text/")]
+                       [ct (format/text-format ct)])
+                     (select-keys formats content-types)))
 
-          m (m/create (-> m/default-options
-                          (assoc :formats formats)
-                          (dissoc :default-format)))]
-      (try
-        (let [req (m/negotiate-and-format-request m req)]
-          (h (assoc req :warp/muuntaja-instance m) respond raise))
+           m (m/create (cond-> m/default-options
+                         true (assoc :formats formats)
+                         default-format (assoc :default-format default-format)))]
+       (try
+         (let [req (m/negotiate-and-format-request m req)]
+           (h (assoc req :apex/muuntaja-instance m) respond raise))
 
-        (catch clojure.lang.ExceptionInfo e
+         (catch clojure.lang.ExceptionInfo e
 
-          (log/debug "An exception occured when negging format-request")
-          (log/debug "Request is" (with-out-str (pprint (dissoc req :oas/api))))
-          ;; If status already >= 400, then just don't negotiate a body response
-          (let [status (or (:warp.response/status req) 200)]
-            (if (< status 400)
+           ;;          (log/debug "An exception occured when negging format-request")
+           ;;          (log/debug "Request is" (with-out-str (pprint (dissoc req :oas/api))))
 
-              (h (assoc req
-                        :warp/muuntaja-instance (m/create)
-                        :warp.response/status 406
-                        :warp.response/body-generator
-                        (fn [format-and-charset]
-                          (log/debug "format-and-charset is" format-and-charset)
-                          {:message "Not Acceptable"
-                           :error (ex-data e)}))
-                 respond raise)
+           ;; If status already >= 400, then just don't negotiate a body response
+           (let [status (or (:apex.response/status req) 200)]
+             (if (< status 400)
 
-              ;; RFC 7231 Section 3.4.1:
-              ;;            "A user agent cannot rely on proactive negotiation
-              ;; preferences being consistently honored, since the origin server
-              ;; might not implement proactive negotiation for the requested
-              ;; resource or might decide that sending a response that doesn't
-              ;; conform to the user agent's preferences is better than sending a
-              ;; 406 (Not Acceptable) response."
-              ;;
-              ;; We feel it's better to send a response that is not
-              ;; (strictly) acceptable by the client if we cannot
-              ;; negotiate one that is. Let's use the first one.
+               (h (assoc req
+                         :apex/muuntaja-instance (m/create)
+                         :apex.response/status 406
+                         :apex.response/body-generator
+                         (fn [format-and-charset]
+                           ;;(log/debug "format-and-charset is" format-and-charset)
+                           {:message "Not Acceptable"
+                            :error (ex-data e)}))
+                  respond raise)
 
-              (h (assoc req :warp/muuntaja-instance (m/create))
-                 respond raise))))))))
+               ;; RFC 7231 Section 3.4.1:
+               ;;            "A user agent cannot rely on proactive negotiation
+               ;; preferences being consistently honored, since the origin server
+               ;; might not implement proactive negotiation for the requested
+               ;; resource or might decide that sending a response that doesn't
+               ;; conform to the user agent's preferences is better than sending a
+               ;; 406 (Not Acceptable) response."
+               ;;
+               ;; We feel it's better to send a response that is not
+               ;; (strictly) acceptable by the client if we cannot
+               ;; negotiate one that is. Let's use the first one.
+
+               (h (assoc req :apex/muuntaja-instance (m/create))
+                  respond raise)))))))))
 
 ;; Let's try not escaping from a 400...
 
@@ -186,47 +190,51 @@
   response. In this case, we raise a 500."
   [h]
   (fn [req respond raise]
-    (let [status (get req :warp.response/status "default")
+    (let [status (get req :apex.response/status)
           operation (:oas/operation req)]
-      (if-let [oas-response (get-in operation ["responses" (str status)])]
+      (log/debug "operation:" (pr-str operation))
+      (log/debug "status:" (pr-str status))
+      (if-let [oas-response (get-in operation ["responses" (str status)]
+                                    (get-in operation ["responses" "default"]))]
         (h
          (assoc req :oas/response oas-response)
          respond raise)
-        (raise {:status 500 :body "Unable to determine an OpenAPI response"})))))
+        (raise (ex-info "Unable to determine an OpenAPI response" {}))))))
 
 (defn wrap-format-response [h]
   (fn [req respond raise]
     (h req
        (fn [response]
-         (if-let [m (some-> response :warp/request :warp/muuntaja-instance)]
-           (respond (m/format-response m (:warp/request response) response))
+         (if-let [m (some-> response :apex/request :apex/muuntaja-instance)]
+           (respond (m/format-response m (:apex/request response) response))
            (respond response)))
        raise)))
 
 (defn wrap-generate-response-body []
   (fn [req respond raise]
     (let [format-and-charset (:muuntaja/response req)]
+
+;;      (log/debug "op:" (pr-str (:oas/operation req)))
+;;      (log/debug "response:" (pr-str (:oas/response req)))
+
+
       (respond
-       {:status (or (:warp.response/status req) 200)
-        :headers {"server" "JUXT warp"}
+       {:status (:apex.response/status req)
+        :headers {"server" "JUXT apex"}
         :body (or
-               ;; Body can be set already by errors Q.
-               (when-let [bg (:warp.response/body-generator req)]
+               (when-let [body (:apex.response/body req)]
+                 body)
+
+               (when-let [bg (:apex.response/body-generator req)]
                  (bg format-and-charset))
 
+               ;; Deprecated
                (when-let [v (::value req)]
                  {:message (format "OK, value is '%s'" (::value req))})
 
-               ;; TODO: Q. Should we be using :raw-format instead?
-               (case (:format format-and-charset)
-                 "text/plain" "OK"
-                 "text/html" "<h1>OK</h1>"
-                 ;; default
-                 {:message "OK - here's a JSON response"
-                  ;;:request req
-                  }))
+               )
 
-        :warp/request req}))))
+        :apex/request req}))))
 
 (defn wrap-clean-response [h]
   (fn [req respond raise]
@@ -234,6 +242,48 @@
        (fn [response] (respond (select-keys response [:status :headers :body])))
        raise)))
 
+
+(defmulti http-method (fn [req operation operation-handler respond raise] (:request-method req)))
+
+(defmethod http-method :get [req operation operation-handler respond raise]
+  ;; We'll throw an error to help the user know they should add a
+  ;; operation function for this operation.
+  (when-not operation-handler
+    (let [op-id (get operation "operationId")]
+      (throw (ex-info
+              (format "No operation defined for %s" op-id)
+              {:operation-id op-id}))))
+  (operation-handler
+   req
+   (fn [req] (respond (merge {:apex.response/status 200} req)))
+   raise))
+
+(defmethod http-method :post [req operation operation-handler respond raise]
+  ;; We'll throw an error to help the user know they should add a
+  ;; operation function for this operation.
+  (when-not operation-handler
+    (let [op-id (get operation "operationId")]
+      (throw (ex-info
+              (format "No operation defined for %s" op-id)
+              {:operation-id op-id}))))
+  (let [responses (get operation "responses")]
+    (let [status (first (map (fn [x] (Integer/parseInt x)) (keys (dissoc responses "default"))))]
+      (operation-handler
+       req
+       (fn [req] (respond (merge (when status {:apex.response/status status}) req)))
+       raise))))
+
+(defn wrap-execute-method [h options]
+  (fn [req respond raise]
+    (let [operation (:oas/operation req)
+          opId (get operation "operationId")
+          operation-handler (get-in options [:operation-handlers opId])]
+      (http-method
+       req
+       operation
+       operation-handler
+       (fn [new-req] (h new-req respond raise))
+       raise))))
 
 (defn handler [api options]
   (->
@@ -252,9 +302,11 @@
    ;; muuntaja to format the response of errors, which may not have
    ;; been generated yet (they're from ring middleware below this
    ;; point!).
-   (wrap-format)
+   (wrap-format options)
 
    (wrap-determine-oas-response)
+
+   (wrap-execute-method options)
 
    ;; We need to determine the parameters, in order to work out the
    ;; status code, which will in turn determine the content

@@ -1,4 +1,4 @@
-(ns juxt.warp.yaml
+(ns juxt.apex.yaml
   (:require
    [clj-yaml.core :as yaml]))
 

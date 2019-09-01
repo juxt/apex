@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+  <modelVersion>4.0.0</modelVersion>
+    
+  <groupId>apex</groupId>
+    
+  <artifactId>apex</artifactId>
+    
+  <version>0.0.2</version>
+    
+  <name>apex</name>
+    
+  <description>APi EXecution</description>
+    
+  <url>https://github.com/juxt/apex</url>
+    
+  <scm>
+        
+    <url>https://github.com/juxt/apex</url>
+      
+  </scm>
+    
+  <properties>
+        
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      
+  </properties>
+    
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.10.1</version>
+    </dependency>
+    <dependency>
+      <groupId>manifold</groupId>
+      <artifactId>manifold</artifactId>
+      <version>0.1.9-alpha3</version>
+    </dependency>
+    <dependency>
+      <groupId>clj-yaml</groupId>
+      <artifactId>clj-yaml</artifactId>
+      <version>0.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>juxt</groupId>
+      <artifactId>muuntaja</artifactId>
+      <version>0.6.4-juxt-2</version>
+    </dependency>
+    <dependency>
+      <groupId>ring</groupId>
+      <artifactId>ring-core</artifactId>
+      <version>1.7.1</version>
+    </dependency>
+    <dependency>
+      <groupId>ring</groupId>
+      <artifactId>ring-mock</artifactId>
+      <version>0.3.2</version>
+    </dependency>
+  </dependencies>
+    
+  <build>
+        
+    <sourceDirectory>src</sourceDirectory>
+      
+  </build>
+    
+  <distributionManagement>
+        
+    <repository>
+            
+      <id>clojars</id>
+            
+      <name>Clojars repository</name>
+            
+      <url>https://clojars.org/repo</url>
+          
+    </repository>
+      
+  </distributionManagement>
+    
+  <repositories>
+    <repository>
+      <id>clojars</id>
+      <url>https://repo.clojars.org/</url>
+    </repository>
+  </repositories>
+  
+</project>

@@ -3,12 +3,15 @@
  {manifold {:mvn/version "0.1.9-alpha3"}
   clj-yaml {:mvn/version "0.4.0"}
 
-  juxt/muuntaja {:mvn/version "0.6.4-juxt-1"}
+  juxt/muuntaja {:mvn/version "0.6.4-juxt-2"}
 
   ring/ring-core {:mvn/version "1.7.1"}
   ring/ring-mock {:mvn/version "0.3.2"}
 
-  jinx {:mvn/version "0.1.5"}
+  jinx {:local/root "../jinx"
+        :exclusions [cljs-node-io]
+        ;; :mvn/version "0.1.5"
+        }
   }
 
  :aliases
@@ -23,7 +26,9 @@
 
                      org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
 
-                     ring/ring-jetty-adapter {:mvn/version "1.7.1"}}}
+                     ring/ring-jetty-adapter {:mvn/version "1.7.1"}
+
+                     metosin/reitit {:mvn/version "0.3.9"}}}
 
   :test {:extra-paths ["test"]
          :extra-deps {

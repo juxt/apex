@@ -1,7 +1,7 @@
 <!-- Logback Configuration. See http://logback.qos.ch/ -->
 <!-- Adapted from https://github.com/stuartsierra/log.dev/blob/master/resources/logback.xml -->
 <!-- <configuration scan="true" scanPeriod="1 seconds"> -->
-<configuration>
+<configuration debug="true">
 
    <!-- Console (STDOUT) output. -->
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -105,7 +105,7 @@
     <appender-ref ref="ALL_LOG_FILE" />
   </root>
 
-  <logger name="juxt.warp" level="ALL">
+  <logger name="juxt.apex" level="ALL">
     <appender-ref ref="CONSOLE-DEV" />
   </logger>
 

@@ -1,18 +1,18 @@
-(ns juxt.warp.dev.api
+(ns juxt.apex.dev.api
   (:require
    [integrant.core :as ig]
    [clojure.java.io :as io]
-   [juxt.warp.request :refer [handler]]
+   [juxt.apex.request :refer [handler]]
    [clojure.tools.logging :as log]
-   [juxt.warp.yaml :as yaml]))
+   [juxt.apex.yaml :as yaml]))
 
 (defn- nil-doc-exception [document]
   (let [msg (format "No such resource on classpath: %s" document)]
     (ex-info msg {:document document})))
 
 (defmethod ig/init-key ::api
-  [_ {:juxt.warp/keys [document]
-      :juxt.warp.dev/keys [new-handler-on-each-request?]
+  [_ {:juxt.apex/keys [document]
+      :juxt.apex.dev/keys [new-handler-on-each-request?]
       :as options}]
 
   (if new-handler-on-each-request?
@@ -23,7 +23,16 @@
       ;; dev var) and warn if we're in this code path:
       #_(log/warn "Loading document on request. Performance will be adversely impacted.")
       (if-let [doc (io/resource document)]
-        (let [h (handler (yaml/parse-string (slurp doc)) options)]
+        (let [h (handler
+                 (yaml/parse-string (slurp doc))
+                 (merge
+                  options
+                  {:operation-handlers
+                   {"createPets" (fn [_]
+                                   (log/info "Create Pets")
+                                   nil)
+                    "listPets" (fn [_ _ _]
+                                 ["cat" "dog"])}}))]
           (h req respond raise))
         (raise (nil-doc-exception document))))
 

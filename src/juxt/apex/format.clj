@@ -1,4 +1,4 @@
-(ns juxt.warp.format
+(ns juxt.apex.format
   (:refer-clojure :exclude [format])
   (:require
    [muuntaja.format.core :as m])
