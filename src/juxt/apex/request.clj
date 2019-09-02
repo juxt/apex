@@ -238,14 +238,28 @@
        (fn [response] (respond (select-keys response [:status :headers :body])))
        raise)))
 
+(defn operation-handler [req opts]
+  (let [operation (:oas/operation req)
+        opId (get operation "operationId")]
+    (get-in opts [:apex/operations opId :apex/action])))
 
-(defmulti http-method (fn [req operation operation-handler callback raise] (:request-method req)))
+(defmulti http-method (fn [req callback raise opts] (:request-method req)))
 
-(defmethod http-method :get [req operation operation-handler callback raise]
+(defmethod http-method :get [req callback raise opts]
   ;; We'll throw an error to help the user know they should add a
   ;; operation function for this operation.
-  (if-not operation-handler
-    (let [op-id (get operation "operationId")]
+  (if-let [operation-handler (operation-handler req opts)]
+    (operation-handler
+     req
+     (fn [req] (callback
+                (merge
+                 ;; if not set, default to a 200
+                 {:apex.response/status 200}
+                 req)))
+     raise)
+
+    ;; Error, no operation handler
+    (let [op-id (get-in req [:oas/operation "operationId"])]
       (raise (ex-info
               (format "No operation defined for %s" op-id)
               {:operation-id op-id
@@ -253,40 +267,39 @@
                ;; nicely by the juxt.apex.dev ns to explain exactly
                ;; what the user should do, with appropriate
                ;; documentation.
-               })))
+               })))))
+
+(defmethod http-method :post [req callback raise opts]
+  (if-let [operation-handler (operation-handler req opts)]
     (operation-handler
      req
-     (fn [req] (callback (merge {:apex.response/status 200} req)))
-     raise)))
+     (fn [req] (callback req))
+     raise)
 
-(defmethod http-method :post [req operation operation-handler callback raise]
-  ;; We'll throw an error to help the user know they should add a
-  ;; operation function for this operation.
-  (if-not operation-handler
-    (let [op-id (get operation "operationId")]
+    (let [op-id (get-in req [:oas/operation "operationId"])]
       (raise (ex-info
               (format "No operation defined for %s" op-id)
-              {:operation-id op-id})))
-    (let [responses (get operation "responses")]
-      ;; TODO: Just let operation handlers determine status codes directly
-      (let [status (first (map (fn [x] (Integer/parseInt x)) (keys (dissoc responses "default"))))]
-        (operation-handler
-         req
-         (fn [req] (callback (merge (when status {:apex.response/status status}) req)))
-         raise)))))
+              {:operation-id op-id
+               ;; TODO: Set a code here such that this can be rendered
+               ;; nicely by the juxt.apex.dev ns to explain exactly
+               ;; what the user should do, with appropriate
+               ;; documentation.
+               })))))
 
 (defn wrap-execute-method [h options]
   (fn [req respond raise]
     (let [operation (:oas/operation req)
           opId (get operation "operationId")
           operation-handler (get-in options [:apex/operations opId :apex/action])]
+      ;; TODO: operation handler should be pulled from options by each of the
       (http-method
        req
-       operation
-       operation-handler
+       ;;       operation
+       ;;       operation-handler
        (fn [req]
          (h req respond raise))
-       raise))))
+       raise
+       options))))
 
 (defn wrap-validators [h options]
   (fn [req respond raise]
