@@ -22,17 +22,25 @@
       ;; TODO: Detect we're in prod mode (by checking existence of a
       ;; dev var) and warn if we're in this code path:
       #_(log/warn "Loading document on request. Performance will be adversely impacted.")
+
       (if-let [doc (io/resource document)]
         (let [h (handler
                  (yaml/parse-string (slurp doc))
                  (merge
                   options
                   {:operation-handlers
-                   {"createPets" (fn [_]
-                                   (log/info "Create Pets")
-                                   nil)
-                    "listPets" (fn [_ _ _]
-                                 ["cat" "dog"])}}))]
+                   {"createPets"
+                    (fn [req respond raise]
+                      (log/info "Create Pets")
+                      nil)
+                    "listPets"
+                    (fn [req respond raise]
+                      (respond
+                       (merge
+                        req
+                        {:apex.response/status 200
+                         :apex.response/body ["cat" "dog"]})))}}))]
+          (log/trace "calling handler")
           (h req respond raise))
         (raise (nil-doc-exception document))))
 

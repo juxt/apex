@@ -1,7 +1,7 @@
 <!-- Logback Configuration. See http://logback.qos.ch/ -->
 <!-- Adapted from https://github.com/stuartsierra/log.dev/blob/master/resources/logback.xml -->
 <!-- <configuration scan="true" scanPeriod="1 seconds"> -->
-<configuration debug="true">
+<configuration debug="false">
 
    <!-- Console (STDOUT) output. -->
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

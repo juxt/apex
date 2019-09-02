@@ -255,7 +255,8 @@
               {:operation-id op-id}))))
   (operation-handler
    req
-   (fn [req] (respond (merge {:apex.response/status 200} req)))
+   (fn [req]
+     (respond (merge {:apex.response/status 200} req)))
    raise))
 
 (defmethod http-method :post [req operation operation-handler respond raise]
@@ -282,7 +283,8 @@
        req
        operation
        operation-handler
-       (fn [new-req] (h new-req respond raise))
+       (fn [new-req]
+         (h new-req respond raise))
        raise))))
 
 (defn handler [api options]
@@ -327,7 +329,8 @@
 
    (wrap-oas-path api)
 
-   (wrap-clean-response)))
+   (wrap-clean-response)
+))
 
 
 #_{["findPets" "200"]

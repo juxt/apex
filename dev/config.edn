@@ -10,7 +10,7 @@
    ;; This declaration ensures that the service can be accessed using
    ;; localhost without requiring the OpenAPI document itself to be
    ;; altered. Defaults to nil.
-   :juxt.apex.dev/additional-servers #profile {:dev [{"url" #join ["http://localhost:" #ref [:port] "/api"]}]}
+   :juxt.apex.dev/additional-servers #profile {:dev [{"url" #join ["http://localhost:" #ref [:port]]}]}
 
    ;; This declaration is for convenience during development. It will
    ;; recreate the handler from the document every time, which allows
