@@ -1,15 +1,13 @@
 (ns juxt.apex.request
   (:require
-   [ring.middleware.params :refer [wrap-params]]
-   [muuntaja.middleware :as mw]
-   [muuntaja.core :as m]
    [clojure.tools.logging :as log]
+   [juxt.apex.dev :as dev]
+   [juxt.apex.format :as format]
    [juxt.jinx-alpha :as jinx]
-   [clojure.pprint :refer [pprint]]
-   [clojure.string :as str]
-   [juxt.apex.format :as format]))
+   [muuntaja.core :as m]
+   [ring.middleware.params :refer [wrap-params]]))
 
-(defn wrap-oas-path [h api]
+(defn wrap-oas-api [h api]
   (fn [req respond raise]
     (h (merge req {:oas/api api}) respond raise)))
 
@@ -141,6 +139,8 @@
                          true (assoc :formats formats)
                          default-format (assoc :default-format default-format)))]
        (try
+
+         ;; TODO: Shouldn't this be m/request-format only?
          (let [req (m/negotiate-and-format-request m req)]
            (h (assoc req :apex/muuntaja-instance m) respond raise))
 
@@ -327,10 +327,15 @@
    (wrap-check-404 api)
    (wrap-path-map api options)
 
-   (wrap-oas-path api)
+
+   ;; Developer only feature that uses knowledge in the API to
+   ;; generate a set of paths This should be useful for JSON too
+   (dev/wrap-helpful-404 api)
+
+   (wrap-oas-api api)
 
    (wrap-clean-response)
-))
+   ))
 
 
 #_{["findPets" "200"]
