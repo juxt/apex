@@ -1,7 +1,9 @@
 (ns juxt.apex.request
   (:require
+   [clojure.string :as str]
    [clojure.tools.logging :as log]
    [juxt.apex.dev :as dev]
+   [juxt.apex.doc :as doc]
    [juxt.apex.format :as format]
    [juxt.jinx-alpha :as jinx]
    [muuntaja.core :as m]
@@ -12,26 +14,29 @@
     (h (merge req {:oas/api api}) respond raise)))
 
 (defn wrap-path-map [h api {:juxt.apex.dev/keys [additional-servers]}]
-  (log/debug "additional-servers is" (pr-str additional-servers))
   (fn [req respond raise]
     (let [url (format "%s://%s%s" (name (:scheme req)) (get-in req [:headers "host"]) (:uri req))
           servers (->> (get-in api ["servers"])
-                    (concat additional-servers)
-                    (map #(get % "url")))
+                       (concat additional-servers)
+                       (map #(get % "url")))
 
-          path (some #(when (.startsWith url %) (subs url (count %))) servers)
-          path-item (get-in api ["paths" path])]
+          request-path (some #(when (.startsWith url %) (subs url (count %))) servers)]
 
-;;      (log/trace "req:" (with-out-str (pprint (dissoc req :oas/api))))
-;;      (log/trace "url: " url)
-;;      (log/trace "servers: " servers)
-;;      (log/trace "path: " path)
-;;      (log/trace "path-item: " path-item)
+      (h (merge req
+                {:oas/url url
+                 :oas/servers servers
+                 :apex/request-path request-path}
+                (when request-path
+                  (some (fn [[path path-item]]
+                          (let [matcher (or (:apex/matcher (meta path-item))
+                                            (doc/compile-path-template path))
+                                params (matcher request-path)]
 
-      (h (merge req {:oas/url url
-                     :oas/servers servers
-                     :oas/path path
-                     :oas/path-item path-item})
+                            (when params {:oas/path path
+                                          :oas/path-item path-item
+                                          :oas/path-params params})))
+                        (get api "paths"))))
+
          respond raise))))
 
 (defn wrap-check-404 [h api]
@@ -192,8 +197,6 @@
   (fn [req respond raise]
     (let [status (get req :apex.response/status)
           operation (:oas/operation req)]
-      (log/debug "operation:" (pr-str operation))
-      (log/debug "status:" (pr-str status))
       (if-let [oas-response (get-in operation ["responses" (str status)]
                                     (get-in operation ["responses" "default"]))]
         (h
@@ -214,13 +217,8 @@
   (fn [req respond raise]
     (let [format-and-charset (:muuntaja/response req)]
 
-;;      (log/debug "op:" (pr-str (:oas/operation req)))
-;;      (log/debug "response:" (pr-str (:oas/response req)))
-
-
       (respond
        {:status (:apex.response/status req)
-        :headers {"server" "JUXT apex"}
         :body (or
                (when-let [body (:apex.response/body req)]
                  body)
@@ -230,9 +228,7 @@
 
                ;; Deprecated
                (when-let [v (::value req)]
-                 {:message (format "OK, value is '%s'" (::value req))})
-
-               )
+                 {:message (format "OK, value is '%s'" (::value req))}))
 
         :apex/request req}))))
 
@@ -243,49 +239,73 @@
        raise)))
 
 
-(defmulti http-method (fn [req operation operation-handler respond raise] (:request-method req)))
+(defmulti http-method (fn [req operation operation-handler callback raise] (:request-method req)))
 
-(defmethod http-method :get [req operation operation-handler respond raise]
+(defmethod http-method :get [req operation operation-handler callback raise]
   ;; We'll throw an error to help the user know they should add a
   ;; operation function for this operation.
-  (when-not operation-handler
+  (if-not operation-handler
     (let [op-id (get operation "operationId")]
-      (throw (ex-info
+      (raise (ex-info
               (format "No operation defined for %s" op-id)
-              {:operation-id op-id}))))
-  (operation-handler
-   req
-   (fn [req]
-     (respond (merge {:apex.response/status 200} req)))
-   raise))
+              {:operation-id op-id
+               ;; TODO: Set a code here such that this can be rendered
+               ;; nicely by the juxt.apex.dev ns to explain exactly
+               ;; what the user should do, with appropriate
+               ;; documentation.
+               })))
+    (operation-handler
+     req
+     (fn [req] (callback (merge {:apex.response/status 200} req)))
+     raise)))
 
-(defmethod http-method :post [req operation operation-handler respond raise]
+(defmethod http-method :post [req operation operation-handler callback raise]
   ;; We'll throw an error to help the user know they should add a
   ;; operation function for this operation.
-  (when-not operation-handler
+  (if-not operation-handler
     (let [op-id (get operation "operationId")]
-      (throw (ex-info
+      (raise (ex-info
               (format "No operation defined for %s" op-id)
-              {:operation-id op-id}))))
-  (let [responses (get operation "responses")]
-    (let [status (first (map (fn [x] (Integer/parseInt x)) (keys (dissoc responses "default"))))]
-      (operation-handler
-       req
-       (fn [req] (respond (merge (when status {:apex.response/status status}) req)))
-       raise))))
+              {:operation-id op-id})))
+    (let [responses (get operation "responses")]
+      ;; TODO: Just let operation handlers determine status codes directly
+      (let [status (first (map (fn [x] (Integer/parseInt x)) (keys (dissoc responses "default"))))]
+        (operation-handler
+         req
+         (fn [req] (callback (merge (when status {:apex.response/status status}) req)))
+         raise)))))
 
 (defn wrap-execute-method [h options]
   (fn [req respond raise]
     (let [operation (:oas/operation req)
           opId (get operation "operationId")
-          operation-handler (get-in options [:operation-handlers opId])]
+          operation-handler (get-in options [:apex/operations opId :apex/action])]
       (http-method
        req
        operation
        operation-handler
-       (fn [new-req]
-         (h new-req respond raise))
+       (fn [req]
+         (h req respond raise))
        raise))))
+
+(defn wrap-validators [h options]
+  (fn [req respond raise]
+    (let [operation (:oas/operation req)
+          opId (get operation "operationId")
+          validators (get-in options [:apex/operations opId :apex/validators])]
+      (h req
+         respond
+         (fn [response]
+           (respond (assoc-in
+                     response [:headers "etag"]
+                     (format "\"%s\"" (hash (:body response))))))
+         raise))))
+
+(defn wrap-server-header [h]
+  (fn [req respond raise]
+    (h req (fn [response]
+             (respond (assoc-in response [:headers "server"] "JUXT Apex")))
+       raise)))
 
 (defn handler [api options]
   (->
@@ -319,6 +339,10 @@
    ;; Get the resource's properties
    (wrap-properties options)
 
+   ;; Conditional requests
+   ;;(wrap-validators options)
+
+
    (wrap-format-response)
 
    wrap-determine-operation
@@ -331,20 +355,11 @@
    ;; Developer only feature that uses knowledge in the API to
    ;; generate a set of paths This should be useful for JSON too
    (dev/wrap-helpful-404 api)
+   (dev/wrap-helpful-error api)
 
    (wrap-oas-api api)
 
+   (wrap-server-header)
+
    (wrap-clean-response)
    ))
-
-
-#_{["findPets" "200"]
- (fn [content-type]
-   "Hello World!"
-   )}
-
-
-;; Create a general handler that can be put in Ring, manifold or Pedestal
-#_(make-handler [open-api-desc attachments]
-
-              )

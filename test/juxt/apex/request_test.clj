@@ -1,6 +1,7 @@
 (ns juxt.apex.request-test
   (:require
    [clojure.java.io :as io]
+   [clojure.string :as str]
    [clojure.tools.logging :as log]
    [clojure.test :refer [deftest is testing]]
    [jsonista.core :as j]
@@ -40,17 +41,17 @@
 ;; GET
 (deftest get-operation-test
   (let [api (yaml/parse-string (slurp (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
-        h (handler api {:operation-handlers
+        h (handler api {:apex/operations
                         {"listPets"
-                         (fn [req respond raise]
-                           (respond
-                            (assoc req
-                                   :apex.response/body ["monkey" "cat" "dog" "lizard" "tarantula"])))}})
+                         {:apex/action
+                          (fn [req respond raise]
+                            (respond
+                             (assoc req
+                                    :apex.response/body ["monkey" "cat" "dog" "lizard" "tarantula"])))}}})
         response @(call-handler h (mock/request
                                    :get "http://petstore.swagger.io/v1/pets"))]
     (is (= 200 (:status response)))
     (is (= "[\"monkey\",\"cat\",\"dog\",\"lizard\",\"tarantula\"]" (-> response :body slurp)))))
-
 
 ;; Restore when operations tested
 #_(deftest coerce-body-to-json-test
@@ -123,11 +124,11 @@
 
 ;; POST
 #_(let [api (yaml/parse-string (slurp (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
-      h (handler api {:operation-handlers
+      h (handler api {:apex/operations
                       {"createPets"
-                       (fn [req respond raise]
-                         (log/trace "Create pets!")
-                         (respond req))}})]
+                       {:apex/handler (fn [req respond raise]
+                                   (log/trace "Create pets!")
+                                   (respond req))}}})]
   (->
    @(call-handler h (mock/request
                      :post "http://petstore.swagger.io/v1/pets"))
