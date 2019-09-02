@@ -1,7 +1,69 @@
 = Apex
 
+Apex stands of **AP**I **Ex**ecution.
+
+Apex is a Clojure library that produces Ring handlers from OpenAPI
+descriptions.
+
 Apex is a Clojure web library that takes an Open API 3.0 description,
 some attachments, and returns a Ring handler.
+
+== Rationale
+
+https://github.com/juxt/yada[yada], the web library we wrote to
+replace Liberator, is beginning to show its age. When we started yada,
+the web looked a little different than today:
+
+
+* There was no async option in Ring, and we wanted to avoid
+  thread-per-request model for some of the high-traffic websites we
+  were producing in our consulting projects.
+
+* Prismatic Schema was firmly established as the way to specify
+  constraints on data.
+
+In the past five years we've seen a number of developments:
+
+* Ring now has a
+  https://github.com/ring-clojure/ring/blob/master/SPEC[well thought
+  out approach to async], supporting modern asynchronous web servers
+  without sacrificing the composeability of middleware.
+
+* https://www.openapis.org/[OpenAPI] (formerly Swagger) continues to
+  attact users, adopted by large organisations, and has now matured
+  and is now governed by The Linux Foundation.
+
+* https://json-schema.org/[JSON Schema] continues to mature. (We like
+  it so much we've even written our own Clojure library,
+  https://github.com/juxt/jinx[jinx])
+
+* Metosin has developed a very nice content negotiation and coercion
+  library called https://github.com/metosin/muuntaja[Muuntaja]
+
+=== OpenAPI: the missing piece of the web jigsaw
+
+One of the key insights behind yada was web resources should be
+modelled with data. OpenAPI is now firmly established as both the
+_de-facto_ and the _de-jure_ data model of web APIs.
+
+=== From Prismatic Schema to JSON Schema
+
+The future of Prismatic Schema has been in doubt since Cognitect
+announced clojure.spec. While we value clojure.spec in our internal
+data structures, we feel that the web API community is going to move
+inexorably towards adoption of JSON Schema. We believe the Clojure
+community should welcome this trend towards a more data-oriented
+approach to building application systems.
+
+=== Standards conformance
+
+Standards facilitate the rich interoperable ecosystem we enjoy as both
+users and developers of the web. Too often conformance with
+established standards is the exception rather than the rule. This is a
+shame, as it degrades the web for everyone. Web libraries like Apex
+should encourage compliance due to the multiplier effect of multiple
+applications built on them.
+
 
 == Status
 
