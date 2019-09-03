@@ -291,11 +291,8 @@
     (let [operation (:oas/operation req)
           opId (get operation "operationId")
           operation-handler (get-in options [:apex/operations opId :apex/action])]
-      ;; TODO: operation handler should be pulled from options by each of the
       (http-method
        req
-       ;;       operation
-       ;;       operation-handler
        (fn [req]
          (h req respond raise))
        raise
