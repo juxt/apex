@@ -29,15 +29,16 @@
                  :oas/servers servers
                  :apex/request-path request-path}
                 (when request-path
-                  (some (fn [[path path-item]]
-                          (let [matcher (or (:apex/matcher (meta path-item))
-                                            (doc/compile-path-template path))
-                                params (matcher request-path)]
-
-                            (when params {:oas/path path
-                                          :oas/path-item path-item
-                                          :apex.request/path-params params})))
-                        (get api "paths"))))
+                  (some
+                   (fn [[path path-item]]
+                     (let [matcher (or (:apex/matcher (meta path-item))
+                                       (doc/compile-path-template path))]
+                       (when-let [params (matcher request-path)]
+                         {:oas/path path
+                          :oas/path-item path-item
+                          :oas/operation (get path-item (name (:request-method req)))
+                          :apex.request/path-params params})))
+                   (get api "paths"))))
 
          respond raise))))
 
@@ -60,12 +61,6 @@
       (if-not (get path-item (name (:request-method req)))
         (respond {:status 405 :body "Method Not Allowed"})
         (h req respond raise)))))
-
-(defn wrap-determine-operation [h]
-  (fn [req respond raise]
-    (let [path-item (:oas/path-item req)
-          operation (get path-item (name (:request-method req)))]
-      (h (merge req {:oas/operation operation}) respond raise))))
 
 (defn wrap-properties [h options]
   (fn [req respond raise]
@@ -321,6 +316,28 @@
              (respond (assoc-in response [:headers "server"] "JUXT Apex")))
        raise)))
 
+;; TODO: Refactoring: Rename keyword ns :oas to :apex.oas
+
+(defn wrap-internal-error [h api]
+  (fn [req respond raise]
+    (h
+     req
+     respond
+     (fn [error]
+       (log/trace "wrap-internal-error2")
+       (log/trace "keys of req are" (keys req))
+       (log/trace "operation" (:oas/operation req))
+       (let [responses (get-in req [:oas/operation "responses"])
+             response (get responses "500" (get responses "default"))
+             produces (keys (get response "content"))
+             m (m/create (-> (update m/default-options :formats select-keys produces)))]
+
+         (respond
+          (m/format-response
+           m
+           req {:status 500
+                :body {:error error}})))))))
+
 (defn handler [api options]
   (->
    ;; TODO: We should be careful not to overuse the Ring middleware
@@ -358,17 +375,20 @@
 
    (wrap-format-response)
 
-   wrap-determine-operation
    wrap-check-405
 
    (wrap-check-404 api)
-   (wrap-path-map api options)
-
 
    ;; Developer only feature that uses knowledge in the API to
-   ;; generate a set of paths This should be useful for JSON too
+   ;; generate a set of paths. This should be useful for JSON too.
    (dev/wrap-helpful-404 api)
    (dev/wrap-helpful-error api)
+
+   (wrap-internal-error api)
+
+   (wrap-path-map api options)
+
+   ;; NOTE: All error handlers from now cannot rely on wrap-path-map being run
 
    (wrap-oas-api api)
 

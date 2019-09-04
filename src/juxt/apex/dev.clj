@@ -3,7 +3,9 @@
 (ns juxt.apex.dev
   (:require
    [clojure.java.io :as io]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [juxt.apex.format :as format]
+   [muuntaja.core :as m]))
 
 (def handlebars-pattern #"\{\{([^\}]*)\}\}")
 
@@ -61,19 +63,34 @@
 
 (defn wrap-helpful-error [h api]
   (fn [req respond raise]
-    (h
-     req
-     respond
-     (fn [error]
-       (respond
-        {:status 500
-         :headers
-         {"content-type" "text/html;charset=utf-8"}
-         :body
-         ;; TODO: Render the error
-         (process-content
-          (slurp (io/resource "juxt/apex/error.html"))
-          {:status 500
-           :title "Internal Server Error"
-           :error (pr-str error)}
-          api)})))))
+    (let [m (m/create (-> m/default-options
+                          (assoc :formats {"text/html" (format/text-format "text/html")})
+                          (dissoc :default-format)))]
+
+      (try
+        (let [format (m/response-format m req)]
+          (if (= (:format format) "text/html")
+            (h
+             req
+             respond
+             ;; Only do this if we can neg text/html
+             (fn [error]
+               (respond
+                {:status 500
+                 :headers
+                 {"content-type" "text/html;charset=utf-8"}
+                 :body
+                 ;; TODO: Render the error
+                 (process-content
+                  (slurp (io/resource "juxt/apex/error.html"))
+                  {:status 500
+                   :title "Internal Server Error"
+                   :error (pr-str error)}
+
+                  api)})))
+
+            ;; No text/html
+            (h req respond raise)))
+        (catch Exception e
+          (h req respond raise)
+          )))))
