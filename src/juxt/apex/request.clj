@@ -6,6 +6,7 @@
    [clojure.string :as str]
    [clojure.tools.logging :as log]
    [juxt.apex.dev :as dev]
+   [juxt.apex.redoc :as redoc]
    [juxt.apex.doc :as doc]
    [juxt.apex.format :as format]
    [juxt.jinx-alpha :as jinx]
@@ -400,4 +401,6 @@
    (wrap-server-header)
 
    (wrap-clean-response)
+
+   (redoc/wrap-redoc api options)
    ))

@@ -32,14 +32,17 @@
       ;; dev var) and warn if we're in this code path:
       #_(log/warn "Loading document on request. Performance will be adversely impacted.")
 
-      (if-let [doc (io/resource document)]
-        (let [doc (doc/process-document (yaml/parse-string (slurp doc)))
+      (if-let [doc-resource (io/resource document)]
+        (let [doc (yaml/parse-string (slurp doc-resource))
+              processed-doc (doc/process-document doc)
               h
               (handler
                doc
                (merge
                 options
-                {:apex/operations
+                {:apex/doc doc
+
+                 :apex/operations
 
                  {"createPets"
                   {:apex/action
@@ -52,19 +55,19 @@
 
                   "listPets"
                   {:apex/action
-                     (fn [req callback raise]
-                       (callback
-                        (merge
-                         req
-                         {:apex.response/status 200
-                          :apex.response/body
-                          (for [[id v] @database]
-                            (assoc v "id" id "href" (doc/path-for doc "showPetById" {"petId" id})))})))
+                   (fn [req callback raise]
+                     (callback
+                      (merge
+                       req
+                       {:apex.response/status 200
+                        :apex.response/body
+                        (for [[id v] @database]
+                          (assoc v "id" id "href" (doc/path-for doc "showPetById" {"petId" id})))})))
 
-                     :apex/validators
-                     [(fn [body]
-                        {:apex/entity-tag (hash body)
-                         :apex.validation/strong? true})]}
+                   :apex/validators
+                   [(fn [body]
+                      {:apex/entity-tag (hash body)
+                       :apex.validation/strong? true})]}
 
                   "showPetById"
                   {:apex/action
