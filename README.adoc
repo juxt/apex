@@ -68,3 +68,8 @@ applications built on them.
 == Status
 
 ALPHA
+
+== References
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests
+https://apisyouwonthate.com/blog/
