@@ -19,6 +19,7 @@
        "title" title
        "style" (slurp (io/resource "juxt/apex/style.css"))
        "footer" (slurp (io/resource "juxt/apex/footer.html"))
+
        "routes"
        (format
         "<table style='border: 1px solid black; border-collapse: collapse'>
@@ -63,9 +64,10 @@
 
 (defn wrap-helpful-error [h api]
   (fn [req respond raise]
-    (let [m (m/create (-> m/default-options
-                          (assoc :formats {"text/html" (format/text-format "text/html")})
-                          (dissoc :default-format)))]
+    (let [m (m/create
+             (-> m/default-options
+                 (assoc :formats {"text/html" (format/text-format "text/html")})
+                 (dissoc :default-format)))]
 
       (try
         (let [format (m/response-format m req)]

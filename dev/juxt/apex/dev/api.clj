@@ -52,19 +52,19 @@
 
                   "listPets"
                   {:apex/action
-                   (fn [req callback raise]
-                     (callback
-                      (merge
-                       req
-                       {:apex.response/status 200
-                        :apex.response/body
-                        (for [[id v] @database]
-                          (assoc v "id" id "href" (doc/path-for doc "showPetById" {"petId" id})))})))
+                     (fn [req callback raise]
+                       (callback
+                        (merge
+                         req
+                         {:apex.response/status 200
+                          :apex.response/body
+                          (for [[id v] @database]
+                            (assoc v "id" id "href" (doc/path-for doc "showPetById" {"petId" id})))})))
 
-                   :apex/validators
-                   [(fn [body]
-                      {:apex/entity-tag (hash body)
-                       :apex.validation/strong? true})]}
+                     :apex/validators
+                     [(fn [body]
+                        {:apex/entity-tag (hash body)
+                         :apex.validation/strong? true})]}
 
                   "showPetById"
                   {:apex/action
@@ -72,22 +72,18 @@
                      (callback
                       (merge
                        req
-                       {:apex.response/status 200
-                        :apex.response/headers {"content-type" "text/html"}
-                        :apex.response/body
+                       (let [pet-id (get-in req [:apex.request/path-params "petId"])]
+                         (assert pet-id)
+                         (if-let [pet (get @database pet-id)]
+                           {:apex.response/status 200
+                            :apex.response/body
+                            (merge
+                             {"id" pet-id} ; first in merge order
+                             ;; But forbid any id attributes in value
+                             (dissoc pet "id"))}
 
-                        (let [pet-id (get-in req [:apex.request/path-params "petId"])]
-                          (assert pet-id)
-                          (merge
-                           {"id" pet-id} ; first in merge order
-                           ;; But forbid any id attributes in value
-                           (dissoc (get @database pet-id) "id")))
-
-                        ;; TODO: Key goal is to generate an ETag and
-                        ;; support If-Match to avoid the lost-update
-                        ;; problem with PUT.
-
-                        })))
+                           {:apex.response/status 404
+                            :apex.response/body (format "Pet not found with id %s" pet-id)})))))
 
                    :apex/validators
                    []}}}))]

@@ -2,6 +2,7 @@
 
 (ns juxt.apex.request
   (:require
+   [clojure.java.io :as io]
    [clojure.string :as str]
    [clojure.tools.logging :as log]
    [juxt.apex.dev :as dev]
@@ -24,35 +25,40 @@
 
           request-path (some #(when (.startsWith url %) (subs url (count %))) servers)]
 
-      (h (merge req
-                {:oas/url url
-                 :oas/servers servers
-                 :apex/request-path request-path}
-                (when request-path
-                  (some
-                   (fn [[path path-item]]
-                     (let [matcher (or (:apex/matcher (meta path-item))
-                                       (doc/compile-path-template path))]
-                       (when-let [params (matcher request-path)]
-                         {:oas/path path
-                          :oas/path-item path-item
-                          :oas/operation (get path-item (name (:request-method req)))
-                          :apex.request/path-params params})))
-                   (get api "paths"))))
 
-         respond raise))))
+      (if-let [path-info (and request-path
+                              (some
+                               (fn [[path path-item]]
+                                 (let [matcher (or (:apex/matcher (meta path-item))
+                                                   (doc/compile-path-template path))]
+                                   (when-let [params (matcher request-path)]
+                                     {:oas/path path
+                                      :oas/path-item path-item
+                                      :oas/operation (get path-item (name (:request-method req)))
+                                      :apex.request/path-params params})))
+                               (get api "paths")))]
 
-(defn wrap-check-404 [h api]
-  (fn [req respond raise]
-    (let [{:keys [:oas/path :oas/path-item]} req]
-      (if
-        ;; Not served by server in the 'servers' section
-        ;; Or not found in the 'paths' section
-        (or (nil? path) (nil? path-item))
-        (respond {:status 404 :body "Not Found"})
+        (h (merge
+            req
+            {:oas/url url
+             :oas/servers servers
+             :apex/request-path request-path}
+            path-info)
+           respond raise)
 
-        ;; Otherwise continue
-        (h req respond raise)))))
+        ;; This is a 404
+        ;; TODO: Do conneg
+        (try
+          (respond
+           {:status 404
+            :headers
+            {"content-type" "text/html;charset=utf-8"}
+            :body
+            (dev/process-content
+             (slurp (io/resource "juxt/apex/404.html"))
+             {:status 404 :title "Not Found"}
+             api)})
+          (catch Exception e (raise e)))))))
 
 (defn wrap-check-405 [h]
   (fn [req respond raise]
@@ -258,11 +264,8 @@
     (let [op-id (get-in req [:oas/operation "operationId"])]
       (raise (ex-info
               (format "No operation defined for %s" op-id)
-              {:operation-id op-id
-               ;; TODO: Set a code here such that this can be rendered
-               ;; nicely by the juxt.apex.dev ns to explain exactly
-               ;; what the user should do, with appropriate
-               ;; documentation.
+              {:error-code ::no-operation
+               :operation-id op-id
                })))))
 
 (defmethod http-method :post [req callback raise opts]
@@ -377,14 +380,16 @@
 
    wrap-check-405
 
-   (wrap-check-404 api)
-
    ;; Developer only feature that uses knowledge in the API to
    ;; generate a set of paths. This should be useful for JSON too.
-   (dev/wrap-helpful-404 api)
+
+   ;; Note, this isn't right because it triggers on both a missing
+   ;; route and a missing pet. Each of these cases need a different
+   ;; error message. Needs more thinking.
+   ;;(dev/wrap-helpful-404 api)
    (dev/wrap-helpful-error api)
 
-   (wrap-internal-error api)
+   ;;(wrap-internal-error api)
 
    (wrap-path-map api options)
 
