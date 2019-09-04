@@ -1,3 +1,5 @@
+;; Copyright © 2019, JUXT LTD.
+
 (ns juxt.apex.dev.server
   (:require
    [ring.adapter.jetty :as jetty]

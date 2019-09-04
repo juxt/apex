@@ -1,3 +1,5 @@
+;; Copyright © 2019, JUXT LTD.
+
 (ns juxt.apex.format
   (:refer-clojure :exclude [format])
   (:require

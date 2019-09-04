@@ -1,3 +1,5 @@
+;; Copyright © 2019, JUXT LTD.
+
 (ns juxt.apex.request-test
   (:require
    [clojure.java.io :as io]

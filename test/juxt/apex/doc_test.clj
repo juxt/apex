@@ -1,3 +1,5 @@
+;; Copyright © 2019, JUXT LTD.
+
 (ns juxt.apex.doc-test
   (:require
    [clojure.test :refer [deftest is testing]]
