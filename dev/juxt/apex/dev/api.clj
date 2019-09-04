@@ -82,6 +82,12 @@
                              ;; But forbid any id attributes in value
                              (dissoc pet "id"))}
 
+                           ;; TODO: Operations need to have support to
+                           ;; provide data bodies that can be rendered
+                           ;; with HTML by (another) middleware in dev
+                           ;; mode, and stripped of all information in
+                           ;; the more secure prod mode.
+
                            {:apex.response/status 404
                             :apex.response/body (format "Pet not found with id %s" pet-id)})))))
 
