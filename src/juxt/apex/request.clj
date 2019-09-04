@@ -34,7 +34,7 @@
 
                             (when params {:oas/path path
                                           :oas/path-item path-item
-                                          :oas/path-params params})))
+                                          :apex.request/path-params params})))
                         (get api "paths"))))
 
          respond raise))))
@@ -151,9 +151,6 @@
 
          (catch clojure.lang.ExceptionInfo e
 
-           ;;          (log/debug "An exception occured when negging format-request")
-           ;;          (log/debug "Request is" (with-out-str (pprint (dissoc req :oas/api))))
-
            ;; If status already >= 400, then just don't negotiate a body response
            (let [status (or (:apex.response/status req) 200)]
              (if (< status 400)
@@ -163,7 +160,6 @@
                          :apex.response/status 406
                          :apex.response/body-generator
                          (fn [format-and-charset]
-                           ;;(log/debug "format-and-charset is" format-and-charset)
                            {:message "Not Acceptable"
                             :error (ex-data e)}))
                   respond raise)
@@ -218,19 +214,22 @@
     (let [format-and-charset (:muuntaja/response req)]
 
       (respond
-       {:status (:apex.response/status req)
-        :body (or
-               (when-let [body (:apex.response/body req)]
-                 body)
+       (merge
+        (when-let [headers (:apex.response/headers req)] {:headers headers})
+        {:status (:apex.response/status req)
 
-               (when-let [bg (:apex.response/body-generator req)]
-                 (bg format-and-charset))
+         :body (or
+                (when-let [body (:apex.response/body req)]
+                  body)
 
-               ;; Deprecated
-               (when-let [v (::value req)]
-                 {:message (format "OK, value is '%s'" (::value req))}))
+                (when-let [bg (:apex.response/body-generator req)]
+                  (bg format-and-charset))
 
-        :apex/request req}))))
+                ;; Deprecated
+                (when-let [v (::value req)]
+                  {:message (format "OK, value is '%s'" (::value req))}))
+
+         :apex/request req})))))
 
 (defn wrap-clean-response [h]
   (fn [req respond raise]
@@ -300,16 +299,19 @@
 
 (defn wrap-validators [h options]
   (fn [req respond raise]
-    (let [operation (:oas/operation req)
-          opId (get operation "operationId")
-          validators (get-in options [:apex/operations opId :apex/validators])]
-      (h req
-         respond
-         (fn [response]
-           (respond (assoc-in
-                     response [:headers "etag"]
-                     (format "\"%s\"" (hash (:body response))))))
-         raise))))
+    (try
+      (let [operation (:oas/operation req)
+            opId (get operation "operationId")
+            validators (get-in options [:apex/operations opId :apex/validators])]
+        (h req
+           (fn [response]
+             (respond (assoc-in
+                       response [:headers "etag"]
+                       (format "\"%s\"" (hash (:body response))))))
+           raise))
+      (catch Exception e
+        (log/error e "Failed when wrapping validations")
+        ))))
 
 (defn wrap-server-header [h]
   (fn [req respond raise]
@@ -350,8 +352,7 @@
    (wrap-properties options)
 
    ;; Conditional requests
-   ;;(wrap-validators options)
-
+   (wrap-validators options)
 
    (wrap-format-response)
 

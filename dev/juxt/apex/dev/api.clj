@@ -7,6 +7,12 @@
    [clojure.tools.logging :as log]
    [juxt.apex.yaml :as yaml]))
 
+(def database
+  (atom {"1" {"name" "Sven" "type" "Dog"}
+         "2" {"name" "Luna" "type" "Cat"}
+         "3" {"name" "Arya" "type" "Cat"}
+         "4" {"name" "Kaia" "type" "Cat"}}))
+
 (defn- nil-doc-exception [document]
   (let [msg (format "No such resource on classpath: %s" document)]
     (ex-info msg {:document document})))
@@ -50,14 +56,13 @@
                        req
                        {:apex.response/status 200
                         :apex.response/body
-                        [{:pet "cat" :href (doc/path-for doc "showPetById" {"petId" 1})}
-                         {:pet "dog" :href (doc/path-for doc "showPetById" {"petId" 2})}]})))
+                        (for [[id v] @database]
+                          (assoc v "id" id "href" (doc/path-for doc "showPetById" {"petId" id})))})))
 
                    :apex/validators
                    [(fn [body]
                       {:apex/entity-tag (hash body)
                        :apex.validation/strong? true})]}
-
 
                   "showPetById"
                   {:apex/action
@@ -66,19 +71,24 @@
                       (merge
                        req
                        {:apex.response/status 200
+                        :apex.response/headers {"content-type" "text/html"}
                         :apex.response/body
-                        ;; TODO: Look up pet details in a database
+
+                        (let [pet-id (get-in req [:apex.request/path-params "petId"])]
+                          (assert pet-id)
+                          (merge
+                           {"id" pet-id} ; first in merge order
+                           ;; But forbid any id attributes in value
+                           (dissoc (get @database pet-id) "id")))
 
                         ;; TODO: Key goal is to generate an ETag and
                         ;; support If-Match to avoid the lost-update
                         ;; problem with PUT.
 
-                        {"name" "Rover"}})))
+                        })))
 
                    :apex/validators
-                   []}
-
-                  }}))]
+                   []}}}))]
 
           (h req respond raise))
         (raise (nil-doc-exception document))))
