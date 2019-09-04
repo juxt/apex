@@ -8,16 +8,9 @@
    [clojure.test :refer [deftest is testing]]
    [jsonista.core :as j]
    [juxt.apex.request :refer [handler]]
+   [juxt.apex.test-util :refer [call-handler]]
    [juxt.apex.yaml :as yaml]
    [ring.mock.request :as mock]))
-
-(defn call-handler [handler request]
-  (let [p (promise)]
-    (handler
-     request
-     (fn [response] (deliver p response))
-     (fn [err] (deliver p err)))
-    p))
 
 (deftest responds-with-404-test
   (let [api (yaml/parse-string (slurp (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
