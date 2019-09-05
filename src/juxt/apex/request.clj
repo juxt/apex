@@ -298,21 +298,47 @@
        raise
        options))))
 
-(defn wrap-validators [h options]
+(defmulti validator->header (fn [[k v]] k))
+
+(defmethod validator->header :apex/entity-tag
+  [[_ v]] ["ETag" (:value v)])
+
+(defn to-rfc-1123-date-time [instant]
+  (.format java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME
+           (java.time.ZonedDateTime/ofInstant instant (java.time.ZoneId/of "GMT"))))
+
+(defn from-rfc-1123-date-time [s]
+  (some->> s
+           (.parse java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME)
+           (java.time.Instant/from)))
+
+(defmethod validator->header :apex/last-modified
+  [[_ v]]
+  ["Last-Modified" (to-rfc-1123-date-time (:value v))])
+
+(defn since? [instant since]
+  (= (.compareTo instant since) 1))
+
+(defn wrap-conditional-request [h options]
   (fn [req respond raise]
-    (try
-      (let [operation (:oas/operation req)
-            opId (get operation "operationId")
-            validators (get-in options [:apex/operations opId :apex/validators])]
-        (h req
-           (fn [response]
-             (respond (assoc-in
-                       response [:headers "etag"]
-                       (format "\"%s\"" (hash (:body response))))))
-           raise))
-      (catch Exception e
-        (log/error e "Failed when wrapping validations")
-        ))))
+    (let [operation (:oas/operation req)
+          opId (get operation "operationId")]
+      (if-let [fv (get-in options [:apex/operations opId :apex/validators])]
+        (fv
+         req
+         (fn [req]
+           (let [since (from-rfc-1123-date-time (get-in req [:headers "if-modified-since"]))
+                 modified (:value (:apex/last-modified req))]
+
+             (if (and since modified (not (since? modified since)))
+               (respond {:status 304})
+               (h req
+                  (fn [response]
+                    (respond (update response :headers merge (into {} (map validator->header (select-keys req [:apex/entity-tag :apex/last-modified]))))))
+                  raise))))
+         raise)
+        ;; No validators
+        (h req respond raise)))))
 
 (defn wrap-server-header [h]
   (fn [req respond raise]
@@ -365,6 +391,9 @@
 
    (wrap-execute-method options)
 
+   ;; Conditional requests
+   (wrap-conditional-request options)
+
    ;; We need to determine the parameters, in order to work out the
    ;; status code, which will in turn determine the content
    ;; negotiation.
@@ -373,9 +402,6 @@
 
    ;; Get the resource's properties
    (wrap-properties options)
-
-   ;; Conditional requests
-   (wrap-validators options)
 
    (wrap-format-response)
 

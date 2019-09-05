@@ -50,8 +50,7 @@
                      (log/info "Create Pets")
                      nil)
 
-                   :apex/validators
-                   []}
+                   }
 
                   "listPets"
                   {:apex/action
@@ -65,9 +64,10 @@
                           (assoc v "id" id "href" (doc/path-for doc "showPetById" {"petId" id})))})))
 
                    :apex/validators
-                   [(fn [body]
-                      {:apex/entity-tag (hash body)
-                       :apex.validation/strong? true})]}
+                   (fn [req callback raise]
+                     {}
+                     #_{:apex/entity-tag (hash () body)
+                      :apex.validation/strong? true})}
 
                   "showPetById"
                   {:apex/action
@@ -94,8 +94,7 @@
                            {:apex.response/status 404
                             :apex.response/body (format "Pet not found with id %s" pet-id)})))))
 
-                   :apex/validators
-                   []}}}))]
+                   }}}))]
 
           (h req respond raise))
         (raise (nil-doc-exception document))))
