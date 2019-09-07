@@ -428,5 +428,5 @@
 
    (wrap-clean-response)
 
-   (redoc/wrap-redoc api options)
+;;   (redoc/wrap-redoc api options)
    ))
