@@ -319,6 +319,8 @@
 (defn since? [instant since]
   (= (.compareTo instant since) 1))
 
+;; TODO: This could be generalised as Ring middleware if we moved to a
+;; design of compiling a Ring middleware chain for each operation.
 (defn wrap-conditional-request [h options]
   (fn [req respond raise]
     (let [operation (:oas/operation req)
