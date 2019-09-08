@@ -19,90 +19,57 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
-#_(let
-    [doc (yaml/parse-string
-          (slurp
-           (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
-     app (openapi-handler
-          doc
-          {
-           :apex/resources
-           {"/pets"
-
-            {:apex/methods
-             {:get
-              {:handler
-               (fn [req respond raise]
-                 (respond {:status 200 :body pets}))}}
-
-             :apex/validators
-             (fn [req callback raise]
-               (callback
-                ;; Expectation is to return a new request with
-                ;; validators merged.
-                (merge
-                 req
-                 {:apex/entity-tag
-                  ;; The purpose of this map is also to
-                  ;; indicate strong or weak validator strength.
-                  {:value "123"}
-
-                  :apex/last-modified
-                  {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))}
-
-            }})]
-
-    @(call-handler app {:request-method :get :uri "/pets/2"})
-    )
-
-(deftest app-test
+(defn handler []
   (let [doc (yaml/parse-string
              (slurp
-              (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
-        app (openapi-handler
-             doc
-             {:apex/add-implicit-head? true
-              :apex/resources
-              {"/pets"
+              (io/resource "juxt/apex/openapi-examples/petstore.yaml")))]
+    (openapi-handler
+     doc
+     {:apex/add-implicit-head? true
+      :apex/resources
+      {"/pets"
 
-               {:apex/validators
-                (fn [req callback raise]
-                  (callback
-                   ;; Expectation is to return a new request with
-                   ;; validators merged.
-                   (merge
-                    req
-                    {:apex/entity-tag
-                     ;; The purpose of this map is also to
-                     ;; indicate strong or weak validator strength.
-                     {:value "123"}
+       {:apex/validators
+        (fn [req callback raise]
+          (callback
+           ;; Expectation is to return a new request with
+           ;; validators merged.
+           (merge
+            req
+            {:apex/entity-tag
+             ;; The purpose of this map is also to
+             ;; indicate strong or weak validator strength.
+             {:value "123"}
 
-                     :apex/last-modified
-                     {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))
+             :apex/last-modified
+             {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))
 
-                :apex/methods
-                {:get
-                 {:handler
-                  (fn [req respond raise]
-                    (respond {:status 200 :body pets}))}}}
+        :apex/methods
+        {:get
+         {:handler
+          (fn [req respond raise]
+            (respond {:status 200 :body (vals @database)}))}}}
 
-               "/pets/{petId}"
-               {:apex/methods
-                {:get
-                 {:handler
-                  (fn [req respond raise]
-                    (let [id (get-in req [:path-params :petId])
-                          pet (get @database id)]
-                      (respond
-                       (if pet
-                         {:status 200 :body pet}
-                         {:status 404}))))}}}}})]
+       "/pets/{petId}"
+       {:apex/methods
+        {:get
+         {:handler
+          (fn [req respond raise]
+            (let [id (get-in req [:path-params :petId])
+                  pet (get @database id)]
+              (respond
+               (if pet
+                 {:status 200 :body pet}
+                 {:status 404}))))}}}}})))
+
+(deftest app-test
+  (let [app (handler)]
 
     (testing "GET /pets is OK and returns pets"
       (let [{:keys [status body]}
             @(call-handler app {:request-method :get :uri "/pets"})]
         (is (= 200 status))
-        (is (= pets body))))
+        (is (= (vals @database) body))))
 
     (testing "Not found"
       (let [{:keys [status]}
