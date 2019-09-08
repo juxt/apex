@@ -12,23 +12,30 @@
    [juxt.apex.yaml :as yaml]
    [ring.mock.request :as mock]))
 
-(def pets [{:type "cat"}
-           {:type "dog"}
-           {:type "goat"}
-           {:type "goldfish"}
-           {:type "lizard"}])
+(def database
+  (atom {"1" {"name" "Sven" "type" "Dog"}
+         "2" {"name" "Luna" "type" "Cat"}
+         "3" {"name" "Arya" "type" "Cat"}
+         "4" {"name" "Kaia" "type" "Cat"}
+         "5" {"name" "Vega" "type" "Dog"}}))
 
-(let
+#_(let
     [doc (yaml/parse-string
           (slurp
            (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
      app (openapi-handler
           doc
-          {:apex/add-implicit-head? true
+          {
            :apex/resources
            {"/pets"
 
-            {:apex/validators
+            {:apex/methods
+             {:get
+              {:handler
+               (fn [req respond raise]
+                 (respond {:status 200 :body pets}))}}
+
+             :apex/validators
              (fn [req callback raise]
                (callback
                 ;; Expectation is to return a new request with
@@ -41,16 +48,12 @@
                   {:value "123"}
 
                   :apex/last-modified
-                  {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))
+                  {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))}
 
-             :apex/methods
-             {:get
-              {:handler
-               (fn [req respond raise]
-                 (respond {:status 200 :body pets}))}}}}})]
+            }})]
 
-  @(call-handler app {:request-method :head :uri "/pets"})
-  )
+    @(call-handler app {:request-method :get :uri "/pets/2"})
+    )
 
 (deftest app-test
   (let [doc (yaml/parse-string
@@ -58,7 +61,8 @@
               (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
         app (openapi-handler
              doc
-             {:apex/resources
+             {:apex/add-implicit-head? true
+              :apex/resources
               {"/pets"
 
                {:apex/validators
@@ -80,10 +84,23 @@
                 {:get
                  {:handler
                   (fn [req respond raise]
-                    (respond {:status 200 :body pets}))}}}}})]
+                    (respond {:status 200 :body pets}))}}}
 
-    (testing "OK"
-      (let [{:keys [status body]} @(call-handler app {:request-method :get :uri "/pets"})]
+               "/pets/{petId}"
+               {:apex/methods
+                {:get
+                 {:handler
+                  (fn [req respond raise]
+                    (let [id (get-in req [:path-params :petId])
+                          pet (get @database id)]
+                      (respond
+                       (if pet
+                         {:status 200 :body pet}
+                         {:status 404}))))}}}}})]
+
+    (testing "GET /pets is OK and returns pets"
+      (let [{:keys [status body]}
+            @(call-handler app {:request-method :get :uri "/pets"})]
         (is (= 200 status))
         (is (= pets body))))
 
@@ -95,11 +112,18 @@
                :uri "/pets2"})]
         (is (= 404 status))))
 
+    (testing "Get pet by id is OK"
+      (let [{:keys [status body]}
+            @(call-handler app {:request-method :get :uri "/pets/2"})]
+        (is (= 200 status))
+        (is (= (get @database "1") {"name" "Sven" "type" "Dog"}))))
+
     (testing "No such method"
-      (let [{:keys [status]} @(call-handler
-                               app
-                               {:request-method :delete
-                                :uri "/pets"})]
+      (let [{:keys [status]}
+            @(call-handler
+              app
+              {:request-method :delete
+               :uri "/pets"})]
         (is (= 405 status))))
 
     (testing "OPTIONS"
