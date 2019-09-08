@@ -28,8 +28,13 @@
      {:apex/add-implicit-head? true
       :apex/resources
       {"/pets"
+       {:apex/methods
+        {:get
+         {:handler
+          (fn [req respond raise]
+            (respond {:status 200 :body (vals @database)}))}}
 
-       {:apex/validators
+        :apex/validators
         (fn [req callback raise]
           (callback
            ;; Expectation is to return a new request with
@@ -42,13 +47,7 @@
              {:value "123"}
 
              :apex/last-modified
-             {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))
-
-        :apex/methods
-        {:get
-         {:handler
-          (fn [req respond raise]
-            (respond {:status 200 :body (vals @database)}))}}}
+             {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))}
 
        "/pets/{petId}"
        {:apex/methods
