@@ -94,9 +94,12 @@
                   {:name (keyword operation-id)
                    :handler (or (get-in resource [:apex/methods method :handler])
                                 (fn [req respond raise]
+                                  ;; TODO: Create enough data for this
+                                  ;; to be fancified into HTML by
+                                  ;; later middleware.
                                   (respond
                                    {:status 500
-                                    :body (format "Missing operation: %s" operation-id)})))
+                                    :body (format "Missing method handler for OpenAPI operation %s at path %s" operation-id path)})))
                    :middleware [
                                 [wrap-conditional-request (:apex/validators resource)]
                                 ]}}))])))
