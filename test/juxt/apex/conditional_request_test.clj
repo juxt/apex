@@ -6,7 +6,6 @@
    [clojure.string :as str]
    [clojure.tools.logging :as log]
    [clojure.test :refer [deftest is testing]]
-   [jsonista.core :as j]
    [juxt.apex.request :refer [handler]]
    [juxt.apex.yaml :as yaml]
    [juxt.apex.test-util :refer [call-handler]]
