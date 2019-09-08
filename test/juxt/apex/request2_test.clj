@@ -18,13 +18,14 @@
            {:type "goldfish"}
            {:type "lizard"}])
 
-#_(let
+(let
     [doc (yaml/parse-string
           (slurp
            (io/resource "juxt/apex/openapi-examples/petstore.yaml")))
      app (openapi-handler
           doc
-          {:apex/resources
+          {:apex/add-implicit-head? true
+           :apex/resources
            {"/pets"
 
             {:apex/validators
@@ -48,7 +49,7 @@
                (fn [req respond raise]
                  (respond {:status 200 :body pets}))}}}}})]
 
-  @(call-handler app {:request-method :get :uri "/pets"})
+  @(call-handler app {:request-method :head :uri "/pets"})
   )
 
 (deftest app-test
@@ -108,7 +109,27 @@
               {:request-method :options
                :uri "/pets"})]
         (is (= 200 status))
-        (is (= {"Allow" "GET,POST,OPTIONS"} headers))))
+        (is (= {"Allow" "GET,HEAD,POST,OPTIONS"} headers))))
+
+    (testing "HEAD"
+      (let [head-response
+            @(call-handler
+              app
+              {:request-method :head
+               :uri "/pets"})
+            get-response
+            @(call-handler
+              app
+              {:request-method :get
+               :uri "/pets"})]
+        (testing "HEAD is successful"
+          (is (= 200 (:status head-response))))
+        (testing "GET and HEAD have identical headers"
+          (is (= (:headers get-response) (:headers head-response))))
+        (testing "Body of HEAD is nil"
+          (is (nil? (:body head-response)))
+          ;; And not just because the GET body is nil
+          (is (not (nil? (:body get-response)))))))
 
     (testing "Conditional requests"
 

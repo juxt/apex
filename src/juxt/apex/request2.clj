@@ -64,26 +64,42 @@
 
 ;; -- END: Conditional Requests --
 
-(defn openapi-handler [doc options]
+(defn head-method
+  "Note: the Ring core middleware wrap-head calls into the handler. This
+  is an optimized version which does not."
+  [resource]
+  {:head
+   {:handler (fn [req respond raise] (respond {:status 200}))
+    :middleware [
+                 [wrap-conditional-request (:apex/validators resource)]
+                 ]}})
+
+(defn openapi-handler [doc {:apex/keys [resources add-implicit-head?]
+                            :or {add-implicit-head? true}
+                            :as options}]
   (let [routes
         (vec
          (for [[path path-item] (get doc "paths")]
-           (let [resource (get-in options [:apex/resources path])]
+           (let [resource (get resources path)]
              [path
-              (apply merge
-                     (for [[method operation] path-item
-                           :let [method (keyword method)
-                                 operation-id (get operation "operationId")]]
-                       {method
-                        {:name (keyword operation-id)
-                         :handler (or (get-in resource [:apex/methods method :handler])
-                                      (fn [req respond raise]
-                                        (respond
-                                         {:status 500
-                                          :body (format "Missing operation: %s" operation-id)})))
-                         :middleware [
-                                      [wrap-conditional-request (:apex/validators resource)]
-                                      ]}}))])))
+              (apply
+               merge
+               ;; Support default HEAD method
+               ;; TODO: Make optional
+               (when add-implicit-head? (head-method resource))
+               (for [[method operation] path-item
+                     :let [method (keyword method)
+                           operation-id (get operation "operationId")]]
+                 {method
+                  {:name (keyword operation-id)
+                   :handler (or (get-in resource [:apex/methods method :handler])
+                                (fn [req respond raise]
+                                  (respond
+                                   {:status 500
+                                    :body (format "Missing operation: %s" operation-id)})))
+                   :middleware [
+                                [wrap-conditional-request (:apex/validators resource)]
+                                ]}}))])))
 
         router
         (ring/router
