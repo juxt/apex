@@ -64,17 +64,26 @@
 (defn head-method
   "Note: the Ring core middleware wrap-head calls into the handler. This
   is an optimized version which does not."
-  [resource]
+  [resource {:apex/keys [handler-middleware-transform]}]
   {:head
    {:handler (fn [req respond raise] (respond {:status 200}))
-    :middleware [
-                 [wrap-conditional-request (:apex/validators resource)]
-                 ]}})
+    :middleware ((or handler-middleware-transform (fn [_ mw] mw))
+                 resource
+                 [rrc/coerce-request-middleware
+                  [wrap-conditional-request (:apex/validators resource)]
+                  ])}})
 
 (defn openapi->reitit-routes
   "Create a sequence of Reitit route/resource pairs from a given OpenAPI
   document"
-  [doc {:apex/keys [resources add-implicit-head?]}]
+  [doc
+   {:apex/keys
+    [resources ;; TODO: document this
+     handler-middleware-transform
+     add-implicit-head? ;; whether HEAD should be supported implicitly
+     ]
+    :or {add-implicit-head? true}
+    :as options}]
   (vec
    (for [[path path-item] (get doc "paths")]
      (let [resource (get resources path)]
@@ -82,7 +91,7 @@
         (apply
          merge
          ;; Support default HEAD method
-         (when add-implicit-head? (head-method resource))
+         (when add-implicit-head? (head-method resource options))
          (for [[method operation] path-item
                :let [method (keyword method)
                      operation-id (get operation "operationId")]]
@@ -97,27 +106,36 @@
                              {:status 500
                               :body (format "Missing method handler for OpenAPI operation %s at path %s" operation-id path)})))
              :coercion coercion/coercion
-             :middleware
-             [rrc/coerce-request-middleware
-              [wrap-conditional-request (:apex/validators resource)]
-              ]}}))]))))
+             :middleware ((or handler-middleware-transform (fn [_ mw] mw))
+                          resource
+                          [rrc/coerce-request-middleware
+                           [wrap-conditional-request (:apex/validators resource)]
+                           ])}}))]))))
 
-(defn openapi->reitit-router [doc options]
+
+(defn openapi->reitit-router
+  [doc
+   {:apex/keys
+    [global-middleware-transform ;; function to process a vector of middleware
+     ]
+    :or {global-middleware-transform identity}
+    :as options}]
   (ring/router
    [""
     (openapi->reitit-routes doc options)
     {:data {:middleware
-     [
-      [add-api-middleware doc] ; universal
-      ]}}]))
+            (global-middleware-transform
+             [
+              [add-api-middleware doc]  ; universal
+              ])}}]))
 
 (defn openapi-handler
   "Create a Ring handler from an OpenAPI document, with options"
-  [doc {:apex/keys [resources
-                    add-implicit-head?
-                    default-handler]
-        :or {add-implicit-head? true}
-        :as options}]
+  [doc
+   {:apex/keys
+    [default-handler ;; TODO: document this
+     ]
+    :as options}]
   (ring/ring-handler
    (openapi->reitit-router doc options)
    (or default-handler (ring/create-default-handler))))
