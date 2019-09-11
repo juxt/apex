@@ -2,12 +2,9 @@
 
 (ns juxt.apex.request2
   (:require
-   [reitit.core :as r]
+   [juxt.apex.coercion :as coercion]
    [reitit.ring :as ring]
-   [clojure.java.io :as io]
-   [clojure.tools.logging :as log]
-   [juxt.apex.yaml :as yaml]
-   [ring.mock.request :as mock]))
+   [reitit.ring.coercion :as rrc]))
 
 ;; An attempt to create individual pipelines with a Reitit structure
 ;; programmatically.
@@ -74,7 +71,10 @@
                  [wrap-conditional-request (:apex/validators resource)]
                  ]}})
 
-(defn openapi->reitit-routes [doc {:apex/keys [resources add-implicit-head?]}]
+(defn openapi->reitit-routes
+  "Create a sequence of Reitit route/resource pairs from a given OpenAPI
+  document"
+  [doc {:apex/keys [resources add-implicit-head?]}]
   (vec
    (for [[path path-item] (get doc "paths")]
      (let [resource (get resources path)]
@@ -96,20 +96,28 @@
                             (respond
                              {:status 500
                               :body (format "Missing method handler for OpenAPI operation %s at path %s" operation-id path)})))
-             :middleware [
-                          [wrap-conditional-request (:apex/validators resource)]
-                          ]}}))]))))
+             :coercion coercion/coercion
+             :middleware
+             [rrc/coerce-request-middleware
+              [wrap-conditional-request (:apex/validators resource)]
+              ]}}))]))))
 
 (defn openapi->reitit-router [doc options]
   (ring/router
    [""
-    {:middleware
+    (openapi->reitit-routes doc options)
+    {:data {:middleware
      [
-      [add-api-middleware doc]
-      ]}
-    (openapi->reitit-routes doc options)]))
+      [add-api-middleware doc] ; universal
+      ]}}]))
 
-(defn openapi-handler [doc {:apex/keys [resources add-implicit-head?]
-                            :or {add-implicit-head? true}
-                            :as options}]
-  (ring/ring-handler (openapi->reitit-router doc options) (ring/create-default-handler)))
+(defn openapi-handler
+  "Create a Ring handler from an OpenAPI document, with options"
+  [doc {:apex/keys [resources
+                    add-implicit-head?
+                    default-handler]
+        :or {add-implicit-head? true}
+        :as options}]
+  (ring/ring-handler
+   (openapi->reitit-router doc options)
+   (or default-handler (ring/create-default-handler))))
