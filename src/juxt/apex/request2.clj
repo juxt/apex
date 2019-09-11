@@ -74,43 +74,42 @@
                  [wrap-conditional-request (:apex/validators resource)]
                  ]}})
 
+(defn openapi->reitit-routes [doc {:apex/keys [resources add-implicit-head?]}]
+  (vec
+   (for [[path path-item] (get doc "paths")]
+     (let [resource (get resources path)]
+       [path
+        (apply
+         merge
+         ;; Support default HEAD method
+         (when add-implicit-head? (head-method resource))
+         (for [[method operation] path-item
+               :let [method (keyword method)
+                     operation-id (get operation "operationId")]]
+           {method
+            {:name (keyword operation-id)
+             :handler (or (get-in resource [:apex/methods method :handler])
+                          (fn [req respond raise]
+                            ;; TODO: Create enough data for this
+                            ;; to be fancified into HTML by
+                            ;; later middleware.
+                            (respond
+                             {:status 500
+                              :body (format "Missing method handler for OpenAPI operation %s at path %s" operation-id path)})))
+             :middleware [
+                          [wrap-conditional-request (:apex/validators resource)]
+                          ]}}))]))))
+
+(defn openapi->reitit-router [doc options]
+  (ring/router
+   [""
+    {:middleware
+     [
+      [add-api-middleware doc]
+      ]}
+    (openapi->reitit-routes doc options)]))
+
 (defn openapi-handler [doc {:apex/keys [resources add-implicit-head?]
                             :or {add-implicit-head? true}
                             :as options}]
-  (let [routes
-        (vec
-         (for [[path path-item] (get doc "paths")]
-           (let [resource (get resources path)]
-             [path
-              (apply
-               merge
-               ;; Support default HEAD method
-               ;; TODO: Make optional
-               (when add-implicit-head? (head-method resource))
-               (for [[method operation] path-item
-                     :let [method (keyword method)
-                           operation-id (get operation "operationId")]]
-                 {method
-                  {:name (keyword operation-id)
-                   :handler (or (get-in resource [:apex/methods method :handler])
-                                (fn [req respond raise]
-                                  ;; TODO: Create enough data for this
-                                  ;; to be fancified into HTML by
-                                  ;; later middleware.
-                                  (respond
-                                   {:status 500
-                                    :body (format "Missing method handler for OpenAPI operation %s at path %s" operation-id path)})))
-                   :middleware [
-                                [wrap-conditional-request (:apex/validators resource)]
-                                ]}}))])))
-
-        router
-        (ring/router
-         [""
-          {:middleware
-           [
-            [add-api-middleware doc]
-            ]}
-          routes])]
-
-    (ring/ring-handler router (ring/create-default-handler))))
+  (ring/ring-handler (openapi->reitit-router doc options) (ring/create-default-handler)))
