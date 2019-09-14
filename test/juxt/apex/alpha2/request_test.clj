@@ -1,19 +1,20 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns juxt.apex.request2-test
+(ns juxt.apex.alpha2.request-test
   (:require
    [clojure.java.io :as io]
-   [clojure.string :as str]
-   [juxt.apex.util :refer [to-rfc-1123-date-time from-rfc-1123-date-time]]
-   [clojure.tools.logging :as log]
+   [clojure.pprint :refer [pprint]]
    [clojure.test :refer [deftest is testing use-fixtures]]
-   [jsonista.core :as j]
-   [juxt.apex.request2 :refer [openapi-handler]]
-   [juxt.apex.yaml :as yaml]
-   [ring.mock.request :as mock]))
+   [clojure.tools.logging :as log]
+   [juxt.apex.alpha2.request :refer [openapi-handler]]
+   [juxt.apex.alpha2.util :refer [to-rfc-1123-date-time]]
+   [juxt.apex.yaml :as yaml]))
 
-;; The outer handler, for testing Apex middleware
+;; The outer handler, for testing Apex middleware.
 (def ^:dynamic *app*)
+
+;; An atom that can store state to compare against expectations.
+(def ^:dynamic *results*)
 
 (def database
   (atom {"1" {"name" "Sven" "type" "Dog"}
@@ -22,6 +23,13 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
+(defn collate-results [h]
+  (fn [req respond raise]
+    (h req
+       (fn [response]
+         (swap! *results* assoc :request req :response response)
+         (respond response)) raise)))
+
 (defn test-handler []
   (let [doc (yaml/parse-string
              (slurp
@@ -29,6 +37,8 @@
     (openapi-handler
      doc
      {:apex/add-implicit-head? true
+      :apex/handler-middleware-transform
+      (fn [_ mw] (conj mw collate-results))
       :apex/resources
       {"/pets"
        {:apex/methods
@@ -74,7 +84,11 @@
      (fn [err] (deliver p err)))
     @p))
 
-(use-fixtures :once (fn [f] (binding [*app* (test-handler)] (f))))
+(use-fixtures :once
+  (fn [f]
+    (binding [*app* (test-handler)
+              *results* (atom {})]
+      (f))))
 
 (deftest happy-path-test
   (testing "GET /pets is OK and returns pets"
@@ -86,15 +100,45 @@
     (let [{:keys [status body]}
           (request {:request-method :get :uri "/pets/2"})]
       (is (= 200 status))
-      (is (= (get @database "1") {"name" "Sven" "type" "Dog"}))
-      )))
+      (is (= (get @database "1") {"name" "Sven" "type" "Dog"})))))
+
+;; TODO: Write up request2_test.adoc to explain the motivations behind
+;; this ns.
+
+(defn ppr-str [x]
+  (with-out-str (pprint x)))
+
+(deftest param-test
+  (testing "Path parameters are present and coerced to expected types"
+    (request {:request-method :get :uri "/pets/2"})
+
+    (log/trace (-> @*results* :request :reitit.core/match ppr-str))
+
+    (is (= {:petId "2"} (-> @*results* :request :path-params)))
+
+    (is (-> @*results* :request :apex/parameters))
+
+    (log/trace "raw request params "(-> @*results* :request :path-params))
+    (log/trace "schema params" (pr-str (-> @*results* :request :apex/parameters)))
+
+
+
+    ;;(log/trace (-> @*results* :request :parameters :path))
+
+
+
+    #_(let [path-params (get-in @*results* [:request :parameters :path])]
+      (is path-params))
+    )
+
+  )
 
 (deftest not-found-test
   (testing "Not found"
     (let [{:keys [status]}
           (request
-            {:request-method :get
-             :uri "/pets2"})]
+           {:request-method :get
+            :uri "/pets2"})]
       (is (= 404 status)))))
 
 ;; Reitit is able to return a 405 if the correct URL is chosen but

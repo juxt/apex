@@ -1,10 +1,15 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns juxt.apex.coercion
+(ns juxt.apex.alpha2.reitit-play
   (:require
    [reitit.coercion :as coercion]
+   [reitit.ring.coercion :as rrc]
+   [reitit.core :as r]
+   [reitit.ring :as ring]
    [juxt.jinx-alpha :as jinx]
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [reitit.coercion.schema]
+   [schema.core :as s]))
 
 (defn create [opts]
   (reify coercion/Coercion
@@ -57,4 +62,30 @@
       #_(if (coerce-response? schema)
           (coercion/-request-coercer this :response schema)))))
 
-(def coercion (create {}))
+(def coercion
+  (create
+   {}))
+
+(def router
+  (ring/router
+   ["/{company}/users/{user-id}"
+    {:name ::user-view
+     :get {:handler (fn [req] {:status 200 :body (get req :parameters)})
+           :coercion coercion
+           :parameters {:path {:company {"type" "string"}
+                               :user-id {"type" "integer"}}}}}]
+   {:data {:middleware [rrc/coerce-request-middleware]}}))
+
+(def app
+  (ring/ring-handler
+   router
+   (fn [_] {:status 500 :body "default handler applied"})))
+
+(app {:request-method :get
+      :uri "/juxt/users/123"})
+
+;; TODO: Make this work with coercions!
+
+
+;; TODO: Convert OpenAPI to JSON Schema prior to calling this to
+;; ensure int32 gets turned to integer
