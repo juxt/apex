@@ -8,6 +8,7 @@
    [juxt.apex.dev :as dev]
    [juxt.apex.redoc :as redoc]
    [juxt.apex.doc :as doc]
+   [juxt.apex.util :refer [to-rfc-1123-date-time from-rfc-1123-date-time]]
    [juxt.apex.format :as format]
    [juxt.jinx-alpha :as jinx]
    [muuntaja.core :as m]
@@ -302,15 +303,6 @@
 
 (defmethod validator->header :apex/entity-tag
   [[_ v]] ["ETag" (:value v)])
-
-(defn to-rfc-1123-date-time [instant]
-  (.format java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME
-           (java.time.ZonedDateTime/ofInstant instant (java.time.ZoneId/of "GMT"))))
-
-(defn from-rfc-1123-date-time [s]
-  (some->> s
-           (.parse java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME)
-           (java.time.Instant/from)))
 
 (defmethod validator->header :apex/last-modified
   [[_ v]]

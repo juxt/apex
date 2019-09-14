@@ -4,6 +4,7 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str]
+   [juxt.apex.util :refer [to-rfc-1123-date-time from-rfc-1123-date-time]]
    [clojure.tools.logging :as log]
    [clojure.test :refer [deftest is testing use-fixtures]]
    [jsonista.core :as j]
@@ -162,7 +163,7 @@
                 (request {:request-method :get
                           :uri "/pets"
                           :headers {"if-modified-since"
-                                    (juxt.apex.request/to-rfc-1123-date-time
+                                    (to-rfc-1123-date-time
                                      (java.time.Instant/parse "2019-01-01T00:00:00Z"))}})]
 
             (testing "304 if we use a future date in the request"
@@ -172,7 +173,7 @@
                 (request {:request-method :get
                           :uri "/pets"
                           :headers {"if-modified-since"
-                                    (juxt.apex.request/to-rfc-1123-date-time
+                                    (to-rfc-1123-date-time
                                      (java.time.Instant/parse "2010-01-01T00:00:00Z"))}})]
 
             (testing "200 if we use a prior date in the request"

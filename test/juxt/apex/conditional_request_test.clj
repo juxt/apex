@@ -7,6 +7,7 @@
    [clojure.tools.logging :as log]
    [clojure.test :refer [deftest is testing]]
    [juxt.apex.request :refer [handler]]
+   [juxt.apex.util :refer [to-rfc-1123-date-time from-rfc-1123-date-time]]
    [juxt.apex.yaml :as yaml]
    [juxt.apex.test-util :refer [call-handler]]
    [ring.mock.request :as mock]))
@@ -70,7 +71,7 @@
               @(call-handler h (-> (mock/request
                                     :get "http://petstore.swagger.io/v1/pets")
                                    (mock/header "if-modified-since"
-                                                (juxt.apex.request/to-rfc-1123-date-time
+                                                (to-rfc-1123-date-time
                                                  (java.time.Instant/parse "2019-01-01T00:00:00Z")))))]
           (testing "304 if we use a future date in the request"
             (is (= 304 status))))
@@ -79,7 +80,7 @@
               @(call-handler h (-> (mock/request
                                     :get "http://petstore.swagger.io/v1/pets")
                                    (mock/header "if-modified-since"
-                                                (juxt.apex.request/to-rfc-1123-date-time
+                                                (to-rfc-1123-date-time
                                                  (java.time.Instant/parse "2010-01-01T00:00:00Z")))))]
           (testing "200 if we use a prior date in the request"
             (is (= 200 status)))
