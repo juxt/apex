@@ -6,6 +6,7 @@
    [juxt.jinx-alpha :as jinx]
    [juxt.apex.alpha2.parameters :as params]
    [juxt.apex.alpha2.conditional-requests :as condreq]
+   [juxt.apex.alpha2.head :as head]
    [reitit.ring :as ring]))
 
 ;; An attempt to create individual pipelines with a Reitit structure
@@ -16,20 +17,6 @@
    :wrap (fn [h api]
            (fn [req respond raise]
              (h req respond raise)))})
-
-(defn head-method
-  "Note: the Ring core middleware wrap-head calls into the handler. This
-  is an optimized version which does not."
-  [resource {:apex/keys [handler-middleware-transform]}]
-  {:head
-   {:handler (fn [req respond raise] (respond {:status 200}))
-    :middleware ((or handler-middleware-transform (fn [_ mw] mw))
-                 resource
-                 [
-                  ;; TODO: Add wrap-coerce-parameters with GET's
-                  ;; definition
-                  [condreq/wrap-conditional-request (:apex/validators resource)]
-                  ])}})
 
 (defn openapi->reitit-routes
   "Create a sequence of Reitit route/resource pairs from a given OpenAPI
@@ -49,7 +36,7 @@
         (apply
          merge
          ;; Support default HEAD method
-         (when add-implicit-head? (head-method resource options))
+         (when add-implicit-head? (head/implicit-head-method resource options))
          (for [[method
                 {operation-id "operationId"
                  parameters "parameters"}
