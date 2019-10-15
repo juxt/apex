@@ -2,7 +2,7 @@
   (:require
    [clojure.tools.logging :as log]
    [juxt.jinx-alpha :as jinx]
-   [juxt.apex.alpha2.debug :as debug]
+   [juxt.apex.alpha2.trace :as trace]
    [juxt.apex.alpha2.parameters :as params]
    [juxt.apex.alpha2.response :as response]
    [juxt.apex.alpha2.conditional-requests :as condreq]
@@ -29,7 +29,6 @@
          ;; Support default HEAD method
          (when add-implicit-head? (head/implicit-head-method resource options))
          (for [[method {operation-id "operationId"
-                        parameters "parameters"
                         :as operation}]
                path-item
                :let [method (keyword method)]]
@@ -55,11 +54,14 @@
                            ([req] default-response)
                            ([req respond raise]
                             (respond default-response)))))
-             :middleware ((or handler-middleware-transform (fn [_ mw] mw))
-                          resource
-                          [[params/wrap-coerce-parameters parameters]
-                           [condreq/wrap-conditional-request (:apex/validators resource)]
-                           ])}}))]))))
+
+             :middleware
+             ((or handler-middleware-transform (fn [_ mw] mw))
+              resource
+              [params/wrap-coerce-parameters
+               [condreq/wrap-conditional-request (:apex/validators resource)]
+               trace/wrap-trace
+               ])}}))]))))
 
 (defn openapi->reitit-router
   [doc options]

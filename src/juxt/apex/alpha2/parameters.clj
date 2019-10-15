@@ -175,7 +175,7 @@
    (fn [acc k v] (assoc acc k (mapv second v)))
    {}
    (->> (str/split qs #"&")
-        (filter (comp not str/blank?) )
+        (filter (comp not str/blank?))
         (map #(str/split % #"=") )
         (group-by first))))
 
@@ -240,8 +240,9 @@
 (defn extract-undeclared-params [{:apex/keys [params qsm] :as state}]
   (-> (reduce-kv
        (fn [state k v]
-         (update state :apex/params conj [k {:value v}])
-         )
+         (cond-> state
+           (not= k "trace")
+           (update :apex/params conj [k {:value v}])))
        state
        qsm)
       (dissoc :apex/qsm)))
@@ -351,16 +352,22 @@
      (->
       (reduce
        (fn [{:apex/keys [params qsm errors] :as acc}
-            {:strs [in style explode schema required]
+            {:strs [in style explode schema]
              n "name"
              allow-empty-value "allowEmptyValue"
-             :or {style "form"}
              :as param}]
          ;; When style is form, the default value is true. For all other
          ;; styles, the default value is false.
          (case in
            "query"
-           (let [explode (if (some? explode) explode (= style "form"))]
+           (let [explode (if (some? explode) explode (= style "form"))
+                 required (get param "required" false)
+                 style (get param "style" "form")
+                 param (assoc
+                        param
+                        "explode" explode
+                        "required" required
+                        "style" style)]
              (if (and (.equals "object" (get schema "type"))
                       (or (.equals "form" style) (.equals "deepObject" style))
                       explode)
@@ -478,7 +485,7 @@
                 query-parameters
                 (assoc :query (parse-query-string (:query-string req) parameters)))))]
 
-       (fn [h _]
+       (fn [h]
          (fn
            ([req] (h (process-req req)))
            ([req respond raise] (h (process-req req) respond raise))))))

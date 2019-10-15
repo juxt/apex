@@ -58,26 +58,25 @@
                  (monospace (escape (pr-str v)))))))))
 
 (defn vec->table
-  ([v]
-   (vec->table nil v))
-  ([heads v]
-   (el
-    "table"
-    (when heads
+  [cols data]
+  (el
+   "table"
+   (when (not-empty (map :head cols))
+     (el
+      "thead"
       (el
-       "thead"
-       (el
-        "row"
-        (for [h heads]
-          (el "th" h)))))
-    (el
-     "tbody"
-     (for [row v]
-       (el
-        "tr"
-        (for [v row]
-          (el "td" (if (and (map? v) (not-empty v))
-                     (map->table v)
-                     (monospace (escape (pr-str v)))))
-          )
-        ))))))
+       "row"
+       (for [h (map :head cols)]
+         (el "th" h)))))
+   (el
+    "tbody"
+    (for [row data]
+      (el
+       "tr"
+       (for [{:keys [get render style]} cols]
+         (let [v (get row)]
+           (el "td" (if (and (map? v) (not-empty v))
+                      (map->table v)
+                      ((or style monospace) (escape ((or render pr-str) v))))))
+         )
+       )))))
