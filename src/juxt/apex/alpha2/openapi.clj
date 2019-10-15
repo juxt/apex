@@ -1,22 +1,13 @@
-;; Copyright © 2019, JUXT LTD.
-
-(ns juxt.apex.alpha2.request
+(ns juxt.apex.alpha2.openapi
   (:require
    [clojure.tools.logging :as log]
    [juxt.jinx-alpha :as jinx]
+   [juxt.apex.alpha2.debug :as debug]
    [juxt.apex.alpha2.parameters :as params]
+   [juxt.apex.alpha2.response :as response]
    [juxt.apex.alpha2.conditional-requests :as condreq]
    [juxt.apex.alpha2.head :as head]
    [reitit.ring :as ring]))
-
-;; An attempt to create individual pipelines with a Reitit structure
-;; programmatically.
-
-(def add-api-middleware
-  {:name "Add API"
-   :wrap (fn [h api]
-           (fn [req respond raise]
-             (h req respond raise)))})
 
 (defn openapi->reitit-routes
   "Create a sequence of Reitit route/resource pairs from a given OpenAPI
@@ -37,46 +28,50 @@
          merge
          ;; Support default HEAD method
          (when add-implicit-head? (head/implicit-head-method resource options))
-         (for [[method
-                {operation-id "operationId"
-                 parameters "parameters"}
-                operation] path-item
+         (for [[method {operation-id "operationId"
+                        parameters "parameters"
+                        :as operation}]
+               path-item
                :let [method (keyword method)]]
            {method
-            {:name (keyword operation-id)
-             :handler (or (get-in resource [:apex/methods method :handler])
-                          (fn [req respond raise]
-                            ;; TODO: Create enough data for this
-                            ;; to be fancified into HTML by
-                            ;; later middleware.
-                            (respond
-                             {:status 500
-                              :body (format "Missing method handler for OpenAPI operation %s at path %s" operation-id path)})))
+            {:apex/operation operation
+             :name (keyword operation-id)
+             :handler (let [default-response
+                            {:status 500
+                             ;; TODO: Create enough data for this to
+                             ;; be fancified into HTML by later
+                             ;; middleware.
+                             :body (format "Missing method handler for OpenAPI operation %s at path %s\n" operation-id path)}]
+                        (or
+
+                         ;; TODO: Extract this into a ring middleware
+                         ;; which does not call the delegate (or if it
+                         ;; does, embeds the content in an HTML page)
+                         ;;(debug/debug-handler operation)
+
+                         (get-in resource [:apex/methods method :handler])
+
+                         (fn
+                           ([req] default-response)
+                           ([req respond raise]
+                            (respond default-response)))))
              :middleware ((or handler-middleware-transform (fn [_ mw] mw))
                           resource
-                          [
-                           [params/wrap-coerce-parameters parameters]
+                          [[params/wrap-coerce-parameters parameters]
                            [condreq/wrap-conditional-request (:apex/validators resource)]
                            ])}}))]))))
 
 (defn openapi->reitit-router
-  [doc
-   {:apex/keys
-    [global-middleware-transform ;; function to process a vector of middleware
-     ]
-    :or {global-middleware-transform identity}
-    :as options}]
+  [doc options]
   (ring/router
    [""
     (openapi->reitit-routes doc options)
     {:data {:middleware
-            (global-middleware-transform
-             [   ; universal
-              [add-api-middleware doc] ; TODO: remove, but it's a good example
-              ])}}]))
+            [[response/server-header-middleware "JUXT Apex"]
 
-;; TODO: Rename to openapi/compile-handler or similar
-(defn openapi-handler
+             ]}}]))
+
+(defn compile-handler
   "Create a Ring handler from an OpenAPI document, with options"
   [doc
    {:apex/keys

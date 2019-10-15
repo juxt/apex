@@ -236,11 +236,14 @@
 
          :apex/request req})))))
 
-(defn wrap-clean-response [h]
-  (fn [req respond raise]
-    (h req
-       (fn [response] (respond (select-keys response [:status :headers :body])))
-       raise)))
+
+(def wrap-clean-response
+  {:description "Ensures all extraneous entries are dissociated from the response map"
+   :wrap (fn [h]
+           (fn [req respond raise]
+             (h req
+                (fn [response] (respond (select-keys response [:status :headers :body])))
+                raise)))})
 
 (defn operation-handler [req opts]
   (let [operation (:oas/operation req)
@@ -334,10 +337,20 @@
         ;; No validators
         (h req respond raise)))))
 
+(defn wrap-clean-response [h]
+  (fn [req respond raise]
+    (h req
+       (fn [response] (respond (select-keys response [:status :headers :body])))
+       raise)))
+
+(def clean-response-middleware
+  {:description "Ensures all extraneous entries are dissociated from the response map"
+   :wrap wrap-clean-response})
+
 (defn wrap-server-header [h]
   (fn [req respond raise]
     (h req (fn [response]
-             (respond (assoc-in response [:headers "server"] "JUXT Apex")))
+             (respond (assoc-in response [:headers "server"] "JUXT Apex alpha 1")))
        raise)))
 
 ;; TODO: Refactoring: Rename keyword ns :oas to :apex.oas
@@ -361,6 +374,16 @@
            m
            req {:status 500
                 :body {:error error}})))))))
+
+#_(def handler
+  (fn
+    ([req]
+     {:status 200
+      :body "OK\n"})
+    ([req respond raise]
+     (respond {:status 200
+               :body "OK\n"})))
+  )
 
 (defn handler [api options]
   (->

@@ -9,11 +9,16 @@
   is an optimized version which does not."
   [resource {:apex/keys [handler-middleware-transform]}]
   {:head
-   {:handler (fn [req respond raise] (respond {:status 200}))
-    :middleware ((or handler-middleware-transform (fn [_ mw] mw))
-                 resource
-                 [
-                  ;; TODO: Add wrap-coerce-parameters with GET's
-                  ;; definition
-                  [condreq/wrap-conditional-request (:apex/validators resource)]
-                  ])}})
+   {:handler
+    (fn
+      ([req] {:status 200})
+      ([req respond raise]
+       (respond {:status 200})))
+    :middleware
+    ((or handler-middleware-transform (fn [_ mw] mw))
+     resource
+     [
+      ;; TODO: Add wrap-coerce-parameters with GET's
+      ;; definition
+      [condreq/wrap-conditional-request (:apex/validators resource)]
+      ])}})

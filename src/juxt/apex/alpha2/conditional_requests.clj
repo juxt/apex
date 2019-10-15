@@ -20,22 +20,40 @@
   {:name "Conditional request"
    :wrap
    (fn [h validators]
-     (fn [req respond raise]
-       (let [operation (:oas/operation req)
-             opId (get operation "operationId")]
-         (if validators
-           (validators
-            req
-            (fn [req]
-              (let [since (from-rfc-1123-date-time (get-in req [:headers "if-modified-since"]))
-                    modified (:value (:apex/last-modified req))]
+     (fn
+       ([req]
+        (let [operation (:oas/operation req)
+              opId (get operation "operationId")]
+          (if validators
+            (validators
+             req
+             (fn [req]
+               (let [since (from-rfc-1123-date-time (get-in req [:headers "if-modified-since"]))
+                     modified (:value (:apex/last-modified req))]
 
-                (if (and since modified (not (since? modified since)))
-                  (respond {:status 304})
-                  (h req
-                     (fn [response]
-                       (respond (update response :headers merge (into {} (map validator->header (select-keys req [:apex/entity-tag :apex/last-modified]))))))
-                     raise))))
-            raise)
-           ;; No validators
-           (h req respond raise)))))})
+                 (if (and since modified (not (since? modified since)))
+                   {:status 304}
+                   (let [response (h req)]
+                     (update response :headers merge (into {} (map validator->header (select-keys req [:apex/entity-tag :apex/last-modified]))))))))
+             (fn [ex] (throw ex)))
+            ;; No validators
+            (h req))))
+       ([req respond raise]
+        (let [operation (:oas/operation req)
+              opId (get operation "operationId")]
+          (if validators
+            (validators
+             req
+             (fn [req]
+               (let [since (from-rfc-1123-date-time (get-in req [:headers "if-modified-since"]))
+                     modified (:value (:apex/last-modified req))]
+
+                 (if (and since modified (not (since? modified since)))
+                   (respond {:status 304})
+                   (h req
+                      (fn [response]
+                        (respond (update response :headers merge (into {} (map validator->header (select-keys req [:apex/entity-tag :apex/last-modified]))))))
+                      raise))))
+             raise)
+            ;; No validators
+            (h req respond raise))))))})

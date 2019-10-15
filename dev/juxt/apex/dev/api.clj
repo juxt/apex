@@ -4,7 +4,6 @@
   (:require
    [integrant.core :as ig]
    [clojure.java.io :as io]
-   [juxt.apex.request :refer [handler]]
    [juxt.apex.doc :as doc]
    [clojure.tools.logging :as log]
    [juxt.apex.yaml :as yaml]))
@@ -21,16 +20,17 @@
 
 (defmethod ig/init-key ::api
   [_ {:juxt.apex/keys [document]
-      :juxt.apex.dev/keys [new-handler-on-each-request?]
       :as options}]
 
-  (if new-handler-on-each-request?
+  #_(if new-handler-on-each-request?
     ;; Returns a handler that does all the work in reconstructing the
     ;; handler before calling it. Intended for dev mode only.
     (fn [req respond raise]
       ;; TODO: Detect we're in prod mode (by checking existence of a
       ;; dev var) and warn if we're in this code path:
       #_(log/warn "Loading document on request. Performance will be adversely impacted.")
+
+      (log/info "new handler creating")
 
       (if-let [doc-resource (io/resource document)]
         (let [doc (yaml/parse-string (slurp doc-resource))

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Apex debug for {{method}} on {{uri}}</title>
+    <style>
+      {{style}}
+    </style>
+  </head>
+  <body>
+    <section>
+    <h1>{{method}} {{uri}}</h1>
+    </section>
+
+
+    <section>
+    {{summary-table}}
+    </section>
+
+    <section>
+      <h2>Query parameters</h2>
+      <pre>
+{{query-parameters}}
+      </pre>
+    </section>
+
+    <section>
+      <h2>Request</h2>
+      <pre>
+{{request}}
+      </pre>
+    </section>
+
+    <section>
+      <h2>Raw request</h2>
+      <pre>
+{{raw-request}}
+      </pre>
+    </section>
+
+    {{footer}}
+  </body>
+</html>

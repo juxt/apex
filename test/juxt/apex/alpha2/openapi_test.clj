@@ -1,14 +1,15 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns juxt.apex.alpha2.request-test
+(ns juxt.apex.alpha2.openapi-test
   (:require
    [clojure.java.io :as io]
    [clojure.pprint :refer [pprint]]
    [clojure.test :refer [deftest is testing use-fixtures]]
    [clojure.tools.logging :as log]
-   [juxt.apex.alpha2.request :refer [openapi-handler]]
+   [juxt.apex.alpha2.openapi :refer [compile-handler]]
    [juxt.apex.alpha2.util :refer [to-rfc-1123-date-time]]
-   [juxt.apex.yaml :as yaml]))
+   [juxt.apex.yaml :as yaml]
+   [ring.mock.request :as mock]))
 
 ;; The outer handler, for testing Apex middleware.
 (def ^:dynamic *app*)
@@ -34,7 +35,7 @@
   (let [doc (yaml/parse-string
              (slurp
               (io/resource "juxt/apex/openapi-examples/petstore.yaml")))]
-    (openapi-handler
+    (compile-handler
      doc
      {:apex/add-implicit-head? true
       :apex/handler-middleware-transform
@@ -49,7 +50,8 @@
                       :body (vals @database)}))}}
 
         :apex/validators
-        (fn [req callback raise]
+        (fn
+          [req callback raise]
           (callback
            ;; Expectation is to return a new request with
            ;; validators merged.
@@ -111,27 +113,19 @@
 (deftest param-test
   (testing "Path parameters are present and coerced to expected types"
     (request {:request-method :get :uri "/pets/2"})
-
-    (log/trace (-> @*results* :request :reitit.core/match ppr-str))
-
     (is (= {:petId "2"} (-> @*results* :request :path-params)))
+    (is (-> @*results* :request :apex/parameters))))
 
-    (is (-> @*results* :request :apex/parameters))
+#_(mock/request :get "/?")
 
-    (log/trace "raw request params "(-> @*results* :request :path-params))
-    (log/trace "schema params" (pr-str (-> @*results* :request :apex/parameters)))
-
-
-
-    ;;(log/trace (-> @*results* :request :parameters :path))
-
-
-
-    #_(let [path-params (get-in @*results* [:request :parameters :path])]
-      (is path-params))
-    )
-
+#_(binding [*app* (test-handler)
+          *results* (atom {})]
+  (request {:request-method :get
+            :uri "/pets"
+            :query-string "foo=bar&zip=snag"})
+  (-> *results* deref :request)
   )
+
 
 (deftest not-found-test
   (testing "Not found"
