@@ -88,7 +88,10 @@
            :render str
            :style identity}
           {:head "value"
-           :get (comp :value second)}]
+           ;; TODO: Try get :error
+           :get (comp (fn [{:keys [value error]}]
+                        (or value error))
+                      second)}]
 
          (seq (get-in req [:apex/parameters :query :apex/params]))))
 

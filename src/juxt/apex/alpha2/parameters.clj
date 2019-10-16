@@ -384,7 +384,9 @@
                         muuntaja)]
 
                    (if-error value+
-                     (update acc :apex/errors conj (merge error {:apex/param [n param]}))
+                     (update acc :apex/params conj [n {:encoded-strings encoded-strings
+                                                       :error error
+                                                       :param param}])
 
                      (let [validation (jinx/validate value schema {:coercions default-coercions})]
 

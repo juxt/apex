@@ -141,8 +141,7 @@
              "schema" {"type" "null"}}])]
       (is
        (= "Empty value not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/errors 0 :apex.error/message])))
-      (is (empty? (get-in result [:apex/params])))))
+          (get-in result [:apex/params "a" :error :apex.error/message])))))
 
   (testing "default value of allowEmptyValue"
     (let [result
@@ -154,8 +153,7 @@
              "schema" {"type" "null"}}])]
       (is
        (= "Empty value not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/errors 0 :apex.error/message])))
-      (is (empty? (get-in result [:apex/params])))))
+          (get-in result [:apex/params "a" :error :apex.error/message])))))
 
   (testing "Coerce nil value to empty string"
     (let [result (parse-query-string
@@ -179,7 +177,7 @@
       (is
        (=
         "Empty value not allowed for parameter: allowEmptyValue is false"
-        (get-in result [:apex/errors 0 :apex.error/message])))))
+        (get-in result [:apex/params "a" :error :apex.error/message])))))
 
   (testing "Error when empty value for array parameter"
     (let [result
@@ -193,7 +191,7 @@
                        "items" {"type" "string"}}}])]
       (is
        (= "Empty values not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/errors 0 :apex.error/message])))))
+          (get-in result [:apex/params "a" :error :apex.error/message])))))
 
   (testing "default value for allowEmptyValue"
     (let [result
@@ -206,7 +204,7 @@
                        "items" {"type" "string"}}}])]
       (is
        (= "Empty values not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/errors 0 :apex.error/message])))))
+          (get-in result [:apex/params "a" :error :apex.error/message])))))
 
   (testing "No error when empty value for array parameter when value for allowEmptyValue is true"
     (let [result
@@ -250,7 +248,7 @@
                                      "B" {"type" "integer"}}}}])]
       (is (= {"R" "" "B" 100} (get-in result [:apex/params "color" :value]))))))
 
-;; TODO: Search for TODOs in parameters
+;; TODO: Search for TODOs in parameters.clj
 
 (deftest boolean-coercion-test
   (testing "boolean values are coerced from their query parameter value counterparts"
@@ -331,7 +329,7 @@
                     "style" "form"
                     "allowEmptyValue" false
                     "schema" {"type" "boolean"}}])
-              [:apex/errors 0 :apex.error/message]))
+              [:apex/params "a" :error :apex.error/message]))
           "a"
           "a=")))
 
@@ -346,17 +344,13 @@
      (= 100 (get-in result [:apex/params "a" :value]))))
 
   (testing "Illegal integer format returns an error"
-    (let [errors
-          (get-in (parse-query-string
-                   "a=10d0"
-                   [{"name" "a"
-                     "in" "query"
-                     "style" "form"
-                     "schema" {"type" "integer"}}]
-
-                   ) [:apex/errors])]
-      (is (= 1 (count errors))))))
-
+    (is (get-in (parse-query-string
+                 "a=10d0"
+                 [{"name" "a"
+                   "in" "query"
+                   "style" "form"
+                   "schema" {"type" "integer"}}])
+                [:apex/params "a" :error]))))
 
 ;; TODO: Add specs which will help to drive thinking about consistent data
 
