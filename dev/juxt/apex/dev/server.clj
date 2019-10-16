@@ -22,7 +22,7 @@
 
   (let [doc (yaml/parse-string
              (slurp
-              (io/resource "juxt/apex/openapi-examples/petstore.yaml")))]
+              (io/resource "juxt/apex/openapi-examples/petstore-expanded.yaml")))]
     (compile-handler
      doc
      {:apex/add-implicit-head? true
