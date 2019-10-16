@@ -57,7 +57,8 @@
                             (respond default-response)))))
 
              :middleware
-             ((or handler-middleware-transform (fn [_ mw] mw))
+             (;; don't need this because reitit has :transform
+              (or handler-middleware-transform (fn [_ mw] mw))
               resource
               [params/wrap-coerce-parameters
                [condreq/wrap-conditional-request (:apex/validators resource)]
