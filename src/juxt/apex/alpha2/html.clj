@@ -35,16 +35,18 @@
 (defmacro span [class & content]
   `(str "<span class=\"" ~class "\">" (apply str ~@content) "</span>"))
 
+(defn kw->name [k]
+  (str
+   (when-let [n (namespace k)]
+     (str n "/"))
+   (name k)))
+
 (defn kw->str [k]
   (span "keyword"
-   (cond
-     (string? k) (escape (pr-str k))
-
-     (keyword? k) (str
-                   (when-let [n (namespace k)]
-                     (str n "/"))
-                   (name k))
-     :else (str k))))
+        (cond
+          (string? k) (escape (pr-str k))
+          (keyword? k) (str (kw->name k))
+          :else (str k))))
 
 (defn map->table [m]
   (el
@@ -61,7 +63,7 @@
   [cols data]
   (el
    "table"
-   (when (not-empty (map :head cols))
+   (when (not-empty (keep :head cols))
      (el
       "thead"
       (el
@@ -77,6 +79,4 @@
          (let [v (get row)]
            (el "td" (if (and (map? v) (not-empty v))
                       (map->table v)
-                      ((or style monospace) (escape ((or render pr-str) v))))))
-         )
-       )))))
+                      ((or style monospace) (escape ((or render pr-str) v))))))))))))

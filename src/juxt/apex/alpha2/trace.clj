@@ -40,73 +40,63 @@
       "request"
       (html/map->table req)
 
-      #_"summary-table"
-      #_(html/vec->table
-         [[:operation (get-in req [:reitit.core/match :data (:request-method req) :apex/operation "operationId"])]]
-         )
+      "summary-table"
+      (let [method (:request-method req)]
+        (html/vec->table
+         [{:get first :render html/kw->name :style identity}
+          {:get second}]
+         [[:operation
+           (get-in req [:reitit.core/match :data method :apex/operation "operationId"])]]))
 
       "parameters"
-      (html/vec->table
-       [{:head "name"
-         :get first
-         :render str
-         :style identity}
-        {:head "description"
-         :get (comp (getter "description") :param second)
-         :render str
-         :style identity}
-        {:head "in"
-         :get (constantly "query")
-         :render str
-         :style identity}
-        {:head "required"
-         :get (comp (getter "required") :param second)
-         :render str
-         :style identity}
-        {:head "style"
-         :get (comp (getter "style") :param second)
-         :render str
-         :style identity}
-        {:head "explode"
-         :get (comp (getter "explode") :param second)
-         :render str
-         :style identity}
-        {:head "schema"
-         :get (comp (getter "schema") :param second)
-         :render str
-         :style identity}
-        {:head "raw-values"
-         :get (comp :raw-values second)
-         :render str
-         :style identity}
-        {:head "validation"
-         :get (comp :validation second)
-         :render str
-         :style identity}
-        {:head "value"
-         :get (comp :value second)}
-        ]
+      (delay
+        (html/vec->table
+         [{:head "name"
+           :get first
+           :render str
+           :style identity}
+          {:head "description"
+           :get (comp (getter "description") :param second)
+           :render str
+           :style identity}
+          {:head "in"
+           :get (constantly "query")
+           :render str
+           :style identity}
+          {:head "required"
+           :get (comp (getter "required") :param second)
+           :render str
+           :style identity}
+          {:head "style"
+           :get (comp (getter "style") :param second)
+           :render str
+           :style identity}
+          {:head "explode"
+           :get (comp (getter "explode") :param second)
+           :render str
+           :style identity}
+          {:head "schema"
+           :get (comp (getter "schema") :param second)
+           :render str
+           :style identity}
+          {:head "raw-values"
+           :get (comp :raw-values second)
+           :render str
+           :style identity}
+          {:head "validation"
+           :get (comp :validation second)
+           :render str
+           :style identity}
+          {:head "value"
+           :get (comp :value second)}]
 
-       (seq (get-in req [:apex/parameters :query :apex/params]))
-
-       #_(map
-          (juxt
-           first
-           (comp (getter "description") :param second)
-           (comp (getter "required") :param second)
-           (comp (getter "explode") :param second)
-           (comp (getter "schema") :param second)
-           (comp :raw-values second)
-           (comp :validation second)
-           (comp :value second)
-           ;;(comp second)
-           )
-          (get-in req [:apex/parameters :query :apex/params])))
+         (seq (get-in req [:apex/parameters :query :apex/params]))))
 
       "raw-request"
-      (html/escape
-       (with-out-str
-         (pprint req)))}))})
+      (delay
+        (html/escape
+         (with-out-str
+           (pprint req))))}))})
 
 (def wrap-trace
   {:name "Trace console"
