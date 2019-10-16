@@ -6,7 +6,8 @@
    [clojure.string :as str]
    [clojure.pprint :refer [pprint]]
    [ring.util.codec :as codec]
-   [juxt.apex.alpha2.html :as html]))
+   [juxt.apex.alpha2.html :as html]
+   [juxt.apex.alpha2.util :refer [resolve-json-ref]]))
 
 (def default-template-map
   {"style" (delay (slurp (io/resource "juxt/apex/style.css")))
@@ -47,6 +48,18 @@
           {:get second}]
          [[:operation
            (get-in req [:reitit.core/match :data method :apex/operation "operationId"])]]))
+
+
+      "creation-form"
+      (delay
+        (let [doc (get-in req [:reitit.core/match :data :post :apex/openapi])]
+          (pr-str
+           (some->
+            (get-in req [:reitit.core/match :data :post :apex/operation "requestBody" "content" "application/json" "schema"])
+            (resolve-json-ref {:base-document doc})
+            first
+            ))))
+
 
       "parameters"
       (delay
