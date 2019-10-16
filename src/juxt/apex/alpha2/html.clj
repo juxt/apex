@@ -55,9 +55,12 @@
      (el
       "tr"
       (el "td" (kw->str k))
-      (el "td" (if (and (map? v) (not-empty v))
+      (el "td" (cond
+                 (some-> v meta :apex.trace/hide)
+                 "&lt;hidden&gt;"
+                 (and (map? v) (not-empty v))
                  (map->table v)
-                 (monospace (escape (pr-str v)))))))))
+                 :else (monospace (escape (pr-str v)))))))))
 
 (defn vec->table
   [cols data]
@@ -77,6 +80,7 @@
        "tr"
        (for [{:keys [get render style]} cols]
          (let [v (get row)]
-           (el "td" (if (and (map? v) (not-empty v))
+           (el "td" (cond
+                      (and (map? v) (not-empty v))
                       (map->table v)
-                      ((or style monospace) (escape ((or render pr-str) v))))))))))))
+                      :else ((or style monospace) (escape ((or render pr-str) v))))))))))))

@@ -34,6 +34,7 @@
                :let [method (keyword method)]]
            {method
             {:apex/operation operation
+             :apex/openapi (with-meta doc {:apex.trace/hide true})
              :name (keyword operation-id)
              :handler (let [default-response
                             {:status 500
