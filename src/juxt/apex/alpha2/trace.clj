@@ -79,8 +79,8 @@
            :get (comp (getter "schema") :param second)
            :render str
            :style identity}
-          {:head "raw-values"
-           :get (comp :raw-values second)
+          {:head "encoded-strings"
+           :get (comp :encoded-strings second)
            :render str
            :style identity}
           {:head "validation"

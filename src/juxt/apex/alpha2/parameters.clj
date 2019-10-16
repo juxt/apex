@@ -202,18 +202,18 @@
            (let [qsm-key (if (and explode (= style "deepObject"))
                            (str n "[" prop-key "]")
                            prop-key)]
-             (if-let [[_ encoded-values] (find qsm qsm-key)]
+             (if-let [[_ encoded-strings] (find qsm qsm-key)]
                (let [val
                      (cond
                        ;; If the requires a boolean value, we treat an
                        ;; 'empty' value as a true.
-                       (and (= typ "boolean") (nil? (first encoded-values)))
+                       (and (= typ "boolean") (nil? (first encoded-strings)))
                        true
-                       :else (first encoded-values))]
+                       :else (first encoded-strings))]
                  (-> acc
                      (update :value assoc prop-key val)
                      (update :qsm dissoc qsm-key)
-                     (update :raw-values conj [prop-key encoded-values])))
+                     (update :raw-values conj [prop-key encoded-strings])))
                acc)))
          {:qsm qsm
           :value {}
@@ -247,7 +247,7 @@
        qsm)
       (dissoc :apex/qsm)))
 
-(defn- extract-value-from-encoded-values+
+(defn- extract-value-from-encoded-strings+
   "Extract a value for the given parameter from a collection
   of (possibly) encoded values. Returns value according to parameter
   schema, or an error."
@@ -255,7 +255,7 @@
     allow-empty-value "allowEmptyValue"
     :or {style "form"}
     :as param}
-   encoded-values
+   encoded-strings
    muuntaja]
 
   (if content
@@ -263,7 +263,7 @@
     (let [[media-type {:strs [schema]}]
           ;; "The map MUST only contain one entry."
           (first content)]
-      (muuntaja/decode muuntaja media-type (first encoded-values)))
+      (muuntaja/decode muuntaja media-type (first encoded-strings)))
 
     ;; Simple Situation
     (case [(get schema "type" "string") explode]
@@ -273,13 +273,13 @@
       ;; TODO: Think about how to represent nils in query params - is there guidance here?
       ;; An empty value is an implicit nil, but how to specify nil when allowEmptyValue is false ?
       (if allow-empty-value
-        (first encoded-values)
+        (first encoded-strings)
         {:apex/error {:apex.error/message "Empty value not allowed for parameter: allowEmptyValue is false"
                       :apex.error/references [{:apex.error.reference/url ""}]}})
 
       (["boolean" false]
        ["boolean" true])
-      (if-some [val (first encoded-values)]
+      (if-some [val (first encoded-strings)]
         (if (or (.equalsIgnoreCase "false" val)
                 (.equalsIgnoreCase "no" val)
                 (.equalsIgnoreCase "nil" val))
@@ -290,12 +290,12 @@
 
       (["integer" false]          ; single param in collection, take it
        ["integer" true]) ; possibly multiple params in collection, take first
-      (if-some [val (first encoded-values)]
+      (if-some [val (first encoded-strings)]
         (try
           (Integer/parseInt val)
           (catch Exception e
-            {:apex/error {:apex.error/message "Failed to coerce value to integer"
-                          :value val
+            {:apex/error {:apex.error/message "Failed to coerce encoded string to integer"
+                          :apex.error/encoded-value val
                           :apex.error/exception e}}))
         (if allow-empty-value
           nil
@@ -303,7 +303,7 @@
 
       (["string" false]          ; single param in collection, take it
        ["string" true]) ; possibly multiple params in collection, take first
-      (if-some [val (first encoded-values)]
+      (if-some [val (first encoded-strings)]
         val
         (if allow-empty-value
           nil
@@ -311,24 +311,24 @@
 
       ["array" false]
       (str/split
-       (first encoded-values)
+       (first encoded-strings)
        (case style "form" #"," "spaceDelimited" #" " "pipeDelimited" #"\|"))
 
       ["array" true]
       (if (or
            allow-empty-value
-           (every? some? encoded-values))
-        (vec encoded-values)
+           (every? some? encoded-strings))
+        (vec encoded-strings)
         {:apex/error {:apex.error/message "Empty values not allowed for parameter: allowEmptyValue is false"}})
 
       ["object" false]
       (seq->map
        (str/split
-        (first encoded-values)
+        (first encoded-strings)
         (case style "form" #"," "spaceDelimited" #" " "pipeDelimited" #"\|")))
 
       ["object" true]
-      (->> encoded-values
+      (->> encoded-strings
            (map #(str/split % (case style "form" #"," "spaceDelimited" #" " "pipeDelimited" #"\|")))
            (into {})))))
 
@@ -374,13 +374,13 @@
 
                (extract-parameter-for-object acc [n param])
 
-               (if-let [[_ encoded-values] (find qsm n)]
+               (if-let [[_ encoded-strings] (find qsm n)]
 
                  (let [acc (update acc :apex/qsm dissoc n)
                        value+        ; + postfix indicates maybe error
-                       (extract-value-from-encoded-values+
+                       (extract-value-from-encoded-strings+
                         (assoc param "explode" explode)
-                        encoded-values
+                        encoded-strings
                         muuntaja)]
 
                    (if-error value+
@@ -390,7 +390,7 @@
 
                        (cond-> acc
                          (:valid? validation)
-                         (update :apex/params conj [n {:raw-values encoded-values
+                         (update :apex/params conj [n {:encoded-strings encoded-strings
                                                        :value (:instance validation)
                                                        :param param
                                                        :validation validation}])
