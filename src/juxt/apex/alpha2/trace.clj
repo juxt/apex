@@ -45,7 +45,7 @@
          [[:operation (get-in req [:reitit.core/match :data (:request-method req) :apex/operation "operationId"])]]
          )
 
-      "query-parameters"
+      "parameters"
       (html/vec->table
        [{:head "name"
          :get first
@@ -53,6 +53,10 @@
          :style identity}
         {:head "description"
          :get (comp (getter "description") :param second)
+         :render str
+         :style identity}
+        {:head "in"
+         :get (constantly "query")
          :render str
          :style identity}
         {:head "required"
