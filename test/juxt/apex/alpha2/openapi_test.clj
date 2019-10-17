@@ -18,11 +18,11 @@
 (def ^:dynamic *results*)
 
 (def database
-  (atom {"1" {"name" "Sven" "type" "Dog"}
-         "2" {"name" "Luna" "type" "Cat"}
-         "3" {"name" "Arya" "type" "Cat"}
-         "4" {"name" "Kaia" "type" "Cat"}
-         "5" {"name" "Vega" "type" "Dog"}}))
+  (atom {"1" {"name" "Sven" "tag" "Dog"}
+         "2" {"name" "Luna" "tag" "Cat"}
+         "3" {"name" "Arya" "tag" "Cat"}
+         "4" {"name" "Kaia" "tag" "Cat"}
+         "5" {"name" "Vega" "tag" "Dog"}}))
 
 (defn collate-results [h]
   (fn [req respond raise]
@@ -102,7 +102,9 @@
     (let [{:keys [status body]}
           (request {:request-method :get :uri "/pets/2"})]
       (is (= 200 status))
-      (is (= (get @database "1") {"name" "Sven" "type" "Dog"})))))
+      (is (= (get @database "1") {"name" "Sven" "tag" "Dog"})))))
+
+
 
 ;; TODO: Write up request2_test.adoc to explain the motivations behind
 ;; this ns.
