@@ -11,7 +11,7 @@
     <h1>{{method}} {{uri}}</h1>
     </section>
 
-    <section>
+    <section id=root>
 {{creation-form}}
     </section>
 
@@ -34,5 +34,22 @@
     </section>
 
     {{footer}}
+ <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+ <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+ <script src="https://unpkg.com/react-jsonschema-form/dist/react-jsonschema-form.js"></script>
+      <script>
+const Form = JSONSchemaForm.default;
+const e = React.createElement;
+const log = (type) => console.log.bind(console, type);
+function onSubmit(a, b){
+    fetch("/pets", {method: "POST", body: JSON.stringify(a.formData)})
+};
+
+ReactDOM.render(
+    e(Form, {schema: {{creation-form}},
+        onSubmit: onSubmit}),
+  document.getElementById('root')
+);
+      </script>
   </body>
 </html>

@@ -3,7 +3,7 @@
  {manifold {:mvn/version "0.1.9-alpha3"}
   clj-yaml {:mvn/version "0.4.0"}
 
-  juxt/muuntaja {:mvn/version "0.6.4-juxt-2"}
+  metosin/muuntaja {:mvn/version "0.6.5"}
 
   ring/ring-core {:mvn/version "1.7.1"}
   ring/ring-mock {:mvn/version "0.3.2"}
