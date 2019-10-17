@@ -84,4 +84,9 @@
     :as options}]
   (ring/ring-handler
    (openapi->reitit-router doc options)
-   (or default-handler (ring/create-default-handler))))
+   (or
+    default-handler
+    (ring/create-default-handler
+     {:not-found (fn [req]
+                   {:status 404
+                    :body "Apex: Not found"})}))))
