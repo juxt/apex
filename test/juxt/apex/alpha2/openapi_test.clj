@@ -25,11 +25,23 @@
          "5" {"name" "Vega" "tag" "Dog"}}))
 
 (defn collate-results [h]
-  (fn [req respond raise]
-    (h req
-       (fn [response]
-         (swap! *results* assoc :request req :response response)
-         (respond response)) raise)))
+  (fn
+    ([req]
+     (let [response (h req)]
+       (swap! *results* assoc :request req :response response)
+       response))
+    ([req respond raise]
+     (h req
+        (fn [response]
+          (swap! *results* assoc :request req :response response)
+          (respond response))
+        raise))))
+
+(defn constant-handler [response]
+  (fn
+    ([req] (if (fn? response) (response req) response))
+    ([req respond raise]
+     (respond (if (fn? response) (response req) response)))))
 
 (defn test-handler []
   (let [doc (yaml/parse-string
@@ -38,16 +50,19 @@
     (compile-handler
      doc
      {:apex/add-implicit-head? true
-      :apex/handler-middleware-transform
-      (fn [_ mw] (conj mw collate-results))
+      :apex/handler-middleware-transform (fn [_ mw] (conj mw collate-results))
       :apex/resources
       {"/pets"
        {:apex/methods
         {:get
          {:handler
-          (fn [req respond raise]
-            (respond {:status 200
-                      :body (vals @database)}))}}
+          (constant-handler {:status 200
+                             :body (vals @database)})}
+
+         :post
+         {:handler
+          (constant-handler {:status 201
+                             :body "OK"})}}
 
         :apex/validators
         (fn
@@ -69,15 +84,19 @@
        {:apex/methods
         {:get
          {:handler
-          (fn [req respond raise]
-            (let [id (get-in req [:path-params :id])
-                  pet (get @database id)]
-              (respond
+          (constant-handler
+           (fn [req]
+             (let [id (get-in req [:path-params :id])
+                   pet (get @database id)]
                (if pet
                  {:status 200 :body pet}
                  {:status 404}))))}}}}})))
 
-(defn request [request]
+(defn sync-request [request]
+  (assert *app*)
+  (*app* request))
+
+(defn async-request [request]
   (assert *app*)
   (let [p (promise)]
     (*app*
@@ -85,6 +104,13 @@
      (fn [response] (deliver p response))
      (fn [err] (deliver p err)))
     @p))
+
+(defn request [request]
+  (let [async-response (async-request request)
+        sync-response (sync-request request)]
+    (if (not= async-response sync-response)
+      (throw (ex-info "Async and Sync requests do not return the same data!"))
+      async-response)))
 
 (use-fixtures :once
   (fn [f]
@@ -104,6 +130,11 @@
       (is (= 200 status))
       (is (= (get @database "1") {"name" "Sven" "tag" "Dog"})))))
 
+#_(binding [*app* (test-handler)
+          *results* (atom {})]
+  (request {:request-method :post :uri "/pets" :body (jsonista.core/write-value-as-string {"id" "10" "name" "Rex" "type" "Dog"})})
+  @*results*
+  )
 
 
 ;; TODO: Write up request2_test.adoc to explain the motivations behind
@@ -117,17 +148,6 @@
     (request {:request-method :get :uri "/pets/2"})
     (is (= {:id "2"} (-> @*results* :request :path-params)))
     (is (-> @*results* :request :apex/parameters))))
-
-#_(mock/request :get "/?")
-
-#_(binding [*app* (test-handler)
-          *results* (atom {})]
-  (request {:request-method :get
-            :uri "/pets"
-            :query-string "foo=bar&zip=snag"})
-  (-> *results* deref :request)
-  )
-
 
 (deftest not-found-test
   (testing "Not found"
