@@ -34,7 +34,7 @@
 (defn test-handler []
   (let [doc (yaml/parse-string
              (slurp
-              (io/resource "juxt/apex/openapi-examples/petstore.yaml")))]
+              (io/resource "juxt/apex/openapi-examples/petstore-expanded.yaml")))]
     (compile-handler
      doc
      {:apex/add-implicit-head? true
@@ -65,12 +65,12 @@
              :apex/last-modified
              {:value (java.time.Instant/parse "2012-12-04T04:21:00Z")}})))}
 
-       "/pets/{petId}"
+       "/pets/{id}"
        {:apex/methods
         {:get
          {:handler
           (fn [req respond raise]
-            (let [id (get-in req [:path-params :petId])
+            (let [id (get-in req [:path-params :id])
                   pet (get @database id)]
               (respond
                (if pet
@@ -113,7 +113,7 @@
 (deftest param-test
   (testing "Path parameters are present and coerced to expected types"
     (request {:request-method :get :uri "/pets/2"})
-    (is (= {:petId "2"} (-> @*results* :request :path-params)))
+    (is (= {:id "2"} (-> @*results* :request :path-params)))
     (is (-> @*results* :request :apex/parameters))))
 
 #_(mock/request :get "/?")
