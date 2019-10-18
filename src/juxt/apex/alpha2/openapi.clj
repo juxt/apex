@@ -4,6 +4,7 @@
    [juxt.jinx-alpha :as jinx]
    [juxt.apex.alpha2.trace :as trace]
    [juxt.apex.alpha2.parameters :as params]
+   [juxt.apex.alpha2.request-body :as request-body]
    [juxt.apex.alpha2.response :as response]
    [juxt.apex.alpha2.conditional-requests :as condreq]
    [juxt.apex.alpha2.head :as head]
@@ -33,37 +34,46 @@
                path-item
                :let [method (keyword method)]]
            {method
-            {:apex/operation operation
-             :apex/openapi (with-meta doc {:apex.trace/hide true})
+            {
              :name (keyword operation-id)
-             :handler (let [default-response
-                            {:status 500
-                             ;; TODO: Create enough data for this to
-                             ;; be fancified into HTML by later
-                             ;; middleware.
-                             :body (format "Missing method handler for OpenAPI operation %s at path %s\n" operation-id path)}]
-                        (or
 
-                         ;; TODO: Extract this into a ring middleware
-                         ;; which does not call the delegate (or if it
-                         ;; does, embeds the content in an HTML page)
-                         ;;(debug/debug-handler operation)
+             :handler
+             (let [default-response
+                   {:status 500
+                    ;; TODO: Create enough data for this to
+                    ;; be fancified into HTML by later
+                    ;; middleware.
+                    :body (format "Missing method handler for OpenAPI operation %s at path %s\n" operation-id path)}]
+               (or
 
-                         (get-in resource [:apex/methods method :handler])
+                (get-in resource [:apex/methods method :handler])
 
-                         (fn
-                           ([req] default-response)
-                           ([req respond raise]
-                            (respond default-response)))))
+                (fn
+                  ([req] default-response)
+                  ([req respond raise]
+                   (respond default-response)))))
 
              :middleware
-             (;; don't need this because reitit has :transform
+             ( ;; don't need this because reitit has :transform
               (or handler-middleware-transform (fn [_ mw] mw))
               resource
-              [params/wrap-coerce-parameters
-               [condreq/wrap-conditional-request (:apex/validators resource)]
-               trace/wrap-trace
-               ])}}))]))))
+              [[condreq/wrap-conditional-request (:apex/validators resource)]
+               params/wrap-coerce-parameters
+               request-body/wrap-process-request-body
+               trace/wrap-trace])
+
+             ;; This is needed by some middleware to know whether to
+             ;; mount, e.g. a GET method body "has no defined
+             ;; semantics".
+             :apex/method method
+
+             :apex/operation operation
+             :apex/operation-id operation-id
+             :apex/path path
+
+             ;; This is needed by some functions as the base document
+             ;; in $ref resolution
+             :apex/openapi (with-meta doc {:apex.trace/hide true})}}))]))))
 
 (defn openapi->reitit-router
   [doc options]

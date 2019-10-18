@@ -130,12 +130,15 @@
       (is (= 200 status))
       (is (= (get @database "1") {"name" "Sven" "tag" "Dog"})))))
 
-#_(binding [*app* (test-handler)
+(binding [*app* (test-handler)
           *results* (atom {})]
-  (request {:request-method :post :uri "/pets" :body (jsonista.core/write-value-as-string {"id" "10" "name" "Rex" "type" "Dog"})})
-  @*results*
+  (sync-request
+   {:request-method :post
+    :headers {"content-type" "application/json"}
+    :uri "/pets"
+    :body (jsonista.core/write-value-as-string {"id" "10" "tag" "Dog"})})
+  ;;@*results*
   )
-
 
 ;; TODO: Write up request2_test.adoc to explain the motivations behind
 ;; this ns.
