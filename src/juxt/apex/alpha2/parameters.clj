@@ -3,6 +3,7 @@
 (ns juxt.apex.alpha2.parameters
   (:require
    [clojure.string :as str]
+   [juxt.apex.alpha2.codec :as codec]
    [juxt.apex.alpha2.errors :refer [if-error]]
    [juxt.jinx-alpha :as jinx]
    muuntaja.format.core
@@ -332,22 +333,12 @@
            (map #(str/split % (case style "form" #"," "spaceDelimited" #" " "pipeDelimited" #"\|")))
            (into {})))))
 
-(def default-muuntaja
-  (muuntaja/create
-   (->
-    muuntaja/default-options
-    (assoc-in [:formats "application/json"]
-              (muuntaja.format.core/map->Format
-               {:name "application/json"
-                :decoder [muuntaja.format.json/decoder {:decode-key-fn false}]
-                :encoder [muuntaja.format.json/encoder]})))))
-
 ;; TODO: Rename to process-query-string
 (defn parse-query-string
   ([qs paramdefs]
    (parse-query-string qs paramdefs {}))
   ([qs paramdefs {:keys [muuntaja]
-                  :or {muuntaja default-muuntaja}}]
+                  :or {muuntaja codec/default-muuntaja}}]
    (let [qsm (group-query-string ((fnil url-decode "") qs))]
      (->
       (reduce
