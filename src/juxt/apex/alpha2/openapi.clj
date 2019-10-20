@@ -87,10 +87,8 @@
   "Create a Ring handler from an OpenAPI document, with options"
   [doc
    {:keys
-    [reitit.middleware/transform
-     ;; TODO: Put this in apex namespace
-     default-handler
-     ]
+    [default-handler
+     reitit.middleware/transform]
     :as options}]
   (ring/ring-handler
    (openapi->reitit-router doc options)
