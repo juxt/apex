@@ -7,7 +7,7 @@
 (defn implicit-head-method
   "Note: the Ring core middleware wrap-head calls into the handler. This
   is an optimized version which does not."
-  [resource {:apex/keys [handler-middleware-transform]}]
+  [resource]
   {:head
    {:handler
     (fn
@@ -15,10 +15,8 @@
       ([req respond raise]
        (respond {:status 200})))
     :middleware
-    ((or handler-middleware-transform (fn [_ mw] mw))
-     resource
-     [
-      ;; TODO: Add wrap-coerce-parameters with GET's
-      ;; definition
-      [condreq/wrap-conditional-request (:apex/validators resource)]
-      ])}})
+    [
+     ;; TODO: Add wrap-coerce-parameters with GET's
+     ;; definition
+     [condreq/wrap-conditional-request (:apex/validators resource)]
+     ]}})

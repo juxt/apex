@@ -28,7 +28,7 @@
   (fn
     ([req]
      (let [response (h req)]
-       (swap! *results* assoc :request req :response response)
+
        response))
     ([req respond raise]
      (h req
@@ -50,7 +50,8 @@
     (compile-handler
      doc
      {:apex/add-implicit-head? true
-      :apex/handler-middleware-transform (fn [_ mw] (conj mw collate-results))
+      :reitit.middleware/transform #(conj % collate-results)
+
       :apex/resources
       {"/pets"
        {:apex/methods
@@ -130,7 +131,7 @@
       (is (= 200 status))
       (is (= (get @database "1") {"name" "Sven" "tag" "Dog"})))))
 
-(binding [*app* (test-handler)
+#_(binding [*app* (test-handler)
           *results* (atom {})]
   (sync-request
    {:request-method :post

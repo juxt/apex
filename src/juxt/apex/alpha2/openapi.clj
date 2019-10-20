@@ -16,7 +16,6 @@
   [doc
    {:apex/keys
     [resources ;; TODO: document this
-     handler-middleware-transform
      add-implicit-head? ;; whether HEAD should be supported implicitly
      ]
     :or {add-implicit-head? true}
@@ -28,7 +27,7 @@
         (apply
          merge
          ;; Support default HEAD method
-         (when add-implicit-head? (head/implicit-head-method resource options))
+         (when add-implicit-head? (head/implicit-head-method resource))
          (for [[method {operation-id "operationId"
                         :as operation}]
                path-item
@@ -54,13 +53,10 @@
                    (respond default-response)))))
 
              :middleware
-             ( ;; don't need this because reitit has :transform
-              (or handler-middleware-transform (fn [_ mw] mw))
-              resource
-              [[condreq/wrap-conditional-request (:apex/validators resource)]
-               params/wrap-coerce-parameters
-               request-body/wrap-process-request-body
-               trace/wrap-trace])
+             [[condreq/wrap-conditional-request (:apex/validators resource)]
+              params/wrap-coerce-parameters
+              request-body/wrap-process-request-body
+              trace/wrap-trace]
 
              ;; This is needed by some middleware to know whether to
              ;; mount, e.g. a GET method body "has no defined
@@ -76,20 +72,24 @@
              :apex/openapi (with-meta doc {:apex.trace/hide true})}}))]))))
 
 (defn openapi->reitit-router
-  [doc options]
+  [doc {:keys [reitit.middleware/transform] :as options}]
   (ring/router
    [""
     (openapi->reitit-routes doc options)
-    {:data {:middleware
-            [[response/server-header-middleware "JUXT Apex"]
-
-             ]}}]))
+    (merge
+     {:data
+      {:middleware
+       [[response/server-header-middleware "JUXT Apex"]]}}
+     )]
+   (select-keys options [:reitit.middleware/transform])))
 
 (defn compile-handler
   "Create a Ring handler from an OpenAPI document, with options"
   [doc
-   {:apex/keys
-    [default-handler ;; TODO: document this
+   {:keys
+    [reitit.middleware/transform
+     ;; TODO: Put this in apex namespace
+     default-handler
      ]
     :as options}]
   (ring/ring-handler
