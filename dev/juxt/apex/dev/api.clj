@@ -1,5 +1,9 @@
 ;; Copyright © 2019, JUXT LTD.
 
+;; This ns is deprecated but serves the purpose of showing how to
+;; register callback handlers, whose logic should be moved into
+;; server.clj in due course.
+
 (ns juxt.apex.dev.api
   (:require
    [integrant.core :as ig]
