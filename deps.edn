@@ -32,6 +32,10 @@
 
                      criterium {:mvn/version "0.4.5"}
                      hiccup {:mvn/version "2.0.0-alpha2"}
+
+                     spyscope/spyscope {:mvn/version "0.1.6"
+                                        :exclusions [fipp/fipp]}
+                     fipp/fipp {:mvn/version "0.6.14"}
                      }}
 
   :test {:extra-paths ["test"]
