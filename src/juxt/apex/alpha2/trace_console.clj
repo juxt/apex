@@ -213,12 +213,32 @@
                  (cond->>
                      (let [requests (reverse @request-history-atom)]
                        requests)
-                   limit (take limit))))
+                     limit (take limit))))
+
                (section
                 "Control"
-                (html/content-from-template
-                 (slurp (io/resource "juxt/apex/alpha2/form.html"))
-                 {"limit" limit})))}))}))
+                (str
+                 "<form method=\"GET\">"
+                 (html/vec->table
+                  [{:head "Name"
+                    :get first
+                    :render str
+                    :style identity}
+                   {:head "Description"
+                    :get #(get-in % [1 :param "description"])
+                    :render str
+                    :style identity}
+                   {:head "Value"
+                    :get identity
+                    :render identity
+                    :escape identity
+                    :style (fn [v]
+                             (format "<input name=\"%s\" type=\"text\" value=\"%s\"></input>" (first v) (fast-get-in v [1 :value] 10)))
+                    }]
+                  (fast-get-in req [:apex/params :query]))
+
+                 "<p><input type=\"submit\" value=\"Submit\"></input></p>"
+                 "</form method=\"GET\">")))}))}))
 
 (defn request-trace [req params request-history-atom]
   (let [index (fast-get-in params [:path "requestId" :value])

@@ -71,33 +71,34 @@
 
 (defn vec->table
   [cols data]
-  (el
-   "table"
-   (when (not-empty (keep :head cols))
+  (let [default-escape escape]
+    (el
+     "table"
+     (when (not-empty (keep :head cols))
+       (el
+        "thead"
+        (el
+         "row"
+         (for [h (map :head cols)]
+           (el "th" h)))))
      (el
-      "thead"
-      (el
-       "row"
-       (for [h (map :head cols)]
-         (el "th" h)))))
-   (el
-    "tbody"
-    (for [row data]
-      (el
-       "tr"
-       (for [{:keys [get render style compute link]} cols]
-         (let [v ((or compute (fn [row v] v))
-                  row
-                  (get row)
-                  )]
-           (el
-            "td"
-            (cond
-              (and (map? v) (not-empty v))
-              (map->table v)
-              :else
-              (-> v
-                  ((or render pr-str))
-                  escape
-                  ((if link (partial link row) identity))
-                  ((or style monospace))))))))))))
+      "tbody"
+      (for [row data]
+        (el
+         "tr"
+         (for [{:keys [get render style compute link escape]} cols]
+           (let [v ((or compute (fn [row v] v))
+                    row
+                    (get row)
+                    )]
+             (el
+              "td"
+              (cond
+                (and (map? v) (not-empty v))
+                (map->table v)
+                :else
+                (-> v
+                    ((or render pr-str))
+                    ((or escape default-escape))
+                    ((if link (partial link row) identity))
+                    ((or style monospace)))))))))))))
