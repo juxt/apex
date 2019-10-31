@@ -190,8 +190,7 @@
   "For a given parameter with name n, of type object, with OpenAPI
   parameter declaration in param, extract the parameter from the
   query-state map in :apex/qsm. If a parameter can be extracted, conj
-  to :apex/params in acc. If an error occurs, conj the error
-  to :apex/errors in acc. The reason for this contrived function
+  to acc. The reason for this contrived function
   signature is to support integration with a reduction across
   parameter declarations for a given query-string."
   [{:apex/keys [qsm params errors] :as acc} [n param]]
@@ -229,21 +228,22 @@
       true (assoc :apex/qsm new-qsm)
       ;; If valid, add the parameter
       (:valid? validation)
-      (update :apex/params conj [n {:raw-values raw-values
-                                    :value (:instance validation)
-                                    :param param}])
+      (conj [n {:raw-values raw-values
+                :value (:instance validation)
+                :param param}])
       ;; If not valid, add an error
       ;; TODO: Adding errors should be a common function to promote
       ;; consistency across errors.
       (not (:valid? validation))
-      (update :apex/errors conj {:param [n param] :message "Not valid" :validation validation}))))
+      (conj [n {:apex/error {:apex.error/message "Not valid"
+                             :validation validation}}]))))
 
 (defn extract-undeclared-params [{:apex/keys [params qsm] :as state}]
   (-> (reduce-kv
        (fn [state k v]
          (cond-> state
            (not= k "trace")
-           (update :apex/params conj [k {:value v}])))
+           (conj [k {:value v}])))
        state
        qsm)
       (dissoc :apex/qsm)))
@@ -333,10 +333,9 @@
            (map #(str/split % (case style "form" #"," "spaceDelimited" #" " "pipeDelimited" #"\|")))
            (into {})))))
 
-;; TODO: Rename to process-query-string
-(defn parse-query-string
+(defn process-query-string
   ([qs paramdefs]
-   (parse-query-string qs paramdefs {}))
+   (process-query-string qs paramdefs {}))
   ([qs paramdefs {:keys [muuntaja]
                   :or {muuntaja codec/default-muuntaja}}]
    (let [qsm (group-query-string ((fnil url-decode "") qs))]
@@ -374,23 +373,29 @@
                         encoded-strings
                         muuntaja)]
 
+                   ;; TODO: We seem to be coercing above in
+                   ;; extract-value-from-encoded-strings+, do we also
+                   ;; really need to use jinx to validate below?
+
                    (if-error value+
-                     (update acc :apex/params conj [n {:encoded-strings encoded-strings
-                                                       :error error
-                                                       :param param}])
+                     (conj acc [n {:apex/error error
+                                   :encoded-strings encoded-strings
+                                   :param param}])
 
                      (let [validation (jinx/validate value schema {:coercions default-coercions})]
 
                        (cond-> acc
                          (:valid? validation)
-                         (update :apex/params conj [n {:encoded-strings encoded-strings
-                                                       :value (:instance validation)
-                                                       :param param
-                                                       :validation validation}])
+                         (conj [n {:encoded-strings encoded-strings
+                                   :value (:instance validation)
+                                   :param param
+                                   :validation validation}])
 
+                         ;; TODO: Have we got any tests for jinx validation failures on params?
                          (not (:valid? validation))
                          ;; TODO: Errors should follow the same convention, using consistent keyword namespaces
-                         (update :apex/errors conj {:apex/param [n param] :message "Not valid" :validation validation})
+                         (conj [n {:apex/error {:apex.error/message "Not valid"
+                                                :validation validation}}])
 
                          true (update :apex/qsm dissoc n)))))
 
@@ -398,21 +403,18 @@
                  (cond-> acc
                    ;; We're going to add an entry anyway. One purpose
                    ;; is to show tables in debug mode.
-                   true (update :apex/params conj [n {:param param}])
-                   ;; TODO: Errors should follow the same convention, using consistent keyword namespaces
-                   required (update :apex/errors conj {:param n :message "Required parameter missing"}) ))))
+                   true (conj [n (cond-> {:param param}
+                                   required (assoc :apex/error {:apex.error/message "Required parameter missing"}))])))))
 
            ;; Default is to pass acc long to the next parameter
-           acc
+           acc))
 
-           ))
-
-       {:apex/params [] :apex/qsm qsm :apex/errors []}
+       {:apex/qsm qsm}
        ;; Reduce over paramdefs
        paramdefs)
 
       extract-undeclared-params
-      (update :apex/params #(into {} %))))))
+      ))))
 
 ;; TODO: Consider replacing these records with thrown exceptions and
 ;; catching. There is additional complexity to detecting and handling
@@ -433,51 +435,48 @@
      :or {coercions default-coercions}}]
    (into
     {}
-    (reduce-kv ; reduce over paramdefs
-     (fn [acc pname {:keys [required? schema]}]
-       (let [[pkey pval] (find params (keyword pname))]
+    (reduce                             ; reduce over paramdefs
+     (fn [acc {:strs [name required schema] :as paramdef}]
+       (let [[pkey pval] (find params (keyword name))]
          (if pkey
-           (let [{:keys [valid?] :as validation}
+           (let [validation
                  (jinx/validate pval schema {:coercions coercions})]
              (assoc
               acc
-              pname
-              (if valid?
-                (:instance validation)
-                (map->ParameterSchemaValidationError validation))))
+              name
+              (cond-> {:param paramdef
+                       :validation validation}
 
-           (if required?
-             (assoc acc pname (->RequiredParameterMissingError))
-             acc))))
+                (:valid? validation)
+                (assoc :value (:instance validation))
+
+                (not (:valid? validation))
+                (assoc :apex/error
+                       {:apex.error/message "Path parameter not valid according to schema"}))))
+
+           (assoc acc name (cond-> {:param paramdef}
+                             required (assoc :apex/error {:apex.error/message "Required parameter not found"}))))))
      {}
      paramdefs))))
 
-(defn process-parameters [request paramdefs]
-  {;;:path (process-path-parameters (:path-params request) (:path paramdefs))
-   ;;:query (parse-query-string (:query paramdefs))
-   }
-
-  ;; TODO: do query parameters
-  ;; TODO: do header parameters
-  ;; TODO: do cookie parameters
-  )
-
 (def wrap-coerce-parameters
-  {:name "Extract and coerce parameters"
+  {:name "Parameters"
 
    :compile
    (fn [{:apex/keys [operation]} opts]
      (let [{:strs [parameters]} operation
            query-parameters (not-empty (filter #(= (get % "in") "query") parameters))
+           path-parameters (not-empty (filter #(= (get % "in") "path") parameters))
            process-req
            (fn [req]
              (assoc
               req
-              :apex/parameters
+              :apex/params
               (cond-> {}
                 query-parameters
-                (assoc :query (parse-query-string (:query-string req) parameters)))))]
-
+                (assoc :query (process-query-string (:query-string req) query-parameters))
+                path-parameters
+                (assoc :path (process-path-parameters (:path-params req) path-parameters)))))]
        (fn [h]
          (fn
            ([req] (h (process-req req)))

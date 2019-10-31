@@ -8,7 +8,7 @@
    [juxt.apex.alpha2.parameters
     :refer [process-path-parameters
             format-with-style
-            parse-query-string]]
+            process-query-string]]
    [criterium.core :as crt]
    muuntaja.format.core
    muuntaja.format.json
@@ -116,23 +116,31 @@
 ;; TODO: Test performance with criterium
 ;; TODO: Attempt to improve performance
 
+#_(process-query-string
+           "a"
+           [{"name" "a"
+             "in" "query"
+             "style" "form"
+             "allowEmptyValue" false
+             "schema" {"type" "null"}}])
+
 ;; https://stackoverflow.com/questions/4557387/is-a-url-query-parameter-valid-if-it-has-no-value
 (deftest empty-value-test
   (testing "allowedEmptyValue is true"
-    (let [result (parse-query-string
+    (let [result (process-query-string
                   "a"
                   [{"name" "a"
                     "in" "query"
                     "style" "form"
                     "allowEmptyValue" true
                     "schema" {"type" "null"}}])]
-      (let [[n v] (find (:apex/params result) "a")]
+      (let [[n v] (find result "a")]
         (is (= "a" n))
         (is (nil? (:value v))))))
 
   (testing "allowedEmptyValue is false"
     (let [result
-          (parse-query-string
+          (process-query-string
            "a"
            [{"name" "a"
              "in" "query"
@@ -141,11 +149,11 @@
              "schema" {"type" "null"}}])]
       (is
        (= "Empty value not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/params "a" :error :apex.error/message])))))
+          (get-in result ["a" :apex/error :apex.error/message])))))
 
   (testing "default value of allowEmptyValue"
     (let [result
-          (parse-query-string
+          (process-query-string
            "a"
            [{"name" "a"
              "in" "query"
@@ -153,10 +161,10 @@
              "schema" {"type" "null"}}])]
       (is
        (= "Empty value not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/params "a" :error :apex.error/message])))))
+          (get-in result ["a" :apex/error :apex.error/message])))))
 
   (testing "Coerce nil value to empty string"
-    (let [result (parse-query-string
+    (let [result (process-query-string
                   "a"
                   [{"name" "a"
                     "in" "query"
@@ -164,10 +172,10 @@
                     "allowEmptyValue" true
                     "schema" {"type" "string"}}])]
       (is
-       (= "" (get-in result [:apex/params "a" :value])))))
+       (= "" (get-in result ["a" :value])))))
 
   (testing "Error when empty value for string parameter"
-    (let [result (parse-query-string
+    (let [result (process-query-string
                   "a"
                   [{"name" "a"
                     "in" "query"
@@ -177,11 +185,11 @@
       (is
        (=
         "Empty value not allowed for parameter: allowEmptyValue is false"
-        (get-in result [:apex/params "a" :error :apex.error/message])))))
+        (get-in result ["a" :apex/error :apex.error/message])))))
 
   (testing "Error when empty value for array parameter"
     (let [result
-          (parse-query-string
+          (process-query-string
            "a=&a=foo"
            [{"name" "a"
              "in" "query"
@@ -191,11 +199,11 @@
                        "items" {"type" "string"}}}])]
       (is
        (= "Empty values not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/params "a" :error :apex.error/message])))))
+          (get-in result ["a" :apex/error :apex.error/message])))))
 
   (testing "default value for allowEmptyValue"
     (let [result
-          (parse-query-string
+          (process-query-string
            "a=&a=foo"
            [{"name" "a"
              "in" "query"
@@ -204,11 +212,11 @@
                        "items" {"type" "string"}}}])]
       (is
        (= "Empty values not allowed for parameter: allowEmptyValue is false"
-          (get-in result [:apex/params "a" :error :apex.error/message])))))
+          (get-in result ["a" :apex/error :apex.error/message])))))
 
   (testing "No error when empty value for array parameter when value for allowEmptyValue is true"
     (let [result
-          (parse-query-string
+          (process-query-string
            "a=&a=foo"
            [{"name" "a"
              "in" "query"
@@ -216,12 +224,12 @@
              "allowEmptyValue" true
              "schema" {"type" "array"
                        "items" {"type" "string"}}}])]
-      (is (empty? (get-in result [:apex/errors])))
-      (is (= ["" "foo"] (get-in result [:apex/params "a" :value])))))
+      (is (empty? (keep :apex/error (vals result))))
+      (is (= ["" "foo"] (get-in result ["a" :value])))))
 
   (testing "treat empty param in object as boolean true"
     (let [result
-          (parse-query-string
+          (process-query-string
            "R&B"
            [{"name" "color"
              "in" "query"
@@ -231,12 +239,12 @@
                        "properties" {"R" {"type" "boolean"}
                                      "G" {"type" "boolean"}
                                      "B" {"type" "boolean"}}}}])]
-      (is (= {"R" true "B" true} (get-in result [:apex/params "color" :value])))))
+      (is (= {"R" true "B" true} (get-in result ["color" :value])))))
 
 
   (testing "treat empty param in object as empty string"
     (let [result
-          (parse-query-string
+          (process-query-string
            "R&B=100"
            [{"name" "color"
              "in" "query"
@@ -246,7 +254,7 @@
                        "properties" {"R" {"type" "string"}
                                      "G" {"type" "boolean"}
                                      "B" {"type" "integer"}}}}])]
-      (is (= {"R" "" "B" 100} (get-in result [:apex/params "color" :value]))))))
+      (is (= {"R" "" "B" 100} (get-in result ["color" :value]))))))
 
 ;; TODO: Search for TODOs in parameters.clj
 
@@ -255,14 +263,14 @@
     (are [qs expected]
         (= expected
            (get-in
-            (parse-query-string
+            (process-query-string
              qs
              [{"name" "a"
                "in" "query"
                "style" "form"
                "allowEmptyValue" true
                "schema" {"type" "boolean"}}])
-            [:apex/params "a" :value]))
+            ["a" :value]))
         "a" true  ; when a parameter appears, even though empty, it is
                                         ; considered to indiciate 'true'
         "a=" true
@@ -294,13 +302,13 @@
     (are [qs expected]
         (= expected
            (get-in
-            (parse-query-string
+            (process-query-string
              qs [{"name" "a"
                   "in" "query"
                   "style" "form"
                   "allowEmptyValue" false
                   "schema" {"type" "boolean"}}])
-            [:apex/params "a" :value]))
+            ["a" :value]))
         "a=b" true
         "a=true" true
         "a=True" true
@@ -323,34 +331,34 @@
       (are [qs]
           (= "Empty value not allowed for parameter: allowEmptyValue is false"
              (get-in
-              (parse-query-string
+              (process-query-string
                qs [{"name" "a"
                     "in" "query"
                     "style" "form"
                     "allowEmptyValue" false
                     "schema" {"type" "boolean"}}])
-              [:apex/params "a" :error :apex.error/message]))
+              ["a" :apex/error :apex.error/message]))
           "a"
           "a=")))
 
 (deftest integer-coercion-test
   (is
-   (let [result (parse-query-string
+   (let [result (process-query-string
                  "a=100"
                  [{"name" "a"
                    "in" "query"
                    "style" "form"
                    "schema" {"type" "integer"}}])]
-     (= 100 (get-in result [:apex/params "a" :value]))))
+     (= 100 (get-in result ["a" :value]))))
 
   (testing "Illegal integer format returns an error"
-    (is (get-in (parse-query-string
+    (is (get-in (process-query-string
                  "a=10d0"
                  [{"name" "a"
                    "in" "query"
                    "style" "form"
                    "schema" {"type" "integer"}}])
-                [:apex/params "a" :error]))))
+                ["a" :apex/error]))))
 
 ;; TODO: Add specs which will help to drive thinking about consistent data
 
@@ -368,15 +376,15 @@
 (deftest required-parameter-test
   (are [type explode]
       (let [result
-            (parse-query-string
+            (process-query-string
              "a=10"
              [{"name" "b"
                "in" "query"
                "schema" {"type" type}
                "explode" explode
                "required" true}])]
-        (= {:param "b", :message "Required parameter missing"}
-           (get-in result [:apex/errors 0])))
+        (= {:apex.error/message "Required parameter missing"}
+           (get-in result ["b" :apex/error])))
       "string" true
       "string" false
       "array" true
@@ -392,7 +400,7 @@
   (testing "when explode is false, only first query parameter is considered"
     (testing "arrays"
       (let [result
-            (parse-query-string
+            (process-query-string
              "color=R|100|G|200&color=B|150|Z|100"
              [{"name" "color"
                "in" "query"
@@ -400,11 +408,11 @@
                "schema" {"type" "array"
                          "items" {"type" "string"}}
                "explode" false}])]
-        (is (= ["R" "100" "G" "200"] (get-in result [:apex/params "color" :value])))))
+        (is (= ["R" "100" "G" "200"] (get-in result ["color" :value])))))
 
     (testing "objects"
       (let [result
-            (parse-query-string
+            (process-query-string
              "color=R|100|G|200&color=B|150|Z|100"
              [{"name" "color"
                "in" "query"
@@ -414,12 +422,12 @@
                                        "G" {"type" "integer"}
                                        }}
                "explode" false}])]
-        (is (= {"R" "100", "G" 200} (get-in result [:apex/params "color" :value]))))))
+        (is (= {"R" "100", "G" 200} (get-in result ["color" :value]))))))
 
   (testing "when explode is true, all values are separate parameters"
     (testing "arrays"
       (let [result
-            (parse-query-string
+            (process-query-string
              "color=R|100|G|200&color=B|150|Z|100"
              [{"name" "color"
                "in" "query"
@@ -427,11 +435,11 @@
                "schema" {"type" "array"
                          "items" {"type" "string"}}
                "explode" true}])]
-        (is (= ["R|100|G|200" "B|150|Z|100"] (get-in result [:apex/params "color" :value])))))
+        (is (= ["R|100|G|200" "B|150|Z|100"] (get-in result ["color" :value])))))
 
     (testing "objects"
       (let [result
-            (parse-query-string
+            (process-query-string
              ;; Here the key-value pair is split according to the style
              "color=R|100&color=G|200"
              [{"name" "color"
@@ -442,13 +450,13 @@
                                        "G" {"type" "integer"}
                                        }}
                "explode" true}])]
-        (is (= {"R" "100", "G" 200} (get-in result [:apex/params "color" :value])))))))
+        (is (= {"R" "100", "G" 200} (get-in result ["color" :value])))))))
 
 (deftest space-delimited-test
   (testing "when explode is false, only first query parameter is considered"
     (testing "arrays"
       (let [result
-            (parse-query-string
+            (process-query-string
              "color=R 100 G 200&color=B 150 Z 100"
              [{"name" "color"
                "in" "query"
@@ -456,11 +464,11 @@
                "schema" {"type" "array"
                          "items" {"type" "string"}}
                "explode" false}])]
-        (is (= ["R" "100" "G" "200"] (get-in result [:apex/params "color" :value])))))
+        (is (= ["R" "100" "G" "200"] (get-in result ["color" :value])))))
 
     (testing "objects"
       (let [result
-            (parse-query-string
+            (process-query-string
              "color=R 100 G 200&color=B 150 Z 100"
              [{"name" "color"
                "in" "query"
@@ -469,12 +477,12 @@
                          "properties" {"R" {"type" "string"}
                                        "G" {"type" "integer"}}}
                "explode" false}])]
-        (is (= {"R" "100", "G" 200} (get-in result [:apex/params "color" :value]))))))
+        (is (= {"R" "100", "G" 200} (get-in result ["color" :value]))))))
 
   (testing "when explode is true, all values are separate parameters"
     (testing "arrays"
       (let [result
-            (parse-query-string
+            (process-query-string
              "color=R 100 G 200&color=B 150 Z 100"
              [{"name" "color"
                "in" "query"
@@ -482,11 +490,11 @@
                "schema" {"type" "array"
                          "items" {"type" "string"}}
                "explode" true}])]
-        (is (= ["R 100 G 200" "B 150 Z 100"] (get-in result [:apex/params "color" :value])))))
+        (is (= ["R 100 G 200" "B 150 Z 100"] (get-in result ["color" :value])))))
 
     (testing "objects"
       (let [result
-            (parse-query-string
+            (process-query-string
              ;; Here the key-value pair is split according to the style
              "color=R 100&color=G 200"
              [{"name" "color"
@@ -497,11 +505,11 @@
                                        "G" {"type" "integer"}
                                        }}
                "explode" true}])]
-        (is (= {"R" "100", "G" 200} (get-in result [:apex/params "color" :value])))))))
+        (is (= {"R" "100", "G" 200} (get-in result ["color" :value])))))))
 
 (deftest deep-object-test
   (let [result
-        (parse-query-string
+        (process-query-string
          "color[R]=100&color[G]=200&color[B]=150"
          [{"name" "color"
            "in" "query"
@@ -512,7 +520,7 @@
                                    "B" {"type" "integer"}}}
            "explode" true}])]
     (is
-     (= {"R" 100, "G" 200, "B" 150} (get-in result [:apex/params "color" :value] )))))
+     (= {"R" 100, "G" 200, "B" 150} (get-in result ["color" :value] )))))
 
 ;; Complex Scenarios
 
@@ -522,7 +530,7 @@
 
 (deftest complex-situation-test
   (let [result
-        (parse-query-string
+        (process-query-string
          (str "coordinates=" (codec/url-encode "{\"lat\": 52.1, \"long\": 0.45}"))
          [{"name" "coordinates"
            "in" "query"
@@ -536,7 +544,7 @@
            "explode" false}])]
     (is (=
          {"long" 0.45, "lat" 52.1}
-         (get-in result [:apex/params "coordinates" :value])))))
+         (get-in result ["coordinates" :value])))))
 
 ;; TODO: Test form encoding
 
@@ -544,36 +552,41 @@
 
 (deftest path-params-test
   (testing "string schema"
-    (is
-     (=
-      {"petId" "3"}
-      (process-path-parameters
-       {:petId "3"}
-       {"petId" {:required? true :schema {"type" "string"}}})))))
+    (let [params
+          (process-path-parameters
+           {:petId "3"}
+           [{"name" "petId" "required" true "schema" {"type" "string"}}])
+          result (get params "petId")]
+      (is result)
+      (is (= "3" (:value result)))
+      (is (:validation result))
+      (is (get-in result [:validation :valid?])))))
 
 (deftest path-param-coercion-test
   (testing "integer schema with coercion"
-    (is
-     (=
-      {"petId" 3}
-      (process-path-parameters
-       {:petId "3"}
-       {"petId" {:required? true :schema {"type" "integer"}}})))))
+    (let [params
+          (process-path-parameters
+           {:petId "3"}
+           [{"name" "petId" "required" true "schema" {"type" "integer"}}])
+          result (get params "petId")]
+      (is result)
+      (is (= 3 (:value result)))
+      (is (:validation result))
+      (is (get-in result [:validation :valid?])))))
 
 (deftest error-param-test
   (testing "integer schema without coercion"
-    (let [result
+    (let [params
           (process-path-parameters
            {:petId "3"}
-           {"petId" {:required? true :schema {"type" "integer"}}}
+           [{"name" "petId" "required" true "schema" {"type" "integer"}}]
            {:coercions {}})
-          error (get result "petId")]
+          result (get params "petId")]
 
-      (is (= #{"petId"} (into #{} (keys result))))
-      ;;      (is (instance? ParameterSchemaValidationError error))
-      (is (not (:valid? error)))
-      (is (= "Instance of \"3\" is not of type \"integer\""
-             (get-in error [:errors 0 :message]))))))
+      (is (= #{"petId"} (into #{} (keys params))))
+      (is (:apex/error result))
+      (is (= "Path parameter not valid according to schema"
+             (get-in result [:apex/error :apex.error/message]))))))
 
 ;; TODO:
 ;; https://swagger.io/specification/#parameterStyle:
@@ -582,19 +595,27 @@
 ;;  included and its default value is false."
 (deftest missing-required-parameter-test
   (testing "Error is required parameter is missing"
-    (let [result
+    (let [params
           (process-path-parameters
            {}
-           {"petId" {:required? true :schema {"type" "string"}}})
-          error (get result "petId")]
-      ;;(is (instance? RequiredParameterMissingError error))
+           [{"name" "petId" "required" true "schema" {"type" "string"}}])
+          result (get params "petId")]
+      (is result)
+      (is (:apex/error result))
+      (is (= "Required parameter not found" (get-in result [:apex/error :apex.error/message])))
+      ;; We shhould want to get the parameter details, ensure they're in the result
+      (is (:param result))
       ))
   (testing "OK if missing parameter is not required"
-    (let [result
+    (let [params
           (process-path-parameters
            {}
-           {"petId" {:required? false :schema {"type" "string"}}})]
-      (is (nil? (get result "petId"))))))
+           [{"name" "petId" "required" false "schema" {"type" "string"}}])
+          result (get params "petId")]
+      (is result)
+      (is (nil? (find result :apex/error)))
+
+      )))
 
 ;; TODO: parameter errors (plus dev middleware that produces nice 400 page with actual explain breakdown of each error)
 
