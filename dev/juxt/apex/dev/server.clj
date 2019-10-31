@@ -2,14 +2,16 @@
 
 (ns juxt.apex.dev.server
   (:require
-   [ring.adapter.jetty :as jetty]
-   [juxt.apex.alpha2.openapi
-    :refer [compile-handler]]
-   [integrant.core :as ig]
    [clojure.java.io :as io]
-   [reitit.core :as r]
+   [integrant.core :as ig]
+   [juxt.apex.alpha2.openapi :as openapi]
+   [juxt.apex.alpha2.trace-console :as console]
+   [juxt.apex.util :refer [ring-handler]]
    [juxt.apex.yaml :as yaml]
-   [reitit.ring :as ring]))
+   [reitit.core :as r]
+   reitit.middleware
+   [reitit.ring :as ring]
+   [ring.adapter.jetty :as jetty]))
 
 (def database
   (atom {"1" {"name" "Sven" "type" "Dog"}
@@ -18,89 +20,156 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
-(defn create-ring-handler []
+#_(extend-protocol StreamableResponseBody
+  (write-body-to-stream [body response output-stream]
+    (let [w (io/writer output-stream)]
+      (ms/consume-async
+       (fn [message]
+         (try
+           (println "Writing message")
+           (.write w message)
+           (.flush w)
+           (md/success-deferred true)
+           (catch java.io.IOException e
+             (println "Stopping")
+             (md/success-deferred false)
+             )))
+       body
+       )
+      )))
 
-  (let [doc (yaml/parse-string
-             (slurp
-              (io/resource "juxt/apex/openapi-examples/petstore-expanded.yaml")))]
-    (compile-handler
-     doc
-     {:apex/add-implicit-head? true
-      :apex/resources
-      {"/pets"
-       {:apex/methods
-        {:get
-         {:handler
-          (fn [req callback raise]
-            (callback {:status 200
-                       :body (vals @database)}))
+(defn create-root-router [{:apex/keys [request-history-atom] :as opts}]
+  (ring/router
+   [["/hello"
+     {:name :hello
+      :get {:handler
+            (fn
+              ([req] {:status 200 :body "Hello\n"})
+              ([req respond raise]
+               (respond {:status 200 :body (str "Hello, requests so far: " (count @request-history-atom) "\n")})))}}]
 
-          }}
-        }}
-      }))
+    (openapi/create-api-route
+     "/pets-api"
+     (yaml/parse-string
+      (slurp
+       (io/resource "juxt/apex/openapi-examples/petstore-expanded.yaml")))
+     (merge
+      opts
+      {:name :pets-api}
+      {:apex/add-implicit-head? false
+       :apex/resources
+       {"/pets"
+        {:apex/methods
+         {:get
+          {:handler
+           (let [response
+                 (fn [req]
+                   (let [limit (get-in req [:apex/params :query "limit" :value])]
+                     {:status 200
+                      :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
+             (fn
+               ([req] (response req))
+               ([req respond raise]
+                (respond (response req)))))}}}}}))
 
-  #_(ring/ring-handler
-     (ring/router
-      [["/{*path}"
-        {:name :pets
-         :handler handler
-         :middleware
-         [:clean-response
-          [:server-header "JUXT Apex"]
-          ]}]
+    (console/trace-console opts)]))
 
-       #_["/index.html"
-          (fn [req respond _]
-            (respond {:status 200 :body (io/input-stream (io/resource "public/index.html"))}))]
+;;(r/match-by-name (create-root-router {}) :pets-api)
+;;(r/route-names (create-root-router {}))
 
-       #_["/assets/react/{*path}"
-          (ring/create-resource-handler
-           {:root "META-INF/resources/webjars/react/16.8.5"
-            :parameter :path})]
+(defn create-root-handler
+  ([] (create-root-handler {:apex/request-history-atom (atom [])}))
+  ([opts]
+   (ring/ring-handler
+    (create-root-router opts)
 
-       #_["/assets/react-dom/{*path}"
-          (ring/create-resource-handler
-           {:root "META-INF/resources/webjars/react-dom/16.8.5"
-            :parameter :path})]
+    (ring/create-default-handler
+     {:not-found
+      (let [not-found-response
+            {:status 404
+             :headers {"content-type" "text/plain"}
+             :body "Apex: Not found\n"}]
+        (fn
+          ([req] not-found-response)
+          ([req respond raise] (respond not-found-response))))}))))
 
-       #_["/assets/react-jsonschema-form/{*path}"
-          (ring/create-resource-handler
-           {:root "META-INF/resources/webjars/react-jsonschema-form/1.0.5"
-            :parameter :path})]
 
-       #_["/js/{*path}"
-          (ring/create-resource-handler
-           {:root "public"
-            :parameter :path})]
+#_(assert
+ (= {:status 200
+     :body "Hello\n"}
+    ((create-root-handler) {:uri "/hello" :request-method :get})))
 
-       ]
+#_(assert
+ (=
+  {:status 200
+   :body "[{\"name\" \"Sven\", \"type\" \"Dog\"} {\"name\" \"Luna\", \"type\" \"Cat\"}]\n"}
+  ((create-root-handler) {:uri "/pets-api/pets"
+                          :query-string "limit=2"
+                          :request-method :get})))
 
-      {:reitit.middleware/registry
-       {:clean-response clean-response-middleware
-        :server-header server-header-middleware
+#_((create-root-handler) {:uri "/pets-api/pets"
+                          :query-string "limit=2"
+                          :request-method :get})
 
-        }})))
+#_(ring/ring-handler
+   (ring/router
+    [["/{*path}"
+      {:name :pets
+       :handler handler
+       :middleware
+       [:clean-response
+        [:server-header "JUXT Apex"]
+        ]}]
 
-;((create-ring-handler) {:uri "/" :request-method :get})
+     #_["/index.html"
+        (fn [req respond _]
+          (respond {:status 200 :body (io/input-stream (io/resource "public/index.html"))}))]
+
+     #_["/assets/react/{*path}"
+        (ring/create-resource-handler
+         {:root "META-INF/resources/webjars/react/16.8.5"
+          :parameter :path})]
+
+     #_["/assets/react-dom/{*path}"
+        (ring/create-resource-handler
+         {:root "META-INF/resources/webjars/react-dom/16.8.5"
+          :parameter :path})]
+
+     #_["/assets/react-jsonschema-form/{*path}"
+        (ring/create-resource-handler
+         {:root "META-INF/resources/webjars/react-jsonschema-form/1.0.5"
+          :parameter :path})]
+
+     #_["/js/{*path}"
+        (ring/create-resource-handler
+         {:root "public"
+          :parameter :path})]
+
+     ]
+
+    {:reitit.middleware/registry
+     {:clean-response clean-response-middleware
+      :server-header server-header-middleware
+
+      }}))
 
 (defmethod ig/init-key :juxt.apex.dev.server/jetty
   [_ {:keys [handler]
       :juxt.apex.dev/keys [new-handler-on-each-request?]
       :as opts}]
 
-  (jetty/run-jetty
-   (if new-handler-on-each-request?
-     (fn [req respond raise]
-       (let [h (create-ring-handler)]
-         (h req respond raise)
-         ;;(respond {:status 200 :body "OK\n"})
-         ))
-
-     (create-ring-handler))
-   (-> opts (dissoc :handler)
-       (assoc :join? false
-              :async? true
-              :async-timeout 5000))))
+  (let [request-history-atom (atom [])]
+    (jetty/run-jetty
+     (if new-handler-on-each-request?
+       (fn [req respond raise]
+         (let [h (create-root-handler {:apex/request-history-atom request-history-atom})]
+           (h req respond raise)))
+       ;; Production
+       (create-root-handler {:apex/request-history-atom request-history-atom}))
+     (-> opts (dissoc :handler)
+         (assoc :join? false
+                :async? true
+                :async-timeout 5000)))))
 
 (defmethod ig/halt-key! :juxt.apex.dev.server/jetty [_ server]
   (.stop server))

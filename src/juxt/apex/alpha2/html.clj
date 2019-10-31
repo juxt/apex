@@ -48,6 +48,13 @@
           (keyword? k) (str (kw->name k))
           :else (str k))))
 
+(defn render-date [d]
+  (.format java.time.format.DateTimeFormatter/ISO_LOCAL_DATE_TIME
+           (.toLocalDateTime
+            (.atZone
+             (.toInstant d)
+             (java.time.ZoneId/systemDefault)))))
+
 (defn map->table [m]
   (el
    "table"
@@ -78,9 +85,19 @@
     (for [row data]
       (el
        "tr"
-       (for [{:keys [get render style]} cols]
-         (let [v (get row)]
-           (el "td" (cond
-                      (and (map? v) (not-empty v))
-                      (map->table v)
-                      :else ((or style monospace) (escape ((or render pr-str) v))))))))))))
+       (for [{:keys [get render style compute link]} cols]
+         (let [v ((or compute (fn [row v] v))
+                  row
+                  (get row)
+                  )]
+           (el
+            "td"
+            (cond
+              (and (map? v) (not-empty v))
+              (map->table v)
+              :else
+              (-> v
+                  ((or render pr-str))
+                  escape
+                  ((if link (partial link row) identity))
+                  ((or style monospace))))))))))))

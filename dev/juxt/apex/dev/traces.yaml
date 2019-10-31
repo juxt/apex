@@ -1,0 +1,54 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Apex Traces
+  license:
+    name: MIT
+paths:
+  /requests:
+    get:
+      summary: List all requests
+      operationId: listRequests
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: The maximum number of requests to display
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: All requests
+          headers:
+            x-next:
+              description: A link to the next page of responses
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pets"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /requests/{requestId}:
+    get:
+      summary: Info for a specific request
+      operationId: showRequestById
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          description: The id of the request to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                type: object

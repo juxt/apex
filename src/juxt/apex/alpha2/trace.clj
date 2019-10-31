@@ -1,131 +1,114 @@
-;; Copyright © 2019, JUXT LTD.
+(ns juxt.apex.alpha2.trace)
 
-(ns juxt.apex.alpha2.trace
-  (:require
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [clojure.pprint :refer [pprint]]
-   [ring.util.codec :as codec]
-   [jsonista.core :as json]
-   [juxt.apex.alpha2.html :as html]
-   [juxt.apex.alpha2.util :refer [resolve-json-ref]]))
+(defn commit-request-journal [request-history-atom m]
+  (swap!
+   request-history-atom
+   (fn [history]
+     (conj history (assoc m :index (count history))))))
 
-(def default-template-map
-  {"style" (delay (slurp (io/resource "juxt/apex/style.css")))
-   "footer" (delay (slurp (io/resource "juxt/apex/footer.html")))})
+(defn make-journal-entry [journal req middleware]
+  (assert journal)
+  (assert req)
+  (swap! journal conj (-> req
+                          (assoc :apex.trace/middleware middleware)
+                          (dissoc :apex/request-journal-atom))))
 
-(defn getter
-  ([k]
-   (fn [x] (get x k)))
-  ([k default]
-   (fn [x] (get x k default))))
+(defn link-up [reqs]
+  (->> reqs
+       (partition-all 2 1)
+       (map (fn [[x sub]] (cond-> x sub (assoc :apex.trace/subsequent-request sub))))
+       vec))
 
-(defn trace? [req]
-  (when-let [qs (some-> req :query-string codec/url-decode)]
-    (not-empty (filter #(.equals "trace" %) (str/split qs #"&")))))
-
-(defn trace-response [req]
-  {:status 200
-   :headers {"content-type" "text/html;charset=utf-8"}
-   :body
-   (html/content-from-template
-    (slurp
-     (io/resource "juxt/apex/alpha2/trace.html"))
-    (merge
-     {"style" (delay (slurp (io/resource "juxt/apex/style.css")))
-      "footer" (delay (slurp (io/resource "juxt/apex/footer.html")))}
-
-     ;;default-template-map
-
-     {"method" (.toUpperCase (name (get req :request-method)))
-      "uri" (get req :uri)
-      "request"
-      (html/map->table req)
-
-      "summary-table"
-      (let [method (:request-method req)]
-        (html/vec->table
-         [{:get first :render html/kw->name :style identity}
-          {:get second}]
-         [[:operation
-           (get-in req [:reitit.core/match :data method :apex/operation "operationId"])]]))
-
-
-      "creation-form"
-      (delay
-        (let [doc (get-in req [:reitit.core/match :data :post :apex/openapi])]
-          (json/write-value-as-string
-           (some->
-            (get-in req [:reitit.core/match :data :post :apex/operation "requestBody" "content" "application/json" "schema"])
-            (resolve-json-ref {:base-document doc})
-            first
-            ))))
-
-
-      "parameters"
-      (delay
-        (html/vec->table
-         [{:head "name"
-           :get first
-           :render str
-           :style identity}
-          {:head "description"
-           :get (comp (getter "description") :param second)
-           :render str
-           :style identity}
-          {:head "in"
-           :get (constantly "query")
-           :render str
-           :style identity}
-          {:head "required"
-           :get (comp (getter "required") :param second)
-           :render str
-           :style identity}
-          {:head "style"
-           :get (comp (getter "style") :param second)
-           :render str
-           :style identity}
-          {:head "explode"
-           :get (comp (getter "explode") :param second)
-           :render str
-           :style identity}
-          {:head "schema"
-           :get (comp (getter "schema") :param second)
-           :render str
-           :style identity}
-          {:head "encoded-strings"
-           :get (comp :encoded-strings second)
-           :render str
-           :style identity}
-          {:head "validation"
-           :get (comp :validation second)
-           :render str
-           :style identity}
-          {:head "value"
-           ;; TODO: Try get :error
-           :get (comp (fn [{:keys [value error]}]
-                        (or value error))
-                      second)}]
-
-         (seq (get-in req [:apex/parameters :query :apex/params]))))
-
-      "raw-request"
-      (delay
-        (html/escape
-         (with-out-str
-           (pprint req))))}))})
-
-(def wrap-trace
-  {:name "Trace console"
+(def wrap-trace-outer
+  {:name "Outer trace"
+   ::trace-middleware true
    :compile
-   (fn [data opts]
-     (fn [h]
+   (fn [route-data router-opts]
+     (fn [h request-history-atom]
        (fn
          ([req]
-          (if (trace? req)
-            (trace-response req)
+          (let [t0 (new java.util.Date)
+                a (atom [(assoc req :apex.trace/middleware wrap-trace-outer)])]
+            (let [response (h (assoc req :apex/request-journal-atom a))
+                  t1 (new java.util.Date)]
+              (commit-request-journal
+               request-history-atom
+               {:apex/start-date t0
+                :apex/duration (- (.getTime t1) (.getTime t0))
+                :apex/request-journal (link-up @a)})
+              response)))
+         ([req respond raise]
+          (let [t0 (new java.util.Date)
+                a (atom [(assoc req :apex.trace/middleware wrap-trace-outer)])]
+            (h
+             (assoc req :apex/request-journal-atom a)
+             (fn [response]
+               (let [t1 (new java.util.Date)]
+                 (commit-request-journal
+                  request-history-atom
+                  {:apex/start-date t0
+                   :apex/duration (- (.getTime t1) (.getTime t0))
+                   :apex/request-journal (link-up @a)}))
+               (respond response))
+             raise))))))})
+
+(def wrap-trace-inner
+  {:name "Inner trace"
+   ::trace-middleware true
+   :compile
+   (fn [route-data router-opts]
+     (fn [h request-history-atom]
+       (fn
+         ([req]
+          (let [journal (:apex/request-journal-atom req)]
+            (make-journal-entry journal req wrap-trace-inner)
             (h req)))
          ([req respond raise]
-          (if (trace? req)
-            (respond (trace-response req))
+          (let [journal (:apex/request-journal-atom req)]
+            (make-journal-entry journal req wrap-trace-inner)
             (h req respond raise))))))})
+
+(defn middleware-proxy
+  "Given a reitit.middleware/Middleware record (containing a :wrap entry
+  of a single-aray function as per provided by reitit.middleware/into-middleware), update the wrap function ..."
+  [middleware req-f]
+  (assert middleware)
+  (update
+   middleware
+   :wrap
+   (fn [wrap]
+     (fn [h]
+       ;; Here is the sleight-of-hand where we call wrap with the
+       ;; handler to create a new handler we can intercept calls on.
+       (let [h (wrap h)]
+         (fn
+           ([req]
+            (h (req-f req)))
+           ([req respond raise]
+            ;; TODO: Ideally also track any errors that happen in
+            ;; respond in case delegate doesn't properly deal with
+            ;; them. Test for this.
+            (h (req-f req) respond raise))))))))
+
+(defn journalling-proxy [middleware]
+  (middleware-proxy
+   middleware
+   (fn [req]
+     (let [journal (:apex/request-journal-atom req)]
+       (make-journal-entry journal req middleware)
+       req))))
+
+(defn trace-middleware-transform [request-history-atom]
+  (fn [middleware]
+    (vec
+     (concat
+      ;; Add some per-request container to store 'traces' which can be
+      ;; rendered later.
+      [[wrap-trace-outer request-history-atom]]
+      (vec
+       (map
+        (fn [middleware]
+          (journalling-proxy middleware))
+        middleware))
+      [[wrap-trace-inner request-history-atom]]
+      ))))
