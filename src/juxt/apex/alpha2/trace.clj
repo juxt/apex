@@ -16,7 +16,7 @@
 (defn link-up [reqs]
   (->> reqs
        (partition-all 2 1)
-       (map (fn [[x sub]] (cond-> x sub (assoc :apex.trace/subsequent-request sub))))
+       (map (fn [[x sub]] (cond-> x sub (assoc :apex.trace/next-request-state sub))))
        vec))
 
 (def wrap-trace-outer

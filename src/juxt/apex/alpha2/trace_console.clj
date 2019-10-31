@@ -273,8 +273,8 @@
                      :get (fn [x]
                             (second
                              (diff
-                              (dissoc x :apex.trace/subsequent-request :apex.trace/middleware)
-                              (dissoc (:apex.trace/subsequent-request x) :apex.trace/middleware :apex.trace/subsequent-request)))
+                              (dissoc x :apex.trace/next-request-state :apex.trace/middleware)
+                              (dissoc (:apex.trace/next-request-state x) :apex.trace/middleware :apex.trace/next-request-state)))
                             )
                      :render str
                      }]
@@ -381,11 +381,11 @@
 
                (section
                 "Incoming request prior to middleware processing"
-                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/subsequent-request)))
+                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/next-request-state)))
 
                (section
                 "Request prior to handler after middleware processing"
-                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/subsequent-request))))}))}))
+                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/next-request-state))))}))}))
 
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route
