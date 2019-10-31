@@ -10,7 +10,7 @@
 
   <body>
 
-    <nav class="menu">
+    <nav class="navbar">
       <ul>
 	<li><a href="{{home.href}}">Home</a></li>
       </ul>
@@ -18,9 +18,15 @@
 
     <h1>Trace Console</h1>
 
+    <h2>{{title}}</h2>
+
+    <nav class="toc">
+      <h3>Table of contents</h3>
+      {{toc}}
+    </nav>
+
     {{debug}}
 
-    <h2>{{title}}</h2>
     {{body}}
     {{footer}}
   </body>

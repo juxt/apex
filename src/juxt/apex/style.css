@@ -21,12 +21,22 @@ section {
     padding: 0;
     margin: 12pt;
 }
-nav li {
+nav.navbar {
+    margin: 0;
+}
+nav.navbar li {
     display: inline;
+}
+nav {
+    margin: 12pt;
+    padding: 0;
 }
 nav ul {
     margin: 12pt;
     padding: 0;
+}
+nav li {
+    list-style-type: none;
 }
 footer {
     font-size: 70%;

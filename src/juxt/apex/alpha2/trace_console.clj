@@ -4,13 +4,15 @@
   (:require
    [clojure.data :refer [diff]]
    [clojure.java.io :as io]
+   [clojure.string :as str]
    [clojure.pprint :refer [pprint]]
    [juxt.apex.alpha2.html :as html]
    [juxt.apex.alpha2.openapi :as openapi]
    [juxt.apex.alpha2.trace :as trace]
    [juxt.apex.alpha2.util :refer [fast-get-in]]
    [juxt.apex.yaml :as yaml]
-   [reitit.core :as r]))
+   [reitit.core :as r]
+   [ring.util.codec :as codec]))
 
 (def default-template-map
   {"style" (delay (slurp (io/resource "juxt/apex/style.css")))
@@ -125,11 +127,16 @@
    (respond (trace-response req))))
 
 (defn section [title body]
-  (html/content-from-template
-   (slurp
-    (io/resource "juxt/apex/alpha2/section.html"))
-   {"title" title
-    "body" body}))
+  (let [anchor (codec/url-encode (str/replace (.toLowerCase title) #"\s+" "--"))]
+    {:title title
+     :anchor anchor
+     :content
+     (html/content-from-template
+      (slurp
+       (io/resource "juxt/apex/alpha2/section.html"))
+      {"title" title
+       "body" body
+       "anchor" anchor})}))
 
 (defn debug [body]
   (html/content-from-template
@@ -170,10 +177,72 @@
    "footer" (delay (slurp (io/resource "juxt/apex/footer.html")))
    "home.href" (href router "/requests")})
 
+(defn toc [sections]
+  (str
+   "<ul>"
+   (apply str
+          (for [{:keys [title anchor]} sections]
+            (format "<li><a href=\"#%s\">%s</a></li>" anchor title)
+            ))
+   "</ul>"))
+
 (defn requests-index [req params request-history-atom]
   ;; TODO: I feel this :apex/params level is too much - remove the
   ;; :apex/params level.
-  (let [limit (fast-get-in params [:query "limit" :value] 10)]
+  (let [limit (fast-get-in params [:query "limit" :value] 10)
+        sections
+        [(section
+          "Requests"
+          (html/vec->table
+           [{:head "#"
+             :get :index
+             :link
+             (fn [row v]
+               (format "<a href=\"%s\">%s</a>"
+                       (href (:reitit.core/router req) (str "/requests/" (:index row)))
+                       v))
+             :render (partial index-number-format 4)}
+            {:head "date"
+             :get (comp html/render-date :apex/start-date)
+             :render str
+             :style html/monospace}
+            {:head "uri"
+             :get (comp :uri first :apex/request-journal)
+             :render str
+             :style html/monospace}
+            {:head "query-string"
+             :get (comp :query-string first :apex/request-journal)
+             :render str
+             :style html/monospace}]
+           (cond->>
+               (let [requests (reverse @request-history-atom)]
+                 requests)
+               limit (take limit))))
+         (section
+          "Control"
+          (str
+           "<form method=\"GET\">"
+           (html/vec->table
+            [{:head "Name"
+              :get first
+              :render str
+              :style identity}
+             {:head "Description"
+              :get #(get-in % [1 :param "description"])
+              :render str
+              :style identity}
+             {:head "Value"
+              :get identity
+              :render identity
+              :escape identity
+              :style (fn [v]
+                       (format "<input name=\"%s\" type=\"text\" value=\"%s\"></input>" (first v) (fast-get-in v [1 :value] 10)))
+              }]
+            (fast-get-in req [:apex/params :query]))
+
+           "<p><input type=\"submit\" value=\"Submit\"></input></p>"
+           "</form method=\"GET\">"))]]
+
     {:status 200
      :headers {"content-type" "text/html;charset=utf-8"}
      :body (html/content-from-template
@@ -182,69 +251,154 @@
             (merge
              (template-model-base (:reitit.core/router req))
              {"title" "Requests Index"
+              "toc" (toc sections)
 
               #_"debug"
               #_(debug {:router (reitit.core/options (:reitit.core/router req))})
               "body"
-              (str
-               (section
-                "Requests"
-                (html/vec->table
-                 [{:head "#"
-                   :get :index
-                   :link
-                   (fn [row v]
-                     (format "<a href=\"%s\">%s</a>"
-                             (href (:reitit.core/router req) (str "/requests/" (:index row)))
-                             v))
-                   :render (partial index-number-format 4)}
-                  {:head "date"
-                   :get (comp html/render-date :apex/start-date)
-                   :render str
-                   :style html/monospace}
-                  {:head "uri"
-                   :get (comp :uri first :apex/request-journal)
-                   :render str
-                   :style html/monospace}
-                  {:head "query-string"
-                   :get (comp :query-string first :apex/request-journal)
-                   :render str
-                   :style html/monospace}]
-                 (cond->>
-                     (let [requests (reverse @request-history-atom)]
-                       requests)
-                     limit (take limit))))
-
-               (section
-                "Control"
-                (str
-                 "<form method=\"GET\">"
-                 (html/vec->table
-                  [{:head "Name"
-                    :get first
-                    :render str
-                    :style identity}
-                   {:head "Description"
-                    :get #(get-in % [1 :param "description"])
-                    :render str
-                    :style identity}
-                   {:head "Value"
-                    :get identity
-                    :render identity
-                    :escape identity
-                    :style (fn [v]
-                             (format "<input name=\"%s\" type=\"text\" value=\"%s\"></input>" (first v) (fast-get-in v [1 :value] 10)))
-                    }]
-                  (fast-get-in req [:apex/params :query]))
-
-                 "<p><input type=\"submit\" value=\"Submit\"></input></p>"
-                 "</form method=\"GET\">")))}))}))
+              (apply str (map :content sections)
+               )
+              }))}))
 
 (defn request-trace [req params request-history-atom]
   (let [index (fast-get-in params [:path "requestId" :value])
         item (get @request-history-atom index)
         journal (:apex/request-journal item)
-        journal-entries-by-trace-id (group-by :apex.trace/middleware journal)]
+        journal-entries-by-trace-id (group-by :apex.trace/middleware journal)
+        sections
+        [(section
+          "Summary"
+          (html/map->table
+           (first (get journal-entries-by-trace-id trace/wrap-trace-inner))
+           {:sort identity
+            :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
+
+         (section
+          "Middleware Trace"
+          (delay
+            (html/vec->table
+             [{:head "Middleware"
+               :get (comp :name :apex.trace/middleware)
+               :render str
+               :style identity}
+              {:head "Contributions"
+               :get (fn [x]
+                      (second
+                       (diff
+                        (dissoc x :apex.trace/next-request-state :apex.trace/middleware)
+                        (dissoc (:apex.trace/next-request-state x) :apex.trace/middleware :apex.trace/next-request-state)))
+                      )
+               :render str
+               }]
+             (remove
+              (comp ::trace/trace-middleware :apex.trace/middleware)
+              journal))))
+
+         ;; TODO: Extract this elsewhere to an extension mechanism
+         (section
+          "Query Parameters"
+          (delay
+            (html/vec->table
+             [{:head "name"
+               :get first
+               :render str
+               :style identity}
+              {:head "description"
+               :get (comp (getter "description") :param second)
+               :render str
+               :style identity}
+              {:head "in"
+               :get (constantly "query")
+               :render str
+               :style identity}
+              {:head "required"
+               :get (comp (getter "required") :param second)
+               :render str
+               :style identity}
+              {:head "style"
+               :get (comp (getter "style") :param second)
+               :render str
+               :style identity}
+              {:head "explode"
+               :get (comp (getter "explode") :param second)
+               :render str
+               :style identity}
+              {:head "schema"
+               :get (comp (getter "schema") :param second)
+               :render str
+               :style identity}
+              {:head "encoded-strings"
+               :get (comp :encoded-strings second)
+               :render str
+               :style identity}
+              {:head "validation"
+               :get (comp :validation second)
+               :render str
+               :style identity}
+              {:head "value"
+               ;; TODO: Try get :error
+               :get (comp (fn [{:keys [value error]}]
+                            (or value error))
+                          second)}]
+
+             (seq (get-in (last journal) [:apex/params :query])))))
+
+         (section
+          "Path Parameters"
+          (delay
+            (html/vec->table
+             [{:head "name"
+               :get first
+               :render str
+               :style identity}
+              {:head "description"
+               :get (comp (getter "description") :param second)
+               :render str
+               :style identity}
+              {:head "in"
+               :get (constantly "query")
+               :render str
+               :style identity}
+              {:head "required"
+               :get (comp (getter "required") :param second)
+               :render str
+               :style identity}
+              {:head "style"
+               :get (comp (getter "style") :param second)
+               :render str
+               :style identity}
+              {:head "explode"
+               :get (comp (getter "explode") :param second)
+               :render str
+               :style identity}
+              {:head "schema"
+               :get (comp (getter "schema") :param second)
+               :render str
+               :style identity}
+              {:head "encoded-strings"
+               :get (comp :encoded-strings second)
+               :render str
+               :style identity}
+              {:head "validation"
+               :get (comp :validation second)
+               :render str
+               :style identity}
+              {:head "value"
+               ;; TODO: Try get :error
+               :get (comp (fn [{:keys [value error]}]
+                            (or value error))
+                          second)}]
+
+             (seq (get-in (last journal) [:apex/params :path])))))
+
+         (section
+          "Incoming Request (prior to middleware processing)"
+          (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/next-request-state)))
+
+         (section
+          "Final Request (prior to handler after middleware processing)"
+          (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/next-request-state)))
+         ]]
     {:status 200
      :headers {"content-type" "text/html;charset=utf-8"}
      :body (html/content-from-template
@@ -253,139 +407,10 @@
             (merge
              (template-model-base (:reitit.core/router req))
              {"title" "Request Trace"
+              "toc" (toc sections)
               "body"
-              (str
-               (section
-                "Summary"
-                (html/map->table
-                 (first (get journal-entries-by-trace-id trace/wrap-trace-inner))
-                 {:sort identity
-                  :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
-               (section
-                "Story"
-                (delay
-                  (html/vec->table
-                   [{:head "Middleware"
-                     :get (comp :name :apex.trace/middleware)
-                     :render str
-                     :style identity}
-                    {:head "Contributions"
-                     :get (fn [x]
-                            (second
-                             (diff
-                              (dissoc x :apex.trace/next-request-state :apex.trace/middleware)
-                              (dissoc (:apex.trace/next-request-state x) :apex.trace/middleware :apex.trace/next-request-state)))
-                            )
-                     :render str
-                     }]
-                   (remove
-                    (comp ::trace/trace-middleware :apex.trace/middleware)
-                    journal))))
-
-               ;; TODO: Extract this elsewhere to an extension mechanism
-               (section
-                "Query Parameters"
-                (delay
-                  (html/vec->table
-                   [{:head "name"
-                     :get first
-                     :render str
-                     :style identity}
-                    {:head "description"
-                     :get (comp (getter "description") :param second)
-                     :render str
-                     :style identity}
-                    {:head "in"
-                     :get (constantly "query")
-                     :render str
-                     :style identity}
-                    {:head "required"
-                     :get (comp (getter "required") :param second)
-                     :render str
-                     :style identity}
-                    {:head "style"
-                     :get (comp (getter "style") :param second)
-                     :render str
-                     :style identity}
-                    {:head "explode"
-                     :get (comp (getter "explode") :param second)
-                     :render str
-                     :style identity}
-                    {:head "schema"
-                     :get (comp (getter "schema") :param second)
-                     :render str
-                     :style identity}
-                    {:head "encoded-strings"
-                     :get (comp :encoded-strings second)
-                     :render str
-                     :style identity}
-                    {:head "validation"
-                     :get (comp :validation second)
-                     :render str
-                     :style identity}
-                    {:head "value"
-                     ;; TODO: Try get :error
-                     :get (comp (fn [{:keys [value error]}]
-                                  (or value error))
-                                second)}]
-
-                   (seq (get-in (last journal) [:apex/params :query])))))
-
-               (section
-                "Path Parameters"
-                (delay
-                  (html/vec->table
-                   [{:head "name"
-                     :get first
-                     :render str
-                     :style identity}
-                    {:head "description"
-                     :get (comp (getter "description") :param second)
-                     :render str
-                     :style identity}
-                    {:head "in"
-                     :get (constantly "query")
-                     :render str
-                     :style identity}
-                    {:head "required"
-                     :get (comp (getter "required") :param second)
-                     :render str
-                     :style identity}
-                    {:head "style"
-                     :get (comp (getter "style") :param second)
-                     :render str
-                     :style identity}
-                    {:head "explode"
-                     :get (comp (getter "explode") :param second)
-                     :render str
-                     :style identity}
-                    {:head "schema"
-                     :get (comp (getter "schema") :param second)
-                     :render str
-                     :style identity}
-                    {:head "encoded-strings"
-                     :get (comp :encoded-strings second)
-                     :render str
-                     :style identity}
-                    {:head "validation"
-                     :get (comp :validation second)
-                     :render str
-                     :style identity}
-                    {:head "value"
-                     ;; TODO: Try get :error
-                     :get (comp (fn [{:keys [value error]}]
-                                  (or value error))
-                                second)}]
-
-                   (seq (get-in (last journal) [:apex/params :path])))))
-
-               (section
-                "Incoming request prior to middleware processing"
-                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/next-request-state)))
-
-               (section
-                "Request prior to handler after middleware processing"
-                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/next-request-state))))}))}))
+              (apply str (map :content sections)
+               )}))}))
 
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route
