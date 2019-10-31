@@ -264,6 +264,19 @@
                )
               }))}))
 
+(defn to-url [req]
+  (cond-> (str (name (:scheme req)) ":")
+    true (str "//" (:server-name req) )
+    (or
+     (and (= (:scheme req) :http) (not= (:server-port req) 80))
+     (and (= (:scheme req) :https) (not= (:server-port req) 443)))
+    (str ":" (:server-port req))
+    true (str (:uri req))
+    (:query-string req) (str "?" (:query-string req))))
+
+(comment
+  (to-url {:scheme :https :server-port 443 :server-name "localhost" :uri "/" }))
+
 (defn request-trace [req params request-history-atom]
   (let [index (fast-get-in params [:path "requestId" :value])
         item (get @request-history-atom index)
@@ -418,6 +431,7 @@
              (template-model-base (:reitit.core/router req))
              {"title" "Request Trace"
               "toc" (toc sections)
+              "jumbo" (to-url (first (get journal-entries-by-trace-id trace/wrap-trace-outer)))
               "body"
               (apply str (map :content sections))}))}))
 
