@@ -9,6 +9,7 @@ body {
 }
 h1 {font-size: 200%; font-weight: bold; margin: 12pt; padding: 0}
 h2 {font-size: 140%; font-weight: bold; margin: 12pt; padding: 0}
+h3 {font-size: 120%; font-weight: bold; margin: 36pt 12pt 12pt 0pt; padding: 0}
 table {border-collapse: collapse}
 table tr, table td, table th {border: 1px solid #d8d8d8}
 table td {vertical-align: top}
@@ -36,7 +37,7 @@ nav ul {
     padding: 0;
 }
 nav li {
-    list-style-type: none;
+    list-style-type: square;
 }
 footer {
     font-size: 70%;
