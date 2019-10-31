@@ -17,7 +17,7 @@
   (= (.compareTo instant since) 1))
 
 (def wrap-conditional-request
-  {:name "Conditional request"
+  {:name "Conditional requests"
    :wrap
    (fn [h validators]
      (fn
