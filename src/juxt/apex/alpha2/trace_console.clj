@@ -256,6 +256,12 @@
               "body"
               (str
                (section
+                "Summary"
+                (html/map->table
+                 (first (get journal-entries-by-trace-id trace/wrap-trace-inner))
+                 {:sort identity
+                  :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
+               (section
                 "Story"
                 (delay
                   (html/vec->table
@@ -375,11 +381,11 @@
 
                (section
                 "Incoming request prior to middleware processing"
-                (html/map->table (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
+                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/subsequent-request)))
 
                (section
                 "Request prior to handler after middleware processing"
-                (html/map->table (first (get journal-entries-by-trace-id trace/wrap-trace-inner)))))}))}))
+                (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/subsequent-request))))}))}))
 
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route

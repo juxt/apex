@@ -55,19 +55,28 @@
              (.toInstant d)
              (java.time.ZoneId/systemDefault)))))
 
-(defn map->table [m]
-  (el
-   "table"
-   (for [[k v] (sort m)]
-     (el
-      "tr"
-      (el "td" (kw->str k))
-      (el "td" (cond
-                 (some-> v meta :apex.trace/hide)
-                 "&lt;hidden&gt;"
-                 (and (map? v) (not-empty v))
-                 (map->table v)
-                 :else (monospace (escape (pr-str v)))))))))
+
+(defn order-by [m ks]
+  (apply array-map
+         (mapcat seq
+                 (for [k ks]
+                   [k (get m k)]))))
+
+(defn map->table
+  ([m] (map->table m {}))
+  ([m {:keys [sort order] :or {sort sort}}]
+   (el
+    "table"
+    (for [[k v] (if order (order-by m order) (sort m))]
+      (el
+       "tr"
+       (el "td" (kw->str k))
+       (el "td" (cond
+                  (some-> v meta :apex.trace/hide)
+                  "&lt;hidden&gt;"
+                  (and (map? v) (not-empty v))
+                  (map->table v)
+                  :else (monospace (escape (if v (pr-str v) ""))))))))))
 
 (defn vec->table
   [cols data]
