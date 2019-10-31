@@ -126,16 +126,18 @@
   ([req respond raise]
    (respond (trace-response req))))
 
-(defn section [title body]
+(defn section [title description body]
   (let [anchor (codec/url-encode (str/replace (.toLowerCase title) #"\s+" "--"))]
     {:title title
      :anchor anchor
+     :description description
      :content
      (html/content-from-template
       (slurp
        (io/resource "juxt/apex/alpha2/section.html"))
       {"title" title
        "body" body
+       "description" description
        "anchor" anchor})}))
 
 (defn debug [body]
@@ -179,12 +181,12 @@
 
 (defn toc [sections]
   (str
-   "<ul>"
+   "<table>"
    (apply str
-          (for [{:keys [title anchor]} sections]
-            (format "<li><a href=\"#%s\">%s</a></li>" anchor title)
+          (for [{:keys [title anchor description]} sections]
+            (format "<tr><td><a href=\"#%s\">%s</a></td><td>%s</td></tr>" anchor title description)
             ))
-   "</ul>"))
+   "</table>"))
 
 (defn requests-index [req params request-history-atom]
   ;; TODO: I feel this :apex/params level is too much - remove the
@@ -193,6 +195,7 @@
         sections
         [(section
           "Requests"
+          "An index of all incoming requests, over time"
           (html/vec->table
            [{:head "#"
              :get :index
@@ -220,6 +223,7 @@
                limit (take limit))))
          (section
           "Control"
+          "A form that can be used to control this page"
           (str
            "<form method=\"GET\">"
            (html/vec->table
@@ -268,6 +272,7 @@
         sections
         [(section
           "Summary"
+          "A summary table of the inbound request prior to processing."
           (html/map->table
            (first (get journal-entries-by-trace-id trace/wrap-trace-inner))
            {:sort identity
@@ -275,6 +280,7 @@
 
          (section
           "Middleware Trace"
+          "An ordereed trace of the Ring middleware steps involved in processing the request."
           (delay
             (html/vec->table
              [{:head "Middleware"
@@ -297,6 +303,7 @@
          ;; TODO: Extract this elsewhere to an extension mechanism
          (section
           "Query Parameters"
+          "The results of extracting parameters encoded into the query string of the request."
           (delay
             (html/vec->table
              [{:head "name"
@@ -345,6 +352,7 @@
 
          (section
           "Path Parameters"
+          "The results of extracting parameters encoded into the path of the request."
           (delay
             (html/vec->table
              [{:head "name"
@@ -392,11 +400,13 @@
              (seq (get-in (last journal) [:apex/params :path])))))
 
          (section
-          "Incoming Request (prior to middleware processing)"
+          "Pre-processed Request"
+          "A dump of the entire request state, prior to processing."
           (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/next-request-state)))
 
          (section
-          "Final Request (prior to handler after middleware processing)"
+          "Post-processed Request"
+          "A dump of the final request state, after middleware processing and prior to calling the handler, if appropriate."
           (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/next-request-state)))
          ]]
     {:status 200
@@ -409,8 +419,7 @@
              {"title" "Request Trace"
               "toc" (toc sections)
               "body"
-              (apply str (map :content sections)
-               )}))}))
+              (apply str (map :content sections))}))}))
 
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route

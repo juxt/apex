@@ -46,3 +46,6 @@ footer {
     margin-top: 10em;
     padding: 12pt 12pt 100% 12pt
 }
+table a {
+    text-decoration: none;
+}
