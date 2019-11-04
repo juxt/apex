@@ -9,9 +9,14 @@
 (defn make-journal-entry [journal req middleware]
   (assert journal)
   (assert req)
-  (swap! journal conj (-> req
-                          (assoc :apex.trace/middleware middleware)
-                          (dissoc :apex/request-journal-atom))))
+  (swap!
+   journal
+   (fn [journal]
+     (conj journal
+           (-> req
+               (assoc :index (count journal))
+               (assoc :apex.trace/middleware middleware)
+               (dissoc :apex/request-journal-atom))))))
 
 (defn link-up [reqs]
   (->> reqs

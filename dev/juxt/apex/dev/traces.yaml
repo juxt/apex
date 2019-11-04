@@ -52,3 +52,27 @@ paths:
             application/json:
               schema:
                 type: object
+  /requests/{requestId}/states/{stateId}:
+    get:
+      summary: Info for a specific request state
+      operationId: showRequestStateById
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          description: The id of the request to retrieve
+          schema:
+            type: integer
+        - name: stateId
+          in: path
+          required: true
+          description: The id of the request state to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                type: object

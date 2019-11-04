@@ -301,15 +301,24 @@
                :get (comp :name :apex.trace/middleware)
                :render str
                :style identity}
+              {:head "Index"
+               :get :index
+               :link
+               (fn [row v]
+                 (format
+                  "<a href=\"%s\">%s</a>"
+                  (href (:reitit.core/router req) (str "/requests/" index "/states/" v))
+                  v))
+               :render (partial index-number-format 2)
+               :style identity}
               {:head "Contributions"
-               :get (fn [x]
-                      (second
-                       (diff
-                        (dissoc x :apex.trace/next-request-state :apex.trace/middleware)
-                        (dissoc (:apex.trace/next-request-state x) :apex.trace/middleware :apex.trace/next-request-state)))
-                      )
-               :render str
-               }]
+               :get
+               (fn [x]
+                 (second
+                  (diff
+                   (dissoc x :apex.trace/next-request-state :apex.trace/middleware)
+                   (dissoc (:apex.trace/next-request-state x) :apex.trace/middleware :apex.trace/next-request-state))))
+               :render str}]
              (remove
               (comp ::trace/trace-middleware :apex.trace/middleware)
               journal))))
@@ -436,6 +445,33 @@
               "body"
               (apply str (map :content sections))}))}))
 
+(defn request-state-trace [req params request-history-atom]
+  (let [index (fast-get-in params [:path "requestId" :value])
+        item (get @request-history-atom index)
+        journal (:apex/request-journal item)
+        state-index (fast-get-in params [:path "requestId" :value])
+        state (get journal state-index)
+        sections
+        [(section
+          "Summary"
+          "A summary table of the request state"
+          (html/map->table
+           state
+           {:sort identity
+            :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
+
+         ]]
+    {:status 200
+     :headers {"content-type" "text/html;charset=utf-8"}
+     :body (html/content-from-template
+            (slurp
+             (io/resource "juxt/apex/alpha2/trace-console.html"))
+            (merge
+             (template-model-base (:reitit.core/router req))
+             {"title" "Request State"
+              "body"
+              (apply str (map :content sections))}))}))
+
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route
    "/traces"
@@ -465,6 +501,20 @@
         (let [response
               (fn [req]
                 (request-trace req (:apex/params req) request-history-atom))]
+          {:handler
+           (fn
+             ([req] (response req))
+             ([req respond raise]
+              (try
+                (respond (response req))
+                (catch Exception e (raise e)))))})}}
+
+      "/requests/{requestId}/states/{stateId}"
+      {:apex/methods
+       {:get
+        (let [response
+              (fn [req]
+                (request-state-trace req (:apex/params req) request-history-atom))]
           {:handler
            (fn
              ([req] (response req))

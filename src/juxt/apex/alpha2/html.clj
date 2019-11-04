@@ -76,7 +76,10 @@
                   "&lt;hidden&gt;"
                   (and (map? v) (not-empty v))
                   (map->table v)
-                  :else (monospace (escape (if v (pr-str v) ""))))))))))
+                  :else (-> (if v (pr-str v) "")
+                            escape
+                            monospace
+                            ))))))))
 
 (defn vec->table
   [cols data]
