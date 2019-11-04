@@ -211,16 +211,15 @@
              :render str
              :style html/monospace}
             {:head "uri"
-             :get (comp :uri first :apex/request-journal)
+             :get (comp :uri :apex.trace/request-state first :apex/request-journal)
              :render str
              :style html/monospace}
             {:head "query-string"
-             :get (comp :query-string first :apex/request-journal)
+             :get (comp :query-string :apex.trace/request-state first :apex/request-journal)
              :render str
              :style html/monospace}]
            (cond->>
-               (let [requests (reverse @request-history-atom)]
-                 requests)
+               (reverse @request-history-atom)
                limit (take limit))))
          (section
           "Control"
@@ -288,13 +287,13 @@
           "Summary"
           "A summary table of the inbound request prior to processing."
           (html/map->table
-           (first (get journal-entries-by-trace-id trace/wrap-trace-inner))
+           (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-inner)))
            {:sort identity
             :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
 
          (section
           "Middleware Trace"
-          "An ordereed trace of the Ring middleware steps involved in processing the request."
+          "An ordered trace of the Ring middleware steps involved in processing the request."
           (delay
             (html/vec->table
              [{:head "Middleware"
@@ -316,8 +315,8 @@
                (fn [x]
                  (second
                   (diff
-                   (dissoc x :apex.trace/next-request-state :apex.trace/middleware)
-                   (dissoc (:apex.trace/next-request-state x) :apex.trace/middleware :apex.trace/next-request-state))))
+                   (:apex.trace/request-state x)
+                   (-> x :apex.trace/next-request-state :apex.trace/request-state))))
                :render str}]
              (remove
               (comp ::trace/trace-middleware :apex.trace/middleware)
@@ -371,7 +370,7 @@
                             (or value error))
                           second)}]
 
-             (seq (get-in (last journal) [:apex/params :query])))))
+             (seq (get-in (last journal) [:apex.trace/request-state :apex/params :query])))))
 
          (section
           "Path Parameters"
@@ -420,17 +419,18 @@
                             (or value error))
                           second)}]
 
-             (seq (get-in (last journal) [:apex/params :path])))))
+             (seq (get-in (last journal) [:apex.trace/request-state :apex/params :path])))))
 
          (section
           "Pre-processed Request"
           "A dump of the entire request state, prior to processing."
-          (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-outer)) :apex.trace/next-request-state)))
+          (html/map->table (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
+          )
 
          (section
           "Post-processed Request"
           "A dump of the final request state, after middleware processing and prior to calling the handler, if appropriate."
-          (html/map->table (dissoc (first (get journal-entries-by-trace-id trace/wrap-trace-inner)) :apex.trace/next-request-state)))
+          (html/map->table (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-inner)))))
          ]]
     {:status 200
      :headers {"content-type" "text/html;charset=utf-8"}
@@ -441,7 +441,7 @@
              (template-model-base (:reitit.core/router req))
              {"title" "Request Trace"
               "toc" (toc sections)
-              "jumbo" (to-url (first (get journal-entries-by-trace-id trace/wrap-trace-outer)))
+              "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
               "body"
               (apply str (map :content sections))}))}))
 
@@ -450,7 +450,7 @@
         item (get @request-history-atom index)
         journal (:apex/request-journal item)
         state-index (fast-get-in params [:path "requestId" :value])
-        state (get journal state-index)
+        state (get-in journal [state-index :apex.trace/request-state])
         sections
         [(section
           "Summary"

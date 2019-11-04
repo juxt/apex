@@ -13,10 +13,9 @@
    journal
    (fn [journal]
      (conj journal
-           (-> req
-               (assoc :index (count journal))
-               (assoc :apex.trace/middleware middleware)
-               (dissoc :apex/request-journal-atom))))))
+           {:index (count journal)
+            :apex.trace/middleware middleware
+            :apex.trace/request-state (dissoc req :apex/request-journal-atom)}))))
 
 (defn link-up [reqs]
   (->> reqs
@@ -44,7 +43,9 @@
               response)))
          ([req respond raise]
           (let [t0 (new java.util.Date)
-                a (atom [(assoc req :apex.trace/middleware wrap-trace-outer)])]
+                a (atom [{:index 0
+                          :apex.trace/middleware wrap-trace-outer
+                          :apex.trace/request-state req}])]
             (h
              (assoc req :apex/request-journal-atom a)
              (fn [response]
