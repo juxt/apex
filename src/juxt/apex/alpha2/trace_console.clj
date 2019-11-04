@@ -19,6 +19,7 @@
    "footer" (delay (slurp (io/resource "juxt/apex/footer.html")))})
 
 (defn getter
+  "A function that is more ergonmic to use in comp"
   ([k]
    (fn [x] (get x k)))
   ([k default]
