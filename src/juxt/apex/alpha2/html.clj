@@ -62,6 +62,8 @@
                  (for [k ks]
                    [k (get m k)]))))
 
+(declare map->table)
+
 (defn default-render [x]
   (cond
     (keyword? x) (name x)
@@ -91,6 +93,17 @@
            (el "td" (cond
                       (some-> v meta :apex.trace/hide)
                       "&lt;hidden&gt;"
+
+                      (instance? Exception v)
+                      (map->table
+                       (merge
+                        {:message (.getMessage v)
+                         :stack (into [] (.getStackTrace v))
+                         :exception-type (type v)}
+                        (when-let [cause (.getCause v)]
+                          {:cause cause})
+                        (when (instance? clojure.lang.ExceptionInfo v)
+                          {:data (ex-data v)})))
 
                       (and (map? v) (not-empty v))
                       (map->table v)
