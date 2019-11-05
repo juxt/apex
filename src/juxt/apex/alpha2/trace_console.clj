@@ -293,6 +293,7 @@
         item (get @request-history-atom index)
         journal (:apex/request-journal item)
         journal-entries-by-trace-id (group-by :apex.trace/middleware journal)
+        journal-entries-by-type (group-by :type journal)
         sections
         [
          (section
@@ -354,9 +355,7 @@
                     :get (fn [x] "")}))
                }]
              journal
-             #_(filter
-              #(= (:type %) ::trace/enter)
-              journal))))
+             )))
 
          ;; TODO: Extract this elsewhere to an extension mechanism
          (section
@@ -406,7 +405,8 @@
                             (or value error))
                           second)}]
 
-             (seq (get-in (last journal) [:apex.trace/request-state :apex/params :query])))))
+             (seq (get-in (first (get journal-entries-by-type :invoke-handler))
+                          [:apex.trace/request-state :apex/params :query])))))
 
          (section
           "Path Parameters"
@@ -455,7 +455,8 @@
                             (or value error))
                           second)}]
 
-             (seq (get-in (last journal) [:apex.trace/request-state :apex/params :path])))))
+             (seq (get-in (first (get journal-entries-by-type :invoke-handler))
+                          [:apex.trace/request-state :apex/params :path])))))
 
          (section
           "Pre-processed Request"
