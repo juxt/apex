@@ -155,12 +155,14 @@
   (format "<a href=\"%s\">%s</a>" uri body))
 
 (defn index-number-format [max-digits n]
-  (.format
-   (doto
-       (java.text.NumberFormat/getIntegerInstance)
-     (.setMinimumIntegerDigits max-digits)
-     (.setGroupingUsed false))
-   n))
+  (if (number? n)
+    (.format
+     (doto
+         (java.text.NumberFormat/getIntegerInstance)
+       (.setMinimumIntegerDigits max-digits)
+       (.setGroupingUsed false))
+     n)
+    ""))
 
 (defn href [router path]
   ;; TODO: This could also take a third parameter, a request method
@@ -175,10 +177,10 @@
                  :full-path full-path
                  :path path})))))
 
-(defn template-model-base [router]
+(defn template-model-base []
   {"style" (delay (slurp (io/resource "juxt/apex/style.css")))
    "footer" (delay (slurp (io/resource "juxt/apex/footer.html")))
-   "home.href" (href router "/requests")})
+   })
 
 (defn toc [sections]
   (str
@@ -188,6 +190,14 @@
             (format "<tr><td><a href=\"#%s\">%s</a></td><td>%s</td></tr>" anchor title description)
             ))
    "</table>"))
+
+(defn navbar [items]
+  (str
+   "<ul>"
+   "<li>apex</li>"
+   (apply str (for [{:keys [title href]} items]
+                (str "<li><a href=\"" href "\">" title "</a></li>")))
+   "</ul>"))
 
 (defn requests-index [req params request-history-atom]
   ;; TODO: I feel this :apex/params level is too much - remove the
@@ -253,15 +263,16 @@
             (slurp
              (io/resource "juxt/apex/alpha2/trace-console.html"))
             (merge
-             (template-model-base (:reitit.core/router req))
+             (template-model-base)
              {"title" "Requests Index"
               "toc" (toc sections)
+              "navbar" (navbar [])
 
               #_"debug"
               #_(debug {:router (reitit.core/options (:reitit.core/router req))})
               "body"
               (apply str (map :content sections)
-               )
+                     )
               }))}))
 
 (defn to-url [req]
@@ -283,24 +294,30 @@
         journal (:apex/request-journal item)
         journal-entries-by-trace-id (group-by :apex.trace/middleware journal)
         sections
-        [(section
+        [
+         (section
           "Summary"
+          "Overall status of request"
+          "")
+
+         (section
+          "Request"
           "A summary table of the inbound request prior to processing."
           (html/map->table
            (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-inner)))
            {:sort identity
-            :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
+            :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]
+            :dynamic (fn [k v]
+                       (if (= k :request-method)
+                         {:render (comp html/default-render str/upper-case name)}
+                         {:render html/default-render}))}))
 
          (section
-          "Middleware Trace"
-          "An ordered trace of the Ring middleware steps involved in processing the request."
+          "Processing Steps"
+          "A trace of the steps involved in processing the request."
           (delay
             (html/vec->table
-             [{:head "Middleware"
-               :get (comp :name :apex.trace/middleware)
-               :render str
-               :style identity}
-              {:head "Index"
+             [{:head "Index"
                :get :index
                :link
                (fn [row v]
@@ -310,16 +327,35 @@
                   v))
                :render (partial index-number-format 2)
                :style identity}
+              {:head "Step"
+               :get (comp :name :apex.trace/middleware)
+               :render str
+               :style identity}
+              {:head "Type"
+               :get :type
+               :render name
+               :style identity}
               {:head "Contributions"
-               :get
+               :dynamic
                (fn [x]
-                 (second
-                  (diff
-                   (:apex.trace/request-state x)
-                   (-> x :apex.trace/next-request-state :apex.trace/request-state))))
-               :render str}]
-             (remove
-              (comp ::trace/trace-middleware :apex.trace/middleware)
+                 (case (:type x)
+                   :enter
+                   {:render str
+                    :get
+                    (fn [x] (second
+                             (diff
+                              (:apex.trace/request-state x)
+                              (-> x :apex.trace/next-request-state :apex.trace/request-state))))}
+                   :exception-from-handler
+                   {:render str
+                    :get (:exception x)}
+
+                   {:render str
+                    :get (fn [x] "")}))
+               }]
+             journal
+             #_(filter
+              #(= (:type %) ::trace/enter)
               journal))))
 
          ;; TODO: Extract this elsewhere to an extension mechanism
@@ -438,8 +474,11 @@
             (slurp
              (io/resource "juxt/apex/alpha2/trace-console.html"))
             (merge
-             (template-model-base (:reitit.core/router req))
+             (template-model-base)
              {"title" "Request Trace"
+              "navbar" (navbar
+                        [{:title "All requests"
+                          :href (href (:reitit.core/router req) "/requests")}])
               "toc" (toc sections)
               "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
               "body"
@@ -449,7 +488,7 @@
   (let [index (fast-get-in params [:path "requestId" :value])
         item (get @request-history-atom index)
         journal (:apex/request-journal item)
-        state-index (fast-get-in params [:path "requestId" :value])
+        state-index (fast-get-in params [:path "stateId" :value])
         state (get-in journal [state-index :apex.trace/request-state])
         sections
         [(section
@@ -458,17 +497,21 @@
           (html/map->table
            state
            {:sort identity
-            :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))
-
-         ]]
+            :order [:request-method :uri :query-string :headers :scheme :server-name :server-port :remote-addr :body]}))]]
     {:status 200
      :headers {"content-type" "text/html;charset=utf-8"}
      :body (html/content-from-template
             (slurp
              (io/resource "juxt/apex/alpha2/trace-console.html"))
             (merge
-             (template-model-base (:reitit.core/router req))
+             (template-model-base)
              {"title" "Request State"
+              "navbar"
+              (navbar
+               [{:title "All requests"
+                 :href (href (:reitit.core/router req) "/requests")}
+                {:title (index-number-format 4 index)
+                 :href (href (:reitit.core/router req) (str "/requests/" index))}])
               "body"
               (apply str (map :content sections))}))}))
 

@@ -27,6 +27,7 @@ nav.navbar {
 }
 nav.navbar li {
     display: inline;
+    padding-right: 1em;
 }
 nav {
     margin: 12pt;

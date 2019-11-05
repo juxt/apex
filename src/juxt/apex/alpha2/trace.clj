@@ -6,7 +6,7 @@
    (fn [history]
      (conj history (assoc m :index (count history))))))
 
-(defn make-journal-entry [journal req middleware]
+(defn make-journal-entry [journal type req middleware]
   (assert journal)
   (assert req)
   (swap!
@@ -14,8 +14,21 @@
    (fn [journal]
      (conj journal
            {:index (count journal)
+            :type type
             :apex.trace/middleware middleware
             :apex.trace/request-state (dissoc req :apex/request-journal-atom)}))))
+
+(defn make-exception-entry [type journal e middleware]
+  (assert journal)
+  (assert e)
+  (swap!
+   journal
+   (fn [journal]
+     (conj journal
+           {:index (count journal)
+            :type type
+            :apex.trace/middleware middleware
+            :exception e}))))
 
 (defn link-up [reqs]
   (->> reqs
@@ -32,7 +45,10 @@
        (fn
          ([req]
           (let [t0 (new java.util.Date)
-                a (atom [(assoc req :apex.trace/middleware wrap-trace-outer)])]
+                a (atom [{:index 0
+                          :type :begin
+                          :apex.trace/middleware wrap-trace-outer
+                          :apex.trace/request-state req}])]
             (let [response (h (assoc req :apex/request-journal-atom a))
                   t1 (new java.util.Date)]
               (commit-request-journal
@@ -44,6 +60,7 @@
          ([req respond raise]
           (let [t0 (new java.util.Date)
                 a (atom [{:index 0
+                          :type :begin
                           :apex.trace/middleware wrap-trace-outer
                           :apex.trace/request-state req}])]
             (h
@@ -56,7 +73,21 @@
                    :apex/duration (- (.getTime t1) (.getTime t0))
                    :apex/request-journal (link-up @a)}))
                (respond response))
-             raise))))))})
+             (fn [e]
+               (let [t1 (new java.util.Date)]
+                 (commit-request-journal
+                  request-history-atom
+                  {:apex/start-date t0
+                   :apex/duration (- (.getTime t1) (.getTime t0))
+                   :apex/request-journal (link-up @a)}))
+               ;; TODO: Produce a 500 response?
+               ;; This should be subject to OpenAPI - probably handled in a custom middleware
+               ;; Therefore, we should never get here
+
+               ;; Trace on every raise on every middleware, so it's
+               ;; easy to see how an error gets threaded through each
+               ;; middleware
+               (raise e))))))))})
 
 (def wrap-trace-inner
   {:name "Inner trace"
@@ -67,12 +98,18 @@
        (fn
          ([req]
           (let [journal (:apex/request-journal-atom req)]
-            (make-journal-entry journal req wrap-trace-inner)
+            (make-journal-entry journal :invoke-handler req wrap-trace-inner)
             (h req)))
          ([req respond raise]
           (let [journal (:apex/request-journal-atom req)]
-            (make-journal-entry journal req wrap-trace-inner)
-            (h req respond raise))))))})
+            (make-journal-entry journal :invoke-handler req wrap-trace-inner)
+            (try
+              (h req respond raise)
+              (catch Exception e
+                ;; TODO: Add e to trace
+                ;; The handler has not caught and handlers its own errors
+                (make-exception-entry :exception-from-handler journal e wrap-trace-inner)
+                (raise e))))))))})
 
 (defn middleware-proxy
   "Given a reitit.middleware/Middleware record (containing a :wrap entry
@@ -101,7 +138,7 @@
    middleware
    (fn [req]
      (let [journal (:apex/request-journal-atom req)]
-       (make-journal-entry journal req middleware)
+       (make-journal-entry journal :enter req middleware)
        req))))
 
 (defn trace-middleware-transform [request-history-atom]

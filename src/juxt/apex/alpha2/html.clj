@@ -62,55 +62,77 @@
                  (for [k ks]
                    [k (get m k)]))))
 
+(defn default-render [x]
+  (cond
+    (keyword? x) (name x)
+    (string? x) x
+    x (pr-str x)
+    :else ""))
+
 (defn map->table
   ([m] (map->table m {}))
-  ([m {:keys [sort order] :or {sort sort}}]
-   (el
-    "table"
-    (for [[k v] (if order (order-by m order) (sort m))]
-      (el
-       "tr"
-       (el "td" (kw->str k))
-       (el "td" (cond
-                  (some-> v meta :apex.trace/hide)
-                  "&lt;hidden&gt;"
-                  (and (map? v) (not-empty v))
-                  (map->table v)
-                  :else (-> (if v (pr-str v) "")
-                            escape
-                            monospace
-                            ))))))))
+  ([m options]
+   (let [{:keys [sort order]
+          :or {sort sort}}
+         options]
+     (el
+      "table"
+      (for [[k v] (if order (order-by m order) (sort m))]
+        (el
+         "tr"
+         (el "td" (kw->str k))
+         (let [{:keys [render]
+                :or {render default-render}}
+               (if-let [dyn (:dynamic options)]
+                 (dyn k v)
+                 options)]
+           (el "td" (cond
+                      (some-> v meta :apex.trace/hide)
+                      "&lt;hidden&gt;"
+                      (and (map? v) (not-empty v))
+                      (map->table v)
+                      :else (-> v
+                                render
+                                escape
+                                monospace))))))))))
 
 (defn vec->table
   [cols data]
-  (let [default-escape escape]
-    (el
-     "table"
-     (when (not-empty (keep :head cols))
+  (try
+    (let [default-escape escape]
+      (el
+       "table"
+       (when (not-empty (keep :head cols))
+         (el
+          "thead"
+          (el
+           "row"
+           (for [h (map :head cols)]
+             (el "th" h)))))
        (el
-        "thead"
-        (el
-         "row"
-         (for [h (map :head cols)]
-           (el "th" h)))))
-     (el
-      "tbody"
-      (for [row data]
-        (el
-         "tr"
-         (for [{:keys [get render style compute link escape]} cols]
-           (let [v ((or compute (fn [row v] v))
-                    row
-                    (get row)
-                    )]
-             (el
-              "td"
-              (cond
-                (and (map? v) (not-empty v))
-                (map->table v)
-                :else
-                (-> v
-                    ((or render pr-str))
-                    ((or escape default-escape))
-                    ((if link (partial link row) identity))
-                    ((or style monospace)))))))))))))
+        "tbody"
+        (for [row data]
+          (el
+           "tr"
+           (for [x cols]
+             (let [{:keys [get render style compute link escape]}
+                   (if-let [d (:dynamic x)] (d row) x) ; dynamic
+                   v ((or compute (fn [row v] v))
+                      row
+                      (if (ifn? get) (get row) get)
+                      )]
+               (el
+                "td"
+                (cond
+                  (and (map? v) (not-empty v))
+                  (map->table v)
+                  :else
+                  (-> v
+                      ((or render default-render))
+                      ((or escape default-escape))
+                      ((if link (partial link row) identity))
+                      ((or style monospace))))))))))))
+    (catch Exception e
+      (println e)
+      (throw e)
+      )))
