@@ -521,7 +521,7 @@
    "/traces"
    (yaml/parse-string
     (slurp
-     (io/resource "juxt/apex/dev/traces.yaml")))
+     (io/resource "juxt/apex/alpha2/traces.yaml")))
    (merge
     opts
     {:apex/add-implicit-head? false
