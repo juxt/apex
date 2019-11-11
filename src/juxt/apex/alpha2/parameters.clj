@@ -416,17 +416,6 @@
       extract-undeclared-params
       ))))
 
-;; TODO: Consider replacing these records with thrown exceptions and
-;; catching. There is additional complexity to detecting and handling
-;; these errors. Exceptions on the JVM are cheap.
-
-;; The code below was written prior to the query param parser and
-;; follows a different design/style.
-
-(defrecord RequiredParameterMissingError [])
-
-(defrecord ParameterSchemaValidationError [])
-
 (defn process-path-parameters
   ([params paramdefs]
    (process-path-parameters params paramdefs {}))
