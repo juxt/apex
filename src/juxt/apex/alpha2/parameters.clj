@@ -448,6 +448,7 @@
      {}
      paramdefs))))
 
+;; TODO: Rename in accordance with Reitit conventions: parameters-middleware
 (def wrap-coerce-parameters
   {:name "Parameters"
 
