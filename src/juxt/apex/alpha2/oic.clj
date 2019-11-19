@@ -19,21 +19,17 @@
   (assert jwks-f)
   (fn
     ([req]
-     (throw (ex-info "Sync not supported" {}))
-     )
+     (throw (ex-info "Sync not yet supported" {})))
+
     ([req respond raise]
 
-     (println "Line 1")
      (assert openid-config-f)
      (assert jwks-f)
-     (println "Line 2")
 
      (let [code (get-in req [:apex/params :query "code" :value])]
 
-       (println "code is" code)
-
-       (let [config (openid-config-f)
-             token-url (get config "token_endpoint")
+       (let [openid-config (openid-config-f)
+             token-url (get openid-config "token_endpoint")
              client (http/new-client)
              body (http/->www-form-urlencoded
                    {"grant_type" "authorization_code"
@@ -42,15 +38,9 @@
                     "client_id" client-id
                     "client_secret" client-secret})]
 
-         (println "token url is" token-url)
-         (println "body is" body)
-
-         #_(respond "OK - code is" code)
-
          (http/request
           client :post
 
-          #_"http://localhost:3002/test"
           token-url
 
           {:headers
