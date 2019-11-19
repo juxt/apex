@@ -104,10 +104,11 @@
           (let [journal (:apex/request-journal-atom req)]
             (make-journal-entry journal :invoke-handler req wrap-trace-inner)
             (try
+              (println "Calling handler:" h)
               (h req respond raise)
-              (catch Exception e
+              (catch Throwable e
                 ;; TODO: Add e to trace
-                ;; The handler has not caught and handlers its own errors
+                ;; The handler has not caught and handles its own errors
                 (make-exception-entry :exception-from-handler journal e wrap-trace-inner)
                 (raise e))))))))})
 
@@ -131,7 +132,14 @@
             ;; TODO: Ideally also track any errors that happen in
             ;; respond in case delegate doesn't properly deal with
             ;; them. Test for this.
-            (h (req-f req) respond raise))))))))
+            (try
+              (h (req-f req)
+                 respond
+                 raise)
+              (catch Throwable e
+                ;; TODO: Add a note that this has been
+                (raise (ex-info "Throwable escaped from asynchronous middleware" {:middleware middleware} e))
+                )))))))))
 
 (defn journalling-proxy [middleware]
   (middleware-proxy

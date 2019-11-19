@@ -1,3 +1,5 @@
+;; Copyright © 2019, JUXT LTD.
+
 (ns juxt.apex.alpha2.openapi
   (:require
    [clojure.tools.logging :as log]
@@ -10,6 +12,7 @@
    [juxt.apex.alpha2.response :as response]
    [juxt.apex.alpha2.conditional-requests :as condreq]
    [juxt.apex.alpha2.head :as head]
+   [juxt.apex.alpha2.exception :as exception]
    [reitit.ring :as ring]))
 
 (defn openapi->reitit-routes
@@ -55,7 +58,12 @@
                    (respond default-response)))))
 
              :middleware
-             [[condreq/wrap-conditional-request (:apex/validators resource)]
+             [
+              ;; TODO: For consistency, copy these naming Reitit
+              ;; conventions in all Apex middleware.
+              ;;[exception/exception-middleware]
+
+              [condreq/wrap-conditional-request (:apex/validators resource)]
               params/wrap-coerce-parameters
               request-body/wrap-process-request-body
               ;;trace/wrap-trace
@@ -82,30 +90,33 @@
     (when request-history-atom
       {:reitit.middleware/transform (trace/trace-middleware-transform request-history-atom)}))))
 
+;; TODO: Rename from create-api-route to something more intuitive like create-api
 (defn create-api-route
   "Create a Reitit route at path that serves an API defined by the given OpenAPI document"
-  [path openapi-doc {:keys [name] :as opts}]
-  (let [sub-router (create-api-router openapi-doc path opts)]
-    [(str path "*")
-     (merge
-      (when name {:name name})
-      {:handler
-       (let [sub-handler
-             (fn [req]
-               (let [path (get-in req [:reitit.core/match :path])]
-                 (get-in req [:reitit.core/match :data :sub-handler])))]
-         (fn
-           ([req] ((sub-handler req) req))
-           ([req respond raise] ((sub-handler req) req respond raise))))
-       :sub-handler
-       (ring/ring-handler
-        sub-router
-        nil
-        {:middleware
-         [#_(fn [h]
-             (fn
-               ([req] (h (assoc req :apex/router sub-router)))
-               ([req respond raise] (h (assoc req :apex/router sub-router) respond raise))))]})})]))
+  ([path openapi-doc]
+   (create-api-route path openapi-doc {}))
+  ([path openapi-doc {:keys [name] :as opts}]
+   (let [sub-router (create-api-router openapi-doc path opts)]
+     [(str path "*")
+      (merge
+       (when name {:name name})
+       {:handler
+        (let [sub-handler
+              (fn [req]
+                (let [path (get-in req [:reitit.core/match :path])]
+                  (get-in req [:reitit.core/match :data :sub-handler])))]
+          (fn
+            ([req] ((sub-handler req) req))
+            ([req respond raise] ((sub-handler req) req respond raise))))
+        :sub-handler
+        (ring/ring-handler
+         sub-router
+         nil
+         {:middleware
+          [#_(fn [h]
+               (fn
+                 ([req] (h (assoc req :apex/router sub-router)))
+                 ([req respond raise] (h (assoc req :apex/router sub-router) respond raise))))]})})])))
 
 
 ;; Deprecated - openapi-test still uses this but needs to be

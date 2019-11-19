@@ -81,7 +81,7 @@
          options]
      (el
       "table"
-      (for [[k v] (if order (order-by m order) (sort m))]
+      (for [[k v] (if order (order-by m order) (sort-by str m))]
         (el
          "tr"
          (el "td" (kw->str k))
@@ -90,32 +90,36 @@
                (if-let [dyn (:dynamic options)]
                  (dyn k v)
                  options)]
-           (el "td" (cond
-                      (some-> v meta :apex.trace/hide)
-                      "&lt;hidden&gt;"
+           (el "td" (try (cond
+                           (some-> v meta :apex.trace/hide)
+                           "&lt;hidden&gt;"
 
-                      (instance? Exception v)
-                      (map->table
-                       (merge
-                        {:message (.getMessage v)
-                         :stack (into [] (.getStackTrace v))
-                         :exception-type (type v)}
-                        (when-let [cause (.getCause v)]
-                          {:cause cause})
-                        (when (instance? clojure.lang.ExceptionInfo v)
-                          {:data (ex-data v)})))
+                           (instance? Exception v)
+                           (map->table
+                            (merge
+                             {:message (.getMessage v)
+                              :stack (into [] (.getStackTrace v))
+                              :exception-type (type v)}
+                             (when-let [cause (.getCause v)]
+                               {:cause cause})
+                             (when (instance? clojure.lang.ExceptionInfo v)
+                               {:data (ex-data v)})))
 
-                      (and (map? v) (not-empty v))
-                      (map->table v)
+                           (and (map? v) (not-empty v))
+                           (map->table v)
 
-                      (and (sequential? v) (not-empty v))
-                      (vec->table v)
+                           (and (sequential? v) (not-empty v))
+                           (vec->table v)
 
-                      :else
-                      (-> v
-                          render
-                          escape
-                          monospace))))))))))
+                           :else
+                           (-> v
+                               render
+                               escape
+                               monospace))
+                         (catch Exception e
+                           (str "Error: " (.getMessage e))
+                           (.printStackTrace e)
+                           ))))))))))
 
 (defn vec->table
   ([data]

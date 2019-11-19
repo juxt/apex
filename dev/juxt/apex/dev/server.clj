@@ -65,6 +65,8 @@
            (let [response
                  (fn [req]
                    (let [limit (get-in req [:apex/params :query "limit" :value])]
+                     (throw (ex-info "Forced exception" {:data 123
+                                                         :type :forced}))
                      {:status 200
                       :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
              (fn
