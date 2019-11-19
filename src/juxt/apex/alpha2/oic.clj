@@ -8,69 +8,11 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [jsonista.core :as json]
-;;   [buddy.core.keys :as bck]
-;;   [buddy.sign.jws :as jws]
    [juxt.apex.alpha2.openapi :as openapi]
    [juxt.apex.alpha2.http-client :as http]
    [juxt.apex.yaml :as yaml])
   (:import
    [java.net.http HttpRequest$BodyPublishers HttpResponse$BodyHandlers]))
-
-#_(defn b64-decode-json-str
-  "Decode a base-64 encoded JSON string. (UTF-8 assumed, no BOM check)."
-  [s] nil
-  (try
-    (json/read-value (String. (.decode (java.util.Base64/getUrlDecoder) s)))
-    (catch Exception e
-      (throw (ex-info "Failed to decode string" {:string s} e)))))
-
-#_(defn- decode-jwt
-  "Transform a properly formed JWT into a Clojure map. From
-  https://gist.github.com/raymcdermott/1f38ec455df433b96da789a70a4dd346"
-  [jwt]
-  (when-let [jwt-parts (str/split jwt #"\.")]
-    (when (= 3 (count jwt-parts))
-      (let [[b64-header b64-payload b64-signature] jwt-parts]
-        {:header (b64-decode-json-str b64-header)
-         :payload (b64-decode-json-str b64-payload)
-         :signature b64-signature}))))
-
-#_(defn- cert->pem
-  "Convert cert to PEM, for us with buddy.sign.jws. From
-  https://gist.github.com/raymcdermott/1f38ec455df433b96da789a70a4dd346"
-  [cert]
-  (bck/str->public-key
-   (str "-----BEGIN CERTIFICATE-----\n"
-        (str/join "\n" (str/join "\n" (re-seq #".{1,64}" cert)))
-        "\n-----END CERTIFICATE-----\n")))
-
-#_(defn extract-claims-from-id-token [id-token jwks-f]
-  (assert jwks-f)
-  (try
-    (let [{:keys [header]} (decode-jwt id-token)
-          kid (get header "kid")
-          _ (println "kid is" kid)
-          {:strs [kty n alg] :as jwk} (jwks-f kid)
-          _ (println "jwk returned is " (pr-str jwk))]
-
-      (pr-str id-token)
-      #_(prn "cert unsigns id-token to the following:"
-           (pr-str
-            (String.
-             (jws/unsign
-              id-token
-              (cert->pem n)
-              (if alg
-                {:alg (keyword kty)}
-                nil))
-             "UTF-8"))))
-    (catch Exception e
-      (pr-str e)
-      ))
-  )
-
-
-
 
 (defn create-callback-handler [{:keys [redirect-uri client-id client-secret openid-config-f jwks-f]}]
   (assert openid-config-f)
@@ -158,8 +100,7 @@
 
 (defn api [path
            {:keys
-            [login-handler
-             redirect-uri
+            [redirect-uri
              client-id
              client-secret
              openid-config-f ; a function to retrieve the openid-config - which could change
@@ -181,11 +122,7 @@
     opts
     {:apex/add-implicit-head? false
      :apex/resources
-     {"/login"
-      {:apex/methods
-       {:get
-        {:handler login-handler}}}
-      "/callback"
+     {"/callback"
       {:apex/methods
        {:get
         {:handler (create-callback-handler opts)
