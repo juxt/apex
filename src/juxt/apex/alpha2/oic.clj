@@ -14,9 +14,17 @@
   (:import
    [java.net.http HttpRequest$BodyPublishers HttpResponse$BodyHandlers]))
 
-(defn create-callback-handler [{:keys [redirect-uri client-id client-secret openid-config-f jwks-f]}]
+(defn create-callback-handler
+  [{:keys [redirect-uri
+           client-id
+           client-secret
+           openid-config-f
+           jwks-f
+           on-success]}]
+
   (assert openid-config-f)
   (assert jwks-f)
+
   (fn
     ([req]
      (throw (ex-info "Sync not yet supported" {})))
@@ -62,28 +70,22 @@
              ;; TODO: Verify id-token, decode id-token and set cookie on response
              (try
                (let [body (json/read-value (.body result))
-                     id-token (jwt/signed-jwt (get body "id_token"))
-                     jwks (jwks-f)
-                     _ (println "JWKS is" jwks)
+                     id-token (get body "id_token")
+                     _ (when-not id-token (raise (ex-info "No id-token in response" {})))
+                     id-token-jwt (jwt/signed-jwt id-token)
+                     jwks (jwks-f)]
 
-                     ;;claims (extract-claims-from-id-token id-token jwks-f)
-                     ]
+                 (if (jwt/validate-jws id-token-jwt jwks)
+                   (on-success
+                    (assoc req
+                           ;; TODO: document me!
+                           :apex.oic/claims (jwt/claims id-token-jwt))
+                    respond
+                    raise)
+                   (raise (ex-info "Claims have an invalid signature" {:apex.response/status 400}))))
 
-
-                 (respond {:status 200
-                           :headers {"content-type" "text/plain"}
-                           :body (if-let [valid? (jwt/valid-jwt? id-token jwks)]
-                                   ;; call back a callback with result - see apex errors
-
-                                   (str "YES!" (pr-str (into {} (.. id-token getJWTClaimsSet getClaims))))
-                                   (str "NO! id-token: " (pr-str (get body "id_token")))
-
-                                   )}))
                (catch Exception e
-                 (respond {:status 500
-                           :headers {"content-type" "text/plain"}
-                           :body (with-out-str (.printStackTrace e))})
-                 )))
+                 (raise e))))
 
            :on-error raise ; TODO: Possibly should augment error with context
            }))))))
@@ -95,6 +97,7 @@
              client-secret
              openid-config-f ; a function to retrieve the openid-config - which could change
              jwks-f ; a function that returns a com.nimbusds.jose.jwk.JWKSet, can use jwt/jwks
+             on-success ; (fn [req] [req respond raise]) ; claims are assoc'd to request :apex.oic/claims
              ]
             :as opts}]
   (assert (:apex/request-history-atom opts))
@@ -103,6 +106,7 @@
   (assert client-secret)
   (assert openid-config-f)
   (assert jwks-f)
+  (assert on-success)
   (openapi/create-api-route
    path
    (yaml/parse-string

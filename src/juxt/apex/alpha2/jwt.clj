@@ -22,29 +22,27 @@
   [s]
   (SignedJWT/parse s))
 
-(defn valid-jwt?
-  "Return true if the given JWT is valid with respect to the given
+(defn validate-jws
+  "Return true if the given JWS is valid with respect to the given
   signing key."
-  [jwt jwks]
-
-  (assert jwt)
-
-  (let [kid (.. jwt getHeader getKeyID)
-        _ (println "kid is" kid)
+  [jws jwks]
+  (let [kid (.. jws getHeader getKeyID)
         jwk (lookup-key jwks kid)
-        _ (println "jwk is" jwk)
-        _ (println "alg is" (.getValue (.getKeyType jwk)))
         verifier
         (case
             (.getValue (.getKeyType jwk))
             "RSA" (new RSASSAVerifier jwk)
             "EC" (new ECDSAVerifier jwk))]
-    (.verify jwt verifier)))
+    (.verify jws verifier)))
+
+(defn claims [id-token]
+  (into {} (.. id-token getJWTClaimsSet getClaims))
+  )
 
 #_(valid-jwt?
- (signed-jwt "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkpSY080bnhzNWpnYzhZZE43STJoTE80Vl9xbDFiZG9pTVhtY1lnSG00SHMifQ.eyJzdWIiOiI0OTgwMTEwOSIsImVtYWlsIjoibWFsQGp1eHQucHJvIiwicHJlZmVycmVkX3VzZXJuYW1lIjoibWFsIiwibmFtZSI6Ik1hbGNvbG0gU3BhcmtzIiwiYXRfaGFzaCI6IlhTeXZXTUNucTJDSmY2ZW01MERNaEEiLCJzaWQiOiJkYTM2NGNjOS0zZTQzLTRkZDctOWE5OS03ODFjMjFkMDA5ZTMiLCJhdWQiOiJlZDZkZDc5MC1lZTJiLTAxMzYtZGY1Ny0wYTE2M2U2N2I4NGMxNDAxMzkiLCJleHAiOjE1NzQxNzg5NTIsImlhdCI6MTU3NDE3MTc1MiwiaXNzIjoiaHR0cHM6Ly9vcGVuaWQtY29ubmVjdC5vbmVsb2dpbi5jb20vb2lkYyJ9.xCe1pYm7n9Lc0DF_mXJwMG0Jap3C4T7bRjHtMRZt45litbUAdsbiyiG194Y5sVmWn82hdNiWubbEC4MbVP6rf1C1JmR9xUtLKLBXTNUoJkRpuSBdJafMgKUKrRSiqjoFEClrJ2evk_6owBkG8if9HTldZJQ2bxK9hIRmkvp62Ha4D0Q-7xyNXvfkwcQX7tSxE1Wd5ro26Hpne4iIqFlJfS_ZlX_H_CQ9-XZ65Xc3kSj1gMPrM2HsVS1HSuiVrguWX0kJu7PjYf6dOwIC6o2VfR7rYp4v5m-3p-r47uoFNMmVOYgTxn0YjjmaH0zTOpXwLK6zXgi3ccarOcO559yVFw")
- (jwks (io/file "jwks-juxt-dev.json"))
- )
+   (signed-jwt "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkpSY080bnhzNWpnYzhZZE43STJoTE80Vl9xbDFiZG9pTVhtY1lnSG00SHMifQ.eyJzdWIiOiI0OTgwMTEwOSIsImVtYWlsIjoibWFsQGp1eHQucHJvIiwicHJlZmVycmVkX3VzZXJuYW1lIjoibWFsIiwibmFtZSI6Ik1hbGNvbG0gU3BhcmtzIiwiYXRfaGFzaCI6IlhTeXZXTUNucTJDSmY2ZW01MERNaEEiLCJzaWQiOiJkYTM2NGNjOS0zZTQzLTRkZDctOWE5OS03ODFjMjFkMDA5ZTMiLCJhdWQiOiJlZDZkZDc5MC1lZTJiLTAxMzYtZGY1Ny0wYTE2M2U2N2I4NGMxNDAxMzkiLCJleHAiOjE1NzQxNzg5NTIsImlhdCI6MTU3NDE3MTc1MiwiaXNzIjoiaHR0cHM6Ly9vcGVuaWQtY29ubmVjdC5vbmVsb2dpbi5jb20vb2lkYyJ9.xCe1pYm7n9Lc0DF_mXJwMG0Jap3C4T7bRjHtMRZt45litbUAdsbiyiG194Y5sVmWn82hdNiWubbEC4MbVP6rf1C1JmR9xUtLKLBXTNUoJkRpuSBdJafMgKUKrRSiqjoFEClrJ2evk_6owBkG8if9HTldZJQ2bxK9hIRmkvp62Ha4D0Q-7xyNXvfkwcQX7tSxE1Wd5ro26Hpne4iIqFlJfS_ZlX_H_CQ9-XZ65Xc3kSj1gMPrM2HsVS1HSuiVrguWX0kJu7PjYf6dOwIC6o2VfR7rYp4v5m-3p-r47uoFNMmVOYgTxn0YjjmaH0zTOpXwLK6zXgi3ccarOcO559yVFw")
+   (jwks (io/file "jwks-juxt-dev.json"))
+   )
 
 
 
