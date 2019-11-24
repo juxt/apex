@@ -22,6 +22,7 @@
   ;;buddy/buddy-sign {:mvn/version "3.1.0"}
   ;;buddy/buddy-core {:mvn/version "1.6.0"}
   com.nimbusds/nimbus-jose-jwt {:mvn/version "8.2.1"}
+  com.nimbusds/oauth2-oidc-sdk {:mvn/version "6.18.1"}
   }
 
  :aliases

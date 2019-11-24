@@ -8,11 +8,39 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [jsonista.core :as json]
+   [ring.util.response :as response]
    [juxt.apex.alpha2.openapi :as openapi]
    [juxt.apex.alpha2.http-client :as http]
    [juxt.apex.yaml :as yaml])
   (:import
-   [java.net.http HttpRequest$BodyPublishers HttpResponse$BodyHandlers]))
+   (java.net.http HttpRequest$BodyPublishers HttpResponse$BodyHandlers)
+   (com.nimbusds.openid.connect.sdk Nonce)))
+
+(defn login-url [state {:keys [openid-config-f client-id redirect-uri]}]
+  (let [authorization-endpoint (get (openid-config-f) "authorization_endpoint")]
+    (format
+     "%s?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&nonce=%s&state=%s"
+     authorization-endpoint
+     client-id
+     redirect-uri
+     "code"
+     "openid"
+     (new Nonce)
+     state)))
+
+(defn create-init-handler
+  [opts]
+  (fn
+    ([req]
+     (throw (ex-info "Sync not yet supported" {})))
+    ([req respond raise]
+     (let [session (:session req)
+           state (str (new Nonce))]
+       (println "create-init-handler: session is" session)
+       (respond
+        (merge
+         (response/redirect (login-url state opts))
+         {:session (merge session {:state state})}))))))
 
 (defn create-callback-handler
   [{:keys [redirect-uri
@@ -34,7 +62,19 @@
      (assert openid-config-f)
      (assert jwks-f)
 
-     (let [code (get-in req [:apex/params :query "code" :value])]
+     (let [session (:session req)
+           _ (println "session is" session)
+           code (get-in req [:apex/params :query "code" :value])
+           state (get-in req [:apex/params :query "state" :value])]
+
+       (when-not state
+         (raise (ex-info "No state query parameter returned from provider" {})))
+
+       (when-not (:state session)
+         (raise (ex-info "No session state, system cannot defend against a CSRF attack" {})))
+
+       (when-not (= state (:state session))
+         (raise (ex-info "State returned from provided doesn't match that in session" {})))
 
        (let [openid-config (openid-config-f)
              token-url (get openid-config "token_endpoint")
@@ -90,6 +130,8 @@
            :on-error raise ; TODO: Possibly should augment error with context
            }))))))
 
+
+
 (defn api [path
            {:keys
             [redirect-uri
@@ -116,7 +158,12 @@
     opts
     {:apex/add-implicit-head? false
      :apex/resources
-     {"/callback"
+     {"/init"
+      {:apex/methods
+       {:get
+        {:handler (create-init-handler opts)
+         }}}
+      "/callback"
       {:apex/methods
        {:get
         {:handler (create-callback-handler opts)
