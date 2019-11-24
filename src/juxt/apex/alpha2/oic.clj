@@ -130,8 +130,6 @@
            :on-error raise ; TODO: Possibly should augment error with context
            }))))))
 
-
-
 (defn api [path
            {:keys
             [redirect-uri
@@ -168,45 +166,3 @@
        {:get
         {:handler (create-callback-handler opts)
          }}}}})))
-
-
-
-
-;; id token is:
-#_(decoded-jwt
- "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkpSY080bnhzNWpnYzhZZE43STJoTE80Vl9xbDFiZG9pTVhtY1lnSG00SHMifQ.eyJzdWIiOiI0OTgwMTEwOSIsImVtYWlsIjoibWFsQGp1eHQucHJvIiwicHJlZmVycmVkX3VzZXJuYW1lIjoibWFsIiwibmFtZSI6Ik1hbGNvbG0gU3BhcmtzIiwiYXRfaGFzaCI6IlFkdmpvU3hDRnJPWXl3c1Z3TUpWTEEiLCJzaWQiOiI5ZjA1ZDcyMS1kN2JkLTQ2ODYtYThlNy0zNjIxMzFiODY4ZDIiLCJhdWQiOiJlZDZkZDc5MC1lZTJiLTAxMzYtZGY1Ny0wYTE2M2U2N2I4NGMxNDAxMzkiLCJleHAiOjE1NzM1MjQyODUsImlhdCI6MTU3MzUxNzA4NSwiaXNzIjoiaHR0cHM6Ly9vcGVuaWQtY29ubmVjdC5vbmVsb2dpbi5jb20vb2lkYyJ9.YJ02m3VmqBST-WXAbcsm8sGgac-AxTieoMkiGA5TtPSZmlJBlAai9xGioZxF7Kq7Ae9xeUP06lOPstADAGLExuhSmAFGUARcnjbNJbbGLh27tN3eWLaHAFZFn5bw02mTv0TlKa2HyN7JhOuFZQZnMUhyOneU1v69QJY7hRlT0Zw4C192CLQQDDctudSPgc6P4hINfN9zLBR1wNWW4YWxmlDvurVR3tGx9kvZbggnEwBK4vwzyyQqxryLKtS-6vB8tBRHX68PYwx-zJQwImIA0Y6z7fg-P5uERzSYg_54B6ouXDVq5XjuAntnz4zj7J3OK0K-nsp2ar3nIWMB8AGYbQ")
-
-
-#_{:header
- {"typ" "JWT",
-  "alg" "RS256",
-  "kid" "JRcO4nxs5jgc8YdN7I2hLO4V_ql1bdoiMXmcYgHm4Hs"},
- :payload
- {"iat" 1573517085,
-  "aud" "ed6dd790-ee2b-0136-df57-0a163e67b84c140139",
-  "sub" "49801109",
-  "iss" "https://openid-connect.onelogin.com/oidc",
-  "email" "mal@juxt.pro",
-  "name" "Malcolm Sparks",
-  "exp" 1573524285,
-  "at_hash" "QdvjoSxCFrOYywsVwMJVLA",
-  "preferred_username" "mal",
-  "sid" "9f05d721-d7bd-4686-a8e7-362131b868d2"},
- :signature
- "YJ02m3VmqBST-WXAbcsm8sGgac-AxTieoMkiGA5TtPSZmlJBlAai9xGioZxF7Kq7Ae9xeUP06lOPstADAGLExuhSmAFGUARcnjbNJbbGLh27tN3eWLaHAFZFn5bw02mTv0TlKa2HyN7JhOuFZQZnMUhyOneU1v69QJY7hRlT0Zw4C192CLQQDDctudSPgc6P4hINfN9zLBR1wNWW4YWxmlDvurVR3tGx9kvZbggnEwBK4vwzyyQqxryLKtS-6vB8tBRHX68PYwx-zJQwImIA0Y6z7fg-P5uERzSYg_54B6ouXDVq5XjuAntnz4zj7J3OK0K-nsp2ar3nIWMB8AGYbQ"}
-
-;; Call callback with payload
-
-;; TODO: Add session to Crux?
-
-#_(json/read-value (slurp "https://juxt-dev.onelogin.com/oidc/certs"))
-
-#_{"keys"
- [{"n"
-   "z8fZszkUNh1y1iSI6ZCkrwoZx1ZcFuQEngI8G_9VPjJXupqbgXedsV0YqDzQzYmdXd_lLb_OYWdyAP1FV6d2d4PfVjw4rGLqgYN5hEPFYqDEusiKtXyeh38xl37Nb8LGTX1qdstZjcXRo2YQ64W4UyuMko_TGOCxRNJg1fAfxRt1yV_ZeFV_93BMNjubV2D7kvpzaStJmYJi8A6QHqaqHaQkxAvYhJVi9XDajD3vvUlTVyOjURAnuaByA749glGBio5N9AfFTnYbHbeBOK3VJi6EJZzsuj3-5P4GUTYnSfrScs_kblaoeqt4GkExJqMZXGJTfGnX2UbYAjGHSTAoQw",
-   "e" "AQAB",
-   "kty" "RSA",
-   "kid" "JRcO4nxs5jgc8YdN7I2hLO4V_ql1bdoiMXmcYgHm4Hs",
-   "use" "sig"}]}
-
-;; TODO: Add authentication and authorization interceptors to Apex
