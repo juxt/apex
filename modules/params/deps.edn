@@ -1,0 +1,5 @@
+{:paths ["src"]
+ :deps {
+        jinx {:mvn/version "0.1.6"
+              :exclusions [cljs-node-io]}
+        }}

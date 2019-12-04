@@ -1,0 +1,2 @@
+11:12:03.487 DEBUG o.eclipse.jetty.util.log: Logging to Logger[org.eclipse.jetty.util.log] via org.eclipse.jetty.util.log.Slf4jLog  thread=nRepl-session-e040faa9-e4bf-4b43-b6ae-5e086a42495e
+11:12:03.529 INFO  o.eclipse.jetty.util.log: Logging initialized @32779ms to org.eclipse.jetty.util.log.Slf4jLog  thread=nRepl-session-e040faa9-e4bf-4b43-b6ae-5e086a42495e

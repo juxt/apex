@@ -1,0 +1,5 @@
+  ;; Use in 'cache' module
+  ;;org.clojure/core.cache {:mvn/version "0.8.2"}
+{
+
+ }
