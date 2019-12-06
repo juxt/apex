@@ -1,4 +1,4 @@
-{:paths ["src"]
+{:paths ["src" "../openapi-examples"]
  :deps
  {juxt.yada2/openapi {:local/root "../../modules/openapi"}
   juxt.yada2/trace {:local/root "../../modules/trace"}

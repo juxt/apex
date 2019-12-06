@@ -22,7 +22,10 @@
 
 (defn create-root-router [{:apex/keys [request-history-atom] :as opts}]
   (ring/router
-   [["/hello"
+   [
+
+    ;; TODO: Ditch this
+    ["/hello"
      {:name :hello
       :get {:handler
             (fn
@@ -34,7 +37,7 @@
      "/pets-api"
      (yaml/parse-string
       (slurp
-       (io/resource "juxt/apex/openapi-examples/petstore-expanded.yaml")))
+       (io/resource "petstore-expanded.yaml")))
      (merge
       opts
       {:name :pets-api}
@@ -47,7 +50,7 @@
            (let [response
                  (fn [req]
                    (let [limit (get-in req [:apex/params :query "limit" :value])]
-                     (throw (ex-info "Forced exception" {:data 123
+                     #_(throw (ex-info "Forced exception" {:data 123
                                                          :type :forced}))
                      {:status 200
                       :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
