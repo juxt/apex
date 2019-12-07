@@ -1,6 +1,6 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.alpha.oauth2
+(ns juxt.apex.alpha.oauth2.jwt
   (:require
    [clojure.java.io :as io])
   (:import

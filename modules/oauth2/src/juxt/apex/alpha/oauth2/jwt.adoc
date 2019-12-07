@@ -1,4 +1,4 @@
-= juxt.apex.alpha2.jwt
+= juxt.apex.alpha.oauth2.jwt
 
 This is a small wrapper around an excellent Java library for JWT,
 https://connect2id.com/products/nimbus-jose-jwt[Nimbus].

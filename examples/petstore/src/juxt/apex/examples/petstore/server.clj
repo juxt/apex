@@ -1,12 +1,12 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.examples.petstore.server
+(ns juxt.apex.examples.petstore.server
   (:require
    [clojure.java.io :as io]
    [integrant.core :as ig]
    [jsonista.core :as jsonista]
-   [yada2.alpha.openapi.openapi :as openapi]
-   [yada2.alpha.openapi.yaml :as yaml]
+   [juxt.apex.openapi.openapi :as openapi]
+   [juxt.apex..openapi.yaml :as yaml]
    ;;[yada2.alpha.trace.trace-console :as console]
    ;;[juxt.apex.util :refer [ring-handler]]
    [reitit.core :as r]

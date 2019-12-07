@@ -1,7 +1,7 @@
 {:paths ["src" "../openapi-examples"]
  :deps
- {juxt.yada2/openapi {:local/root "../../modules/openapi"}
-  juxt.yada2/trace {:local/root "../../modules/trace"}
+ {juxt.apex/openapi {:local/root "../../modules/openapi"}
+  juxt.apex/trace {:local/root "../../modules/trace"}
   }
 
  :aliases

@@ -1,6 +1,6 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.alpha.openapi.yaml
+(ns juxt.apex.alpha.openapi.yaml
   (:require
    [clj-yaml.core :as yaml]))
 

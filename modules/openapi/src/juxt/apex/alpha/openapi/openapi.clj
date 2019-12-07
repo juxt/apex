@@ -1,6 +1,6 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.alpha.openapi.openapi
+(ns juxt.apex.alpha.openapi.openapi
   (:require
    [reitit.ring :as ring]))
 

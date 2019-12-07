@@ -1,6 +1,6 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.alpha.trace.html
+(ns juxt.apex.alpha.trace.html
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str]))

@@ -1,6 +1,6 @@
 {:paths ["src"]
  :deps
- {juxt.yada2/openapi {:local/root "../../modules/openapi"}}
+ {juxt.apex/openapi {:local/root "../../modules/openapi"}}
  :aliases
  {:dev {}}
 

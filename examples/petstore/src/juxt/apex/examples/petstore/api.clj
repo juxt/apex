@@ -4,7 +4,7 @@
 ;; register callback handlers, whose logic should be moved into
 ;; server.clj in due course.
 
-(ns yada2.examples.petstore.server
+(ns juxt.apex.examples.petstore.server
   (:require
    [integrant.core :as ig]
    [clojure.java.io :as io]

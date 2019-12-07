@@ -1,6 +1,6 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.alpha.trace.trace-console
+(ns juxt.apex.alpha.trace.trace-console
   (:require
    [clojure.data :refer [diff]]
    [clojure.java.io :as io]

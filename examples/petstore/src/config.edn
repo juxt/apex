@@ -1,6 +1,6 @@
 {:port 8080
  :ig/system
- {:yada2.examples.petstore.server/jetty
+ {:juxt.apex.examples.petstore.server/jetty
   {:port #ref [:port]
 
    ;; This declaration is for convenience during development. It will

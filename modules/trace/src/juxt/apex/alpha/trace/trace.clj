@@ -1,6 +1,6 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns yada2.alpha.trace.trace)
+(ns juxt.apex.alpha.trace.trace)
 
 (defn commit-request-journal [request-history-atom m]
   (swap!

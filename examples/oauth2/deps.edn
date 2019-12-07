@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps
- {juxt.yada2/oauth2 {:local/root "../../modules/oauth2"}
-  juxt.yada2/trace {:local/root "../../modules/trace"}
+ {juxt.apex/oauth2 {:local/root "../../modules/oauth2"}
+  juxt.apex/trace {:local/root "../../modules/trace"}
   }
 
  :aliases
