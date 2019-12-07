@@ -38,7 +38,8 @@
        [session/session-middleware
         {:store (ring.middleware.session.cookie/cookie-store)
          :cookie-name "apex-session"}]]
-    (vec
+    (into
+     []
      (for [[path path-item] (get doc "paths")]
        (let [resource (get resources path)]
          [path
@@ -112,26 +113,28 @@
    (create-api-route path openapi-doc {}))
   ([path openapi-doc {:keys [name] :as opts}]
    (let [sub-router (create-api-router openapi-doc path opts)]
-     [(str path "*")
-      (merge
-       (when name {:name name})
-       {:handler
-        (let [sub-handler
-              (fn [req]
-                (let [path (get-in req [:reitit.core/match :path])]
-                  (get-in req [:reitit.core/match :data :sub-handler])))]
-          (fn
-            ([req] ((sub-handler req) req))
-            ([req respond raise] ((sub-handler req) req respond raise))))
-        :sub-handler
-        (ring/ring-handler
-         sub-router
-         nil
-         {:middleware
-          [#_(fn [h]
-               (fn
-                 ([req] (h (assoc req :apex/router sub-router)))
-                 ([req respond raise] (h (assoc req :apex/router sub-router) respond raise))))]})})])))
+     [path
+
+      ["*"
+       (merge
+        (when name {:name name})
+        {:handler
+         (let [sub-handler
+               (fn [req]
+                 (let [path (get-in req [:reitit.core/match :path])]
+                   (get-in req [:reitit.core/match :data :sub-handler])))]
+           (fn
+             ([req] ((sub-handler req) req))
+             ([req respond raise] ((sub-handler req) req respond raise))))
+         :sub-handler
+         (ring/ring-handler
+          sub-router
+          nil
+          {:middleware
+           [#_(fn [h]
+                (fn
+                  ([req] (h (assoc req :apex/router sub-router)))
+                  ([req respond raise] (h (assoc req :apex/router sub-router) respond raise))))]})})]])))
 
 
 ;; Deprecated - openapi-test still uses this but needs to be

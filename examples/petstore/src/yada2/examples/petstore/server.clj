@@ -4,6 +4,7 @@
   (:require
    [clojure.java.io :as io]
    [integrant.core :as ig]
+   [jsonista.core :as jsonista]
    [yada2.alpha.openapi.openapi :as openapi]
    [yada2.alpha.openapi.yaml :as yaml]
    ;;[yada2.alpha.trace.trace-console :as console]
@@ -20,46 +21,59 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
+
+
 (defn create-root-router [{:apex/keys [request-history-atom] :as opts}]
-  (ring/router
-   [
+  (let [doc (yaml/parse-string
+                 (slurp
+                  (io/resource "petstore-expanded.yaml")))]
+    (ring/router
+     [
 
-    ;; TODO: Ditch this
-    ["/hello"
-     {:name :hello
-      :get {:handler
-            (fn
-              ([req] {:status 200 :body "Hello\n"})
-              ([req respond raise]
-               (respond {:status 200 :body (str "Hello, requests so far: " (count @request-history-atom) "\n")})))}}]
+      ;; TODO: Redoc, add module
 
-    (openapi/create-api-route
-     "/pets-api"
-     (yaml/parse-string
-      (slurp
-       (io/resource "petstore-expanded.yaml")))
-     (merge
-      opts
-      {:name :pets-api}
-      {:apex/add-implicit-head? false
-       :apex/resources
-       {"/pets"
-        {:apex/methods
-         {:get
-          {:handler
-           (let [response
-                 (fn [req]
-                   (let [limit (get-in req [:apex/params :query "limit" :value])]
-                     #_(throw (ex-info "Forced exception" {:data 123
-                                                         :type :forced}))
-                     {:status 200
-                      :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
-             (fn
-               ([req] (response req))
-               ([req respond raise]
-                (respond (response req)))))}}}}}))
 
-    #_(console/trace-console opts)]))
+      ;; TODO: Promote something like this to openapi module
+      ["/swagger/pets-api.json"
+       {:get
+        {:handler
+         (fn [req respond raise]
+           (respond
+            {:status 200
+             :headers {"content-type" "application/json"}
+             :body (jsonista/write-value-as-string
+                    (->
+                     doc
+                     (assoc
+                      "servers"
+                      [{"url" "http://localhost:8080/"}])))}))}}]
+
+      (openapi/create-api-route
+       "/pets-api"
+       doc
+       (merge
+        opts
+        {:name :pets-api}
+        {:apex/add-implicit-head? false
+         :apex/resources
+         {"/pets"
+          {:apex/methods
+           {:get
+            {:handler
+             (let [response
+                   (fn [req]
+                     (let [limit (get-in req [:apex/params :query "limit" :value])]
+                       #_(throw (ex-info "Forced exception" {:data 123
+                                                             :type :forced}))
+                       {:status 200
+                        :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
+               (fn
+                 ([req] (response req))
+                 ([req respond raise]
+                  (respond (response req)))))}}}}}))
+
+      #_(console/trace-console opts)]
+     )))
 
 (defn create-root-handler
   ([] (create-root-handler {:apex/request-history-atom (atom [])}))
