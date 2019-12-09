@@ -4,17 +4,18 @@
   (:require
    [clojure.tools.logging :as log]
    [clojure.java.io :as io]
-   [jsonista.core :as jsonista]))
+   [jsonista.core :as jsonista]
+   [comb.template :as template]))
 
-;; TODO: Include comb "0.1.1"
-
-(defn- redoc-response []
+(defn- redoc-response [openapi-doc-path]
   {:status 200
-   :body (slurp (io/resource "juxt/apex/alpha/redoc/redoc.html"))})
+   :body (template/eval
+          (slurp (io/resource "juxt/apex/alpha/redoc/redoc.html"))
+          {:openapi-doc openapi-doc-path})})
 
-(defn new-redoc-handler [doc]
+(defn new-redoc-handler [openapi-doc-path]
   (fn
     ([req]
-     (redoc-response))
+     (redoc-response openapi-doc-path))
     ([req respond raise]
-     (respond (redoc-response)))))
+     (respond (redoc-response openapi-doc-path)))))

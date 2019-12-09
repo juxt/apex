@@ -33,7 +33,7 @@
 
       ;; TODO: Redoc, add module
       ["/doc/pets-api/redoc.html"
-       (redoc/new-redoc-handler doc)]
+       (redoc/new-redoc-handler "/doc/pets-api/openapi.json")]
 
       ;; TODO: Promote something like this to openapi module
       ["/doc/pets-api/openapi.json"
