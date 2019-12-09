@@ -8,10 +8,10 @@
    [clojure.string :as str]
    [reitit.core :as r]
    [ring.util.codec :as codec]
-   [yada2.alpha.openapi.openapi :as openapi]
-   [yada2.alpha.openapi.yaml :as yaml]
-   [yada2.alpha.trace.html :as html]
-   [yada2.alpha.trace.trace :as trace]))
+   [juxt.apex.alpha.openapi.openapi :as openapi]
+   [juxt.apex.alpha.openapi.yaml :as yaml]
+   [juxt.apex.alpha.trace.html :as html]
+   [juxt.apex.alpha.trace.trace :as trace]))
 
 ;; Could be duplicated - if changing this, check for other instances
 (defmacro fast-get-in

@@ -5,8 +5,9 @@
    [clojure.java.io :as io]
    [integrant.core :as ig]
    [jsonista.core :as jsonista]
-   [juxt.apex.openapi.openapi :as openapi]
-   [juxt.apex..openapi.yaml :as yaml]
+   [juxt.apex.alpha.openapi.openapi :as openapi]
+   [juxt.apex.alpha.openapi.yaml :as yaml]
+   [juxt.apex.alpha.redoc.redoc :as redoc]
    ;;[yada2.alpha.trace.trace-console :as console]
    ;;[juxt.apex.util :refer [ring-handler]]
    [reitit.core :as r]
@@ -31,10 +32,11 @@
      [
 
       ;; TODO: Redoc, add module
-
+      ["/doc/pets-api/redoc.html"
+       (redoc/new-redoc-handler doc)]
 
       ;; TODO: Promote something like this to openapi module
-      ["/swagger/pets-api.json"
+      ["/doc/pets-api/openapi.json"
        {:get
         {:handler
          (fn [req respond raise]
@@ -49,7 +51,7 @@
                       [{"url" "http://localhost:8080/"}])))}))}}]
 
       (openapi/create-api-route
-       "/pets-api"
+       "/api/pets"
        doc
        (merge
         opts
