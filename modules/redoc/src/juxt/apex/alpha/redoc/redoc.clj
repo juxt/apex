@@ -7,15 +7,28 @@
    [jsonista.core :as jsonista]
    [comb.template :as template]))
 
-(defn- redoc-response [openapi-doc-path]
+(defn- redoc-response [swagger-url]
   {:status 200
    :body (template/eval
           (slurp (io/resource "juxt/apex/alpha/redoc/redoc.html"))
-          {:openapi-doc openapi-doc-path})})
+          {:swagger-url swagger-url})})
 
-(defn new-redoc-handler [openapi-doc-path]
+(defn new-redoc-handler [swagger-url]
   (fn
     ([req]
-     (redoc-response openapi-doc-path))
+     (redoc-response swagger-url))
     ([req respond raise]
-     (respond (redoc-response openapi-doc-path)))))
+     (respond (redoc-response swagger-url)))))
+
+(defn- swagger-ui-response [swagger-url]
+  {:status 200
+   :body (template/eval
+          (slurp (io/resource "juxt/apex/alpha/redoc/swagger-ui.html"))
+          {:swagger-url swagger-url})})
+
+(defn new-swagger-ui-handler [swagger-url]
+  (fn
+    ([req]
+     (swagger-ui-response swagger-url))
+    ([req respond raise]
+     (respond (swagger-ui-response swagger-url)))))

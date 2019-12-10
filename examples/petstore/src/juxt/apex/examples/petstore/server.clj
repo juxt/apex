@@ -8,8 +8,7 @@
    [juxt.apex.alpha.openapi.openapi :as openapi]
    [juxt.apex.alpha.openapi.yaml :as yaml]
    [juxt.apex.alpha.redoc.redoc :as redoc]
-   ;;[yada2.alpha.trace.trace-console :as console]
-   ;;[juxt.apex.util :refer [ring-handler]]
+   [juxt.apex.alpha.trace.trace-console :as console]
    [reitit.core :as r]
    reitit.middleware
    [reitit.ring :as ring]
@@ -31,12 +30,16 @@
     (ring/router
      [
 
-      ;; TODO: Redoc, add module
+      ;; Redoc
       ["/doc/pets-api/redoc.html"
-       (redoc/new-redoc-handler "/doc/pets-api/openapi.json")]
+       (redoc/new-redoc-handler "/doc/pets-api/swagger.json")]
+
+      ;; Swagger UI
+      ["/doc/pets-api/swagger-ui.html"
+       (redoc/new-swagger-ui-handler "/doc/pets-api/swagger.json")]
 
       ;; TODO: Promote something like this to openapi module
-      ["/doc/pets-api/openapi.json"
+      ["/doc/pets-api/swagger.json"
        {:get
         {:handler
          (fn [req respond raise]
@@ -74,7 +77,7 @@
                  ([req respond raise]
                   (respond (response req)))))}}}}}))
 
-      #_(console/trace-console opts)]
+      (console/trace-console opts)]
      )))
 
 (defn create-root-handler

@@ -144,7 +144,7 @@
      :content
      (html/content-from-template
       (slurp
-       (io/resource "juxt/apex/alpha2/section.html"))
+       (io/resource "juxt/apex/alpha/trace/section.html"))
       {"title" title
        "body" body
        "description" description
@@ -187,9 +187,8 @@
                  :path path})))))
 
 (defn template-model-base []
-  {"style" (delay (slurp (io/resource "juxt/apex/style.css")))
-   "footer" (delay (slurp (io/resource "juxt/apex/footer.html")))
-   })
+  {"style" (delay (slurp (io/resource "juxt/apex/alpha/trace/style.css")))
+   "footer" (delay (slurp (io/resource "juxt/apex/alpha/trace/footer.html")))})
 
 (defn toc [sections]
   (str
@@ -209,8 +208,6 @@
    "</ul>"))
 
 (defn requests-index [req params request-history-atom]
-  ;; TODO: I feel this :apex/params level is too much - remove the
-  ;; :apex/params level.
   (let [limit (fast-get-in params [:query "limit" :value] 10)
         sections
         [(section
@@ -270,7 +267,7 @@
      :headers {"content-type" "text/html;charset=utf-8"}
      :body (html/content-from-template
             (slurp
-             (io/resource "juxt/apex/alpha2/trace-console.html"))
+             (io/resource "juxt/apex/alpha/trace/trace-console.html"))
             (merge
              (template-model-base)
              {"title" "Requests Index"
@@ -279,10 +276,9 @@
 
               #_"debug"
               #_(debug {:router (reitit.core/options (:reitit.core/router req))})
+
               "body"
-              (apply str (map :content sections)
-                     )
-              }))}))
+              (apply str (map :content sections))}))}))
 
 (defn to-url [req]
   (cond-> (str (name (:scheme req)) ":")
@@ -525,12 +521,14 @@
               "body"
               (apply str (map :content sections))}))}))
 
+
+
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route
    "/traces"
    (yaml/parse-string
     (slurp
-     (io/resource "juxt/apex/alpha2/traces.yaml")))
+     (io/resource "juxt/apex/alpha/trace/traces.yaml")))
    (merge
     opts
     {:apex/add-implicit-head? false
