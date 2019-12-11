@@ -23,13 +23,19 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
+(let [doc
+      (yaml/parse-string
+       (slurp
+        (io/resource "petstore-expanded.yaml")))]
+  (get-in doc ["paths" "/pets" "get" "parameters"])
+  )
+
 (defn create-root-router [{:apex/keys [request-history-atom] :as opts}]
-  (let [doc (yaml/parse-string
+  (let [openapi (yaml/parse-string
                  (slurp
                   (io/resource "petstore-expanded.yaml")))]
     (ring/router
      [
-
       ;; Redoc
       ["/doc/pets-api/redoc.html"
        (redoc/new-redoc-handler "/doc/pets-api/swagger.json")]
@@ -48,38 +54,57 @@
              :headers {"content-type" "application/json"}
              :body (jsonista/write-value-as-string
                     (->
-                     doc
+                     openapi
                      (assoc
                       "servers"
                       [{"url" "http://localhost:8080/docs/pets-api"}])))}))}}]
 
-      (openapi/create-api-route
-       "/api/pets"
-       doc
-       (merge
-        opts
-        {:name :pets-api}
-        {:apex/add-implicit-head? false
-         :apex/resources
-         {"/pets"
-          {:apex/methods
-           {:get
-            {:handler
-             (let [response
-                   (fn [req]
-                     (let [limit (get-in req [:apex/params :query "limit" :value])]
-                       #_(throw (ex-info "Forced exception" {:data 123
-                                                             :type :forced}))
-                       {:status 200
-                        :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
-               (fn
-                 ([req] (response req))
-                 ([req respond raise]
-                  (respond (response req)))))}}}}
+      ["/api/pets"
+       ["/pets"
+        {:get
+         (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+           ;; Normal Ring handler
+           (->
+            (fn this
+              ([req]
+               (this req identity #(throw %)))
+              ([req respond raise]
+               (let [limit (get-in req [:apex/params :query "limit" :value])]
+                 #_(throw (ex-info "Forced exception" {:data 123
+                                                       :type :forced}))
+                 (respond
+                  {:status 200
+                   :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))
 
-         :apex/middleware
-         [params/wrap-coerce-parameters]
-         }))
+            ((params/make-wrap-openapi-params (get openapi-operation "parameters")))))}]]
+
+      #_(openapi/create-api-route
+         "/api/pets"
+         doc
+         (merge
+          opts
+          {:name :pets-api}
+          {:apex/add-implicit-head? false
+           :apex/resources
+           {"/pets"
+            {:apex/methods
+             {:get
+              {:handler
+               (let [response
+                     (fn [req]
+                       (let [limit (get-in req [:apex/params :query "limit" :value])]
+                         #_(throw (ex-info "Forced exception" {:data 123
+                                                               :type :forced}))
+                         {:status 200
+                          :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))]
+                 (fn
+                   ([req] (response req))
+                   ([req respond raise]
+                    (respond (response req)))))}}}}
+
+           :apex/middleware
+           [params/wrap-coerce-parameters]
+           }))
 
       (console/trace-console opts)])))
 

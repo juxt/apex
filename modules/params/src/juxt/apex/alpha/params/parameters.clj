@@ -472,31 +472,32 @@
      {}
      paramdefs))))
 
-;; TODO: Rename in accordance with Reitit conventions: parameters-middleware
-(def wrap-coerce-parameters
-  {:name "Parameters"
+(defn make-wrap-openapi-params [parameters]
+  (assert parameters)
+  (let [query-parameters (not-empty (filter #(= (get % "in") "query") parameters))
+        path-parameters (not-empty (filter #(= (get % "in") "path") parameters))
+        process-req
+        (fn [req]
+          (assoc
+           req
+           :apex/params
+           (cond-> {}
+             query-parameters
+             (assoc :query (process-query-string (:query-string req) query-parameters))
+             path-parameters
+             (assoc :path (process-path-parameters (:path-params req) path-parameters)))))]
+    (fn [h]
+      (fn
+        ([req]
+         (h (process-req req)))
+        ([req respond raise] (h (process-req req) respond raise))))))
 
+(def openapi-parameters-middleware
+  {:name "Parameters"
    :compile
    (fn [{:apex/keys [operation]} opts]
-     (let [{:strs [parameters]} operation
-           query-parameters (not-empty (filter #(= (get % "in") "query") parameters))
-           path-parameters (not-empty (filter #(= (get % "in") "path") parameters))
-           process-req
-           (fn [req]
-             (assoc
-              req
-              :apex/params
-              (cond-> {}
-                query-parameters
-                (assoc :query (process-query-string (:query-string req) query-parameters))
-                path-parameters
-                (assoc :path (process-path-parameters (:path-params req) path-parameters)))))]
-       (fn [h]
-         (fn
-           ([req] (h (process-req req)))
-           ([req respond raise] (h (process-req req) respond raise))))))
-
-   ;; TODO: Add :compile which should fail if there is a declared path
-   ;; parameter but none in the URI
-
+     (let [{:strs [parameters]} operation]
+       (make-wrap-openapi-params parameters)))
+   ;; TODO: Make :compile URI aware, such that it doesn't check for
+   ;; path-parameters unnecessarily
    })

@@ -127,6 +127,9 @@
   ([path openapi-doc]
    (create-api-route path openapi-doc {}))
   ([path openapi-doc {:keys [name] :as opts}]
+   ;; Not sure now what the rationale was for sub-router - once Apex
+   ;; is working again, try to factor out this sub-router
+   ;; complexity. Possibly it's only for path-by-name functionality.
    (let [sub-router (create-api-router openapi-doc path opts)]
      [path
       ["*"
