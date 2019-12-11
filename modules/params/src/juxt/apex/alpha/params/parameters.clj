@@ -1,15 +1,29 @@
 ;; Copyright © 2019, JUXT LTD.
 
-(ns juxt.apex.alpha2.parameters
+(ns juxt.apex.alpha.params.parameters
   (:require
    [clojure.string :as str]
-   [juxt.apex.alpha2.codec :as codec]
-   [juxt.apex.alpha2.errors :refer [if-error]]
    [juxt.jinx-alpha :as jinx]
-   muuntaja.format.core
-   muuntaja.format.json
-   [muuntaja.core :as muuntaja]
+   [muuntaja.core :as m]
+   [muuntaja.format.core :as mfc]
+   [muuntaja.format.json :as mfj]
    [ring.util.codec :refer [url-decode]]))
+
+;; TODO: Promote?
+(defn error? [m]
+  (when (associative? m)
+    (contains? m :apex/error)))
+
+;; TODO: Promote?
+(defmacro if-error [sym on-error & body]
+  (assert (.endsWith (str sym) "+"))
+  (let [s (symbol (subs (str sym) 0 (dec (count (str sym)))))
+        error (symbol "error")]
+    `(if (error? ~sym)
+       (let [~error (:apex/error ~sym)]
+         ~on-error)
+       (let [~s ~sym]
+         ~@body))))
 
 (defmulti format-with-style
   (fn [n value {:keys [style explode?]}]
@@ -264,7 +278,7 @@
     (let [[media-type {:strs [schema]}]
           ;; "The map MUST only contain one entry."
           (first content)]
-      (muuntaja/decode muuntaja media-type (first encoded-strings)))
+      (m/decode muuntaja media-type (first encoded-strings)))
 
     ;; Simple Situation
     (case [(get schema "type" "string") explode]
@@ -333,11 +347,21 @@
            (map #(str/split % (case style "form" #"," "spaceDelimited" #" " "pipeDelimited" #"\|")))
            (into {})))))
 
+(def default-muuntaja
+  (m/create
+   (->
+    m/default-options
+    (assoc-in [:formats "application/json"]
+              (mfc/map->Format
+               {:name "application/json"
+                :decoder [mfj/decoder {:decode-key-fn false}]
+                :encoder [mfj/encoder]})))))
+
 (defn process-query-string
   ([qs paramdefs]
    (process-query-string qs paramdefs {}))
   ([qs paramdefs {:keys [muuntaja]
-                  :or {muuntaja codec/default-muuntaja}}]
+                  :or {muuntaja default-muuntaja}}]
    (let [qsm (group-query-string ((fnil url-decode "") qs))]
      (->
       (reduce

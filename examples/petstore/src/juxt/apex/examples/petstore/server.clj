@@ -9,6 +9,8 @@
    [juxt.apex.alpha.openapi.yaml :as yaml]
    [juxt.apex.alpha.redoc.redoc :as redoc]
    [juxt.apex.alpha.trace.trace-console :as console]
+   [juxt.apex.alpha.trace.trace :as trace]
+   [juxt.apex.alpha.params.parameters :as params]
    [reitit.core :as r]
    reitit.middleware
    [reitit.ring :as ring]
@@ -20,8 +22,6 @@
          "3" {"name" "Arya" "type" "Cat"}
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
-
-
 
 (defn create-root-router [{:apex/keys [request-history-atom] :as opts}]
   (let [doc (yaml/parse-string
@@ -51,7 +51,7 @@
                      doc
                      (assoc
                       "servers"
-                      [{"url" "http://localhost:8080/"}])))}))}}]
+                      [{"url" "http://localhost:8080/docs/pets-api"}])))}))}}]
 
       (openapi/create-api-route
        "/api/pets"
@@ -75,10 +75,13 @@
                (fn
                  ([req] (response req))
                  ([req respond raise]
-                  (respond (response req)))))}}}}}))
+                  (respond (response req)))))}}}}
 
-      (console/trace-console opts)]
-     )))
+         :apex/middleware
+         [params/wrap-coerce-parameters]
+         }))
+
+      (console/trace-console opts)])))
 
 (defn create-root-handler
   ([] (create-root-handler {:apex/request-history-atom (atom [])}))
@@ -95,7 +98,6 @@
         (fn
           ([req] not-found-response)
           ([req respond raise] (respond not-found-response))))}))))
-
 
 #_(assert
  (= {:status 200

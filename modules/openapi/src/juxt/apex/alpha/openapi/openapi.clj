@@ -27,17 +27,18 @@
   document"
   [doc
    {:apex/keys
-    [resources          ;; TODO: document this
-     add-implicit-head? ;; whether HEAD should be supported implicitly
+    [resources ; resource implementations mapped by path, see docs
+     add-implicit-head? ; whether HEAD should be supported implicitly
+     middleware
      ]
-    :or {add-implicit-head? true}
+    :or {resources {}
+         add-implicit-head? true
+         middleware []}
     :as options}]
-  (let []
-
-    #_[session-mw
-       [session/session-middleware
-        {:store (ring.middleware.session.cookie/cookie-store)
-         :cookie-name "apex-session"}]]
+  (let [#_[session-mw
+           [session/session-middleware
+            {:store (ring.middleware.session.cookie/cookie-store)
+             :cookie-name "apex-session"}]]]
     (into
      []
      (for [[path path-item] (get doc "paths")]
@@ -71,6 +72,8 @@
                     ([req respond raise]
                      (respond default-response)))))
 
+               :middleware middleware
+
                ;; Middleware to be passed in as a parameter
                ;;:middleware
                #_[
@@ -82,7 +85,6 @@
                   params/wrap-coerce-parameters
                   request-body/wrap-process-request-body
                   session-mw
-                  ;;trace/wrap-trace
                   ]
 
                ;; This is needed by some middleware to know whether to
@@ -114,7 +116,6 @@
   ([path openapi-doc {:keys [name] :as opts}]
    (let [sub-router (create-api-router openapi-doc path opts)]
      [path
-
       ["*"
        (merge
         (when name {:name name})
