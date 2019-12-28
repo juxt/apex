@@ -59,24 +59,41 @@
                       "servers"
                       [{"url" "http://localhost:8080/docs/pets-api"}])))}))}}]
 
-      ["/api/pets"
-       ["/pets"
-        {:get
-         (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-           ;; Normal Ring handler
-           (->
-            (fn this
-              ([req]
-               (this req identity #(throw %)))
-              ([req respond raise]
-               (let [limit (get-in req [:apex/params :query "limit" :value])]
-                 #_(throw (ex-info "Forced exception" {:data 123
-                                                       :type :forced}))
-                 (respond
-                  {:status 200
-                   :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))
+      (let [handler (fn this
+                      ([req]
+                       (this req identity #(throw %)))
+                      ([req respond raise]
+                       (let [limit (get-in req [:apex/params :query "limit" :value])]
+                         #_(throw (ex-info "Forced exception" {:data 123
+                                                               :type :forced}))
+                         (respond
+                          {:status 200
+                           :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))]
+        [
+         ["/api/pets"
+          ["/pets"
+           (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+             {
+              :get
+              ;; Option A: Traditional Ring wrapping
+              (->
+               handler
+               ((params/make-wrap-openapi-params (get openapi-operation "parameters"))))})]]
 
-            ((params/make-wrap-openapi-params (get openapi-operation "parameters")))))}]]
+
+         ["/api/pets2"
+          ["/pets"
+           (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+             {
+              :get
+              ;; Option B: Reitit middleware, this approach is
+              ;; compatible with Apex's tracing facility.
+              handler
+
+              :middleware
+              [
+               [params/openapi-parameters-middleware (get-in openapi ["paths" "/pets" "get" "parameters"])]
+               ]})]]])
 
       #_(openapi/create-api-route
          "/api/pets"

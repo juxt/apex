@@ -472,32 +472,42 @@
      {}
      paramdefs))))
 
-(defn make-wrap-openapi-params [parameters]
-  (assert parameters)
-  (let [query-parameters (not-empty (filter #(= (get % "in") "query") parameters))
-        path-parameters (not-empty (filter #(= (get % "in") "path") parameters))
+(defn make-wrap-openapi-params
+  "Create Ring middleware that will process parameters contained in the
+  request. Parameters are defined as specified by OpenAPI 3.0 (an
+  array of ParameterObject elements), see
+  https://spec.openapis.org/oas/v3.0.2#parameter-object"
+  [param-defs]
+  (assert param-defs)
+  (let [query-param-defs (not-empty (filter #(= (get % "in") "query") param-defs))
+        path-param-defs (not-empty (filter #(= (get % "in") "path") param-defs))
         process-req
         (fn [req]
           (assoc
            req
            :apex/params
            (cond-> {}
-             query-parameters
-             (assoc :query (process-query-string (:query-string req) query-parameters))
-             path-parameters
-             (assoc :path (process-path-parameters (:path-params req) path-parameters)))))]
+             query-param-defs
+             (assoc :query (process-query-string (:query-string req) query-param-defs))
+             path-param-defs
+             (assoc :path (process-path-parameters (:path-params req) path-param-defs)))))]
     (fn [h]
       (fn
         ([req]
          (h (process-req req)))
         ([req respond raise] (h (process-req req) respond raise))))))
 
+;; This is Reitit middleware, see
+;; https://metosin.github.io/reitit/ring/data_driven_middleware.html
+;; We choose to implement :compile since that gives us the most
+;; flexibility to optimise for performance. This is a useful idiom to
+;; use for all Apex middleware.  Note, we write the middleware in
+;; terms of the Ring middleware producing function, in this case,
+;; make-wrap-openapi-params (above).
+
 (def openapi-parameters-middleware
   {:name "Parameters"
    :compile
-   (fn [{:apex/keys [operation]} opts]
-     (let [{:strs [parameters]} operation]
-       (make-wrap-openapi-params parameters)))
-   ;; TODO: Make :compile URI aware, such that it doesn't check for
-   ;; path-parameters unnecessarily
-   })
+   (fn [route-data router-opts]
+     (fn [h param-defs]
+       ((make-wrap-openapi-params param-defs) h)))})

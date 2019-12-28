@@ -521,8 +521,6 @@
               "body"
               (apply str (map :content sections))}))}))
 
-
-
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (openapi/create-api-route
    "/traces"
