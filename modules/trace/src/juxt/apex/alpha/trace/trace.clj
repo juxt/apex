@@ -153,6 +153,8 @@
 
 (defn trace-middleware-transform [request-history-atom]
   (fn [middleware]
+    ;; TODO: Why is this println called so many times?
+    ;; (println "Transforming middleware")
     (vec
      (concat
       ;; Add some per-request container to store 'traces' which can be

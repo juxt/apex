@@ -93,7 +93,9 @@
               :middleware
               [
                [params/openapi-parameters-middleware (get-in openapi ["paths" "/pets" "get" "parameters"])]
-               ]})]]])
+               ]
+
+              })]]])
 
       #_(openapi/create-api-route
          "/api/pets"
@@ -123,7 +125,10 @@
            [params/wrap-coerce-parameters]
            }))
 
-      (console/trace-console opts)])))
+      (console/trace-console opts)]
+
+
+     {:reitit.middleware/transform (trace/trace-middleware-transform request-history-atom)})))
 
 (defn create-root-handler
   ([] (create-root-handler {:apex/request-history-atom (atom [])}))
