@@ -478,7 +478,7 @@
      :headers {"content-type" "text/html;charset=utf-8"}
      :body (html/content-from-template
             (slurp
-             (io/resource "juxt/apex/alpha2/trace-console.html"))
+             (io/resource "juxt/apex/alpha/trace/trace-console.html"))
             (merge
              (template-model-base)
              {"title" "Request Trace"
@@ -486,9 +486,13 @@
                         [{:title "All requests"
                           :href (href (:reitit.core/router req) "/requests")}])
               "toc" (toc sections)
-              "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
+
+              ;; TODO: Why does this fail?
+;;              "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
+
               "body"
-              (apply str (map :content sections))}))}))
+              (apply str (map :content sections))
+              }))}))
 
 (defn request-state-trace [req params request-history-atom]
   (let [index (fast-get-in params [:path "requestId" :value])
@@ -508,7 +512,7 @@
      :headers {"content-type" "text/html;charset=utf-8"}
      :body (html/content-from-template
             (slurp
-             (io/resource "juxt/apex/alpha2/trace-console.html"))
+             (io/resource "juxt/apex/alpha/trace/trace-console.html"))
             (merge
              (template-model-base)
              {"title" "Request State"
