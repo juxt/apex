@@ -5,6 +5,7 @@
    [clojure.java.io :as io]
    [clojure.string :as str]))
 
+;; TODO: Replace with comb
 (def handlebars-pattern #"\{\{([^\}]*)\}\}")
 
 (defn escape [s]
