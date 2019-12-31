@@ -388,12 +388,9 @@
                         [{:title "All requests"
                           :href (href (:reitit.core/router req) "/traces/requests")}])
               "toc" (toc sections)
-
               "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
-
               "body"
-              (apply str (map :content sections))
-              }))}))
+              (apply str (map :content sections))}))}))
 
 (defn request-state-trace [req params request-history-atom]
   (let [index (fast-get-in params [:path "requestId" :value])
