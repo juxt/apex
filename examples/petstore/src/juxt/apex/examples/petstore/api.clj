@@ -1,4 +1,4 @@
-;; Copyright © 2019, JUXT LTD.
+;; Copyright © 2020, JUXT LTD.
 
 ;; This ns is deprecated but serves the purpose of showing how to
 ;; register callback handlers, whose logic should be moved into

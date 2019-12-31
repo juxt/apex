@@ -1,4 +1,4 @@
-;; Copyright © 2019, JUXT LTD.
+;; Copyright © 2020, JUXT LTD.
 
 (ns juxt.apex.alpha.oauth2.oic
   (:require
