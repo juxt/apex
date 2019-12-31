@@ -23,13 +23,6 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
-(let [doc
-      (yaml/parse-string
-       (slurp
-        (io/resource "petstore-expanded.yaml")))]
-  (get-in doc ["paths" "/pets" "get" "parameters"])
-  )
-
 (defn create-root-router [{:apex/keys [request-history-atom] :as opts}]
   (let [openapi (yaml/parse-string
                  (slurp

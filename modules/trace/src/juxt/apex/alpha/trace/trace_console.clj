@@ -8,8 +8,9 @@
    [clojure.string :as str]
    [reitit.core :as r]
    [ring.util.codec :as codec]
-   [juxt.apex.alpha.openapi.openapi :as openapi]
+   [reitit.ring :as ring]
    [juxt.apex.alpha.openapi.yaml :as yaml]
+   [juxt.apex.alpha.params.parameters :as params]
    [juxt.apex.alpha.trace.html :as html]
    [juxt.apex.alpha.trace.trace :as trace]))
 
@@ -219,7 +220,7 @@
              :link
              (fn [row v]
                (format "<a href=\"%s\">%s</a>"
-                       (href (:reitit.core/router req) (str "/requests/" (:index row)))
+                       (href (:reitit.core/router req) (str "/traces/requests/" (:index row)))
                        v))
              :render (partial index-number-format 4)}
             {:head "date"
@@ -294,11 +295,14 @@
   (to-url {:scheme :https :server-port 443 :server-name "localhost" :uri "/" }))
 
 (defn request-trace [req params request-history-atom]
+  (assert req)
+  (assert params)
   (let [index (fast-get-in params [:path "requestId" :value])
         item (get @request-history-atom index)
         journal (:apex/request-journal item)
         journal-entries-by-trace-id (group-by :apex.trace/middleware journal)
         journal-entries-by-type (group-by :type journal)
+        _ (def item item)
         sections
         [
          (section
@@ -329,7 +333,7 @@
                (fn [row v]
                  (format
                   "<a href=\"%s\">%s</a>"
-                  (href (:reitit.core/router req) (str "/requests/" index "/states/" v))
+                  (href (:reitit.core/router req) (str "/traces/requests/" index "/states/" v))
                   v))
                :render (partial index-number-format 2)
                :style identity}
@@ -484,7 +488,7 @@
              {"title" "Request Trace"
               "navbar" (navbar
                         [{:title "All requests"
-                          :href (href (:reitit.core/router req) "/requests")}])
+                          :href (href (:reitit.core/router req) "/traces/requests")}])
               "toc" (toc sections)
 
               ;; TODO: Why does this fail?
@@ -526,52 +530,98 @@
               (apply str (map :content sections))}))}))
 
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
-  (openapi/create-api-route
-   "/traces"
-   (yaml/parse-string
-    (slurp
-     (io/resource "juxt/apex/alpha/trace/traces.yaml")))
-   (merge
-    opts
-    {:apex/add-implicit-head? false
-     :apex/resources
-     {"/requests"
-      {:apex/methods
-       {:get
-        (let [response
-              (fn [req]
-                (requests-index req (:apex/params req) request-history-atom))]
-          {:handler
-           (fn
-             ([req] (response req))
-             ([req respond raise]
-              (try
-                (respond (response req))
-                (catch Exception e (raise e)))))})}}
-      "/requests/{requestId}"
-      {:apex/methods
-       {:get
-        (let [response
-              (fn [req]
-                (request-trace req (:apex/params req) request-history-atom))]
-          {:handler
-           (fn
-             ([req] (response req))
-             ([req respond raise]
-              (try
-                (respond (response req))
-                (catch Exception e (raise e)))))})}}
+  (let [openapi (yaml/parse-string
+                 (slurp
+                  (io/resource "juxt/apex/alpha/trace/traces.yaml")))]
+    ["/traces"
+     ["/requests"
+      (let [openapi-operation (get-in openapi ["paths" "/requests" "get"])]
+        {:get (fn this
+                ([req] (this req identity #(throw %)))
+                ([req respond raise]
+                 (try
+                   (respond (requests-index req (:apex/params req) request-history-atom))
+                   (catch Exception e
+                     (raise e)))))
+         :middleware
+         [
+          [params/openapi-parameters-middleware (get openapi-operation "parameters")]]})
+      ]
 
-      "/requests/{requestId}/states/{stateId}"
-      {:apex/methods
-       {:get
-        (let [response
-              (fn [req]
-                (request-state-trace req (:apex/params req) request-history-atom))]
-          {:handler
-           (fn
-             ([req] (response req))
-             ([req respond raise]
-              (try
-                (respond (response req))
-                (catch Exception e (raise e)))))})}}}})))
+     ["/requests/{requestId}"
+      (let [openapi-operation (get-in openapi ["paths" "/requests/{requestId}" "get"])]
+        {:get (fn this
+                ([req] (this req identity #(throw %)))
+                ([req respond raise]
+                 (try
+                   (respond (request-trace req (:apex/params req) request-history-atom))
+                   (catch Throwable e
+                     (raise e)))))
+         :middleware
+         [
+          [params/openapi-parameters-middleware (get openapi-operation "parameters")]]})
+      ]
+
+     ["/requests/{requestId}/states/{stateId}"
+      (let [openapi-operation (get-in openapi ["paths" "/requests/{requestId}/states/{stateId}" "get"])]
+        {:get (fn this
+                ([req] (this req identity #(throw %)))
+                ([req respond raise]
+                 (try
+                   (respond (request-trace req (:apex/params req) request-history-atom))
+                   (catch Exception e
+                     (raise e)))))
+         :middleware
+         [
+          [params/openapi-parameters-middleware (get openapi-operation "parameters")]]})
+      ]])
+
+  #_(openapi/create-api-route
+     "/traces"
+     (yaml/parse-string
+      (slurp
+       (io/resource "juxt/apex/alpha/trace/traces.yaml")))
+     (merge
+      opts
+      {:apex/add-implicit-head? false
+       :apex/resources
+       {"/requests"
+        {:apex/methods
+         {:get
+          (let [response
+                (fn [req]
+                  (requests-index req (:apex/params req) request-history-atom))]
+            {:handler
+             (fn
+               ([req] (response req))
+               ([req respond raise]
+                (try
+                  (respond (response req))
+                  (catch Exception e (raise e)))))})}}
+        "/requests/{requestId}"
+        {:apex/methods
+         {:get
+          (let [response
+                (fn [req]
+                  (request-trace req (:apex/params req) request-history-atom))]
+            {:handler
+             (fn
+               ([req] (response req))
+               ([req respond raise]
+                (try
+                  (respond (response req))
+                  (catch Exception e (raise e)))))})}}
+
+        "/requests/{requestId}/states/{stateId}"
+        {:apex/methods
+         {:get
+          (let [response
+                (fn [req]
+                  (request-state-trace req (:apex/params req) request-history-atom))]
+            {:handler
+             (fn
+               ([req] (response req))
+               ([req respond raise]
+                (try
+                  (respond (response req))
+                  (catch Exception e (raise e)))))})}}}})))

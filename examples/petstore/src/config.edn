@@ -21,4 +21,6 @@
    ;; altered. Defaults to nil.
    :additional-servers #profile {:dev [{"url" #join ["http://localhost:" #ref [:port]]}]}}
 
+  :juxt.apex.examples.petstore.client/seed {}
+
   }}

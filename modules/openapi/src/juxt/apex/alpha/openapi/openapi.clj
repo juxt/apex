@@ -122,7 +122,8 @@
         {:reitit.middleware/transform (trace/trace-middleware-transform request-history-atom)}))))
 
 ;; TODO: Rename from create-api-route to something more intuitive like create-api
-(defn create-api-route
+;; Deprecated because it's too coarse (and not simple)
+#_(defn create-api-route
   "Create a Reitit route at path that serves an API defined by the given OpenAPI document"
   ([path openapi-doc]
    (create-api-route path openapi-doc {}))
