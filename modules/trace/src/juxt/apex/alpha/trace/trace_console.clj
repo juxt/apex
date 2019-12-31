@@ -389,8 +389,7 @@
                           :href (href (:reitit.core/router req) "/traces/requests")}])
               "toc" (toc sections)
 
-              ;; TODO: Why does this fail?
-;;              "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
+              "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
 
               "body"
               (apply str (map :content sections))
