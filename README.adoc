@@ -8,6 +8,22 @@ descriptions.
 Apex is a Clojure web library that takes an Open API 3.0 description,
 some attachments, and returns a Ring handler.
 
+== Objective
+
+Apex will be considered a success if it meets the following acceptance
+criteria:
+
+* Developers with limited experience of Clojure can create web APIs
+  without too much difficulty, including security.
+
+* Web APIs created with Apex are broadly conformant to HTTP standards
+  and performance is acceptable for the vast majority of use-cases.
+
+This requires the following:
+
+* Error handling is informative and leads developers quickly to the
+  actual cause of the error.
+
 == Rationale
 
 https://github.com/juxt/yada[yada], the web library we wrote to

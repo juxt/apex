@@ -423,6 +423,15 @@
               "body"
               (apply str (map :content sections))}))}))
 
+(defn with-sync-form
+  "Taking an async (3-arity) Ring handler, and return a Ring handler
+  that provides both the async form the synchronous (1-arity) form."
+  [h]
+  (fn
+    ([req] (h req identity #(throw %)))
+    ([req respond raise]
+     (h req respond raise))))
+
 (defn trace-console [{:apex/keys [request-history-atom] :as opts}]
   (let [openapi (yaml/parse-string
                  (slurp
@@ -430,13 +439,12 @@
     ["/traces"
      ["/requests"
       (let [openapi-operation (get-in openapi ["paths" "/requests" "get"])]
-        {:get (fn this
-                ([req] (this req identity #(throw %)))
-                ([req respond raise]
-                 (try
-                   (respond (requests-index req (:apex/params req) request-history-atom))
-                   (catch Exception e
-                     (raise e)))))
+        {:get (with-sync-form
+                (fn [req respond raise]
+                  (try
+                    (respond (requests-index req (:apex/params req) request-history-atom))
+                    (catch Exception e
+                      (raise e)))))
          :middleware
          [
           [params/openapi-parameters-middleware (get openapi-operation "parameters")]]})
@@ -444,13 +452,12 @@
 
      ["/requests/{requestId}"
       (let [openapi-operation (get-in openapi ["paths" "/requests/{requestId}" "get"])]
-        {:get (fn this
-                ([req] (this req identity #(throw %)))
-                ([req respond raise]
-                 (try
-                   (respond (request-trace req (:apex/params req) request-history-atom))
-                   (catch Throwable e
-                     (raise e)))))
+        {:get (with-sync-form
+                (fn [req respond raise]
+                  (try
+                    (respond (request-trace req (:apex/params req) request-history-atom))
+                    (catch Throwable e
+                      (raise e)))))
          :middleware
          [
           [params/openapi-parameters-middleware (get openapi-operation "parameters")]]})
@@ -458,13 +465,12 @@
 
      ["/requests/{requestId}/states/{stateId}"
       (let [openapi-operation (get-in openapi ["paths" "/requests/{requestId}/states/{stateId}" "get"])]
-        {:get (fn this
-                ([req] (this req identity #(throw %)))
-                ([req respond raise]
-                 (try
-                   (respond (request-trace req (:apex/params req) request-history-atom))
-                   (catch Exception e
-                     (raise e)))))
+        {:get (with-sync-form
+                (fn [req respond raise]
+                  (try
+                    (respond (request-trace req (:apex/params req) request-history-atom))
+                    (catch Exception e
+                      (raise e)))))
          :middleware
          [
           [params/openapi-parameters-middleware (get openapi-operation "parameters")]]})]]))

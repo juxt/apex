@@ -71,7 +71,8 @@
               ;; Option A: Traditional Ring wrapping
               (->
                handler
-               ((params/make-wrap-openapi-params (get openapi-operation "parameters"))))})]]
+               (params/wrap-openapi-params (get openapi-operation "parameters"))
+               )})]]
 
 
          ["/api/pets2"

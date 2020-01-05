@@ -321,30 +321,27 @@
      {}
      paramdefs))))
 
-(defn make-wrap-openapi-params
+(defn wrap-openapi-params
   "Create Ring middleware that will process parameters contained in the
   request. Parameters are defined as specified by OpenAPI 3.0 (an
   array of ParameterObject elements), see
   https://spec.openapis.org/oas/v3.0.2#parameter-object"
-  [param-defs]
+  [h param-defs]
   (assert param-defs)
   (let [query-param-defs (not-empty (filter #(= (get % "in") "query") param-defs))
-        path-param-defs (not-empty (filter #(= (get % "in") "path") param-defs))
-        process-req
-        (fn [req]
-          (assoc
+        path-param-defs (not-empty (filter #(= (get % "in") "path") param-defs))]
+    (fn this
+      ([req]
+       (this req identity #(throw %)))
+      ([req respond raise]
+       (h (assoc
            req
            :apex/params
            (cond-> {}
              query-param-defs
              (assoc :query (process-query-string (:query-string req) query-param-defs))
              path-param-defs
-             (assoc :path (process-path-parameters (:path-params req) path-param-defs)))))]
-    (fn [h]
-      (fn
-        ([req]
-         (h (process-req req)))
-        ([req respond raise] (h (process-req req) respond raise))))))
+             (assoc :path (process-path-parameters (:path-params req) path-param-defs)))) respond raise)))))
 
 ;; This is Reitit middleware, see
 ;; https://metosin.github.io/reitit/ring/data_driven_middleware.html
@@ -356,7 +353,5 @@
 
 (def openapi-parameters-middleware
   {:name "Parameters"
-   :compile
-   (fn [route-data router-opts]
-     (fn [h param-defs]
-       ((make-wrap-openapi-params param-defs) h)))})
+   :wrap wrap-openapi-params
+   })
