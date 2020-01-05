@@ -1,5 +1,10 @@
+;; Copyright © 2020, JUXT LTD.
+
 {:paths ["src"]
  :deps {
         jinx {:mvn/version "0.1.6"
               :exclusions [cljs-node-io]}
-        }}
+
+        metosin/muuntaja {:mvn/version "0.6.6"}
+
+        ring/ring-codec {:mvn/version "1.1.2"}}}

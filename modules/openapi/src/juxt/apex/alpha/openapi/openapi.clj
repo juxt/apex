@@ -4,6 +4,7 @@
   (:require
    [reitit.ring :as ring]))
 
+
 (defn implicit-head-method
   "Note: the Ring core middleware wrap-head calls into the handler. This
   is an optimized version which does not."

@@ -4,6 +4,12 @@
   juxt.apex/params {:local/root "../../modules/params"}
   juxt.apex/trace {:local/root "../../modules/trace"}
   juxt.apex/redoc {:local/root "../../modules/redoc"}
+
+  ;; Really? Why do we need these? Are they not brought in with the deps above?
+  metosin/reitit-core {:mvn/version "0.3.10"}
+  metosin/reitit-ring {:mvn/version "0.3.10"}
+  metosin/muuntaja {:mvn/version "0.6.6"}
+
   }
 
  :aliases
@@ -19,6 +25,8 @@
     juxt.edge/lib.app.logging {:local/root "../../../edge/lib/edge.app.logging"}
 
     org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
+
+    metosin/jsonista {:mvn/version "0.2.5"}
 
     ring/ring-jetty-adapter {:mvn/version "1.7.1"}
 
