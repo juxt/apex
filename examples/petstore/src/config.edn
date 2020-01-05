@@ -1,7 +1,6 @@
-{:port 8080
- :ig/system
+{:ig/system
  {:juxt.apex.examples.petstore.server/jetty
-  {:port #ref [:port]
+  {:juxt.apex.examples.petstore.client/port 8080
 
    ;; This declaration is for convenience during development. It will
    ;; recreate the handler from the document every time, which allows
@@ -11,16 +10,6 @@
    ;; enabled in production or test environments where accepted
    ;; performance is required. Defaults to nil.
 
-   ;; TODO: fix namespaces here according to new namespace scheme
+   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}}
 
-   :new-handler-on-each-request? #profile {:dev true :default false}
-   :document "juxt/apex/openapi-examples/petstore.yaml"
-
-   ;; This declaration ensures that the service can be accessed using
-   ;; localhost without requiring the OpenAPI document itself to be
-   ;; altered. Defaults to nil.
-   :additional-servers #profile {:dev [{"url" #join ["http://localhost:" #ref [:port]]}]}}
-
-  :juxt.apex.examples.petstore.client/seed {}
-
-  }}
+  :juxt.apex.examples.petstore.client/seed {}}}

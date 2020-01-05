@@ -110,7 +110,8 @@
           ([req respond raise] (respond not-found-response))))}))))
 
 (defmethod ig/init-key ::jetty
-  [_ {:keys [new-handler-on-each-request?]
+  [_ {:keys [juxt.apex.dev/new-handler-on-each-request?
+             juxt.apex.examples.petstore.client/port]
       :as opts}]
 
   (let [request-history-atom (atom [])]
@@ -121,8 +122,10 @@
            (h req respond raise)))
        ;; Production
        (create-root-handler {:apex/request-history-atom request-history-atom}))
-     (-> opts (dissoc :handler)
-         (assoc :join? false
+     (-> opts
+         (dissoc :handler)
+         (assoc :port port
+                :join? false
                 :async? true
                 :async-timeout 5000)))))
 
