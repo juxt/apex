@@ -1,0 +1,10 @@
+{:paths ["src"]
+ :deps
+ {
+  juxt.apex/openapi {:local/root "../openapi"}
+
+  com.nimbusds/nimbus-jose-jwt {:mvn/version "8.2.1"}
+  com.nimbusds/oauth2-oidc-sdk {:mvn/version "6.18.1"}
+  }
+
+ }

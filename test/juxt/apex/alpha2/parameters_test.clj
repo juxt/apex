@@ -1,4 +1,4 @@
-;; Copyright © 2019, JUXT LTD.
+;; Copyright © 2020, JUXT LTD.
 
 (ns juxt.apex.alpha2.parameters-test
   (:require
@@ -13,11 +13,7 @@
    muuntaja.format.core
    muuntaja.format.json
    [muuntaja.core :as m]
-   [ring.util.codec :as codec])
-  (:import
-   (juxt.apex.alpha2.parameters
-    RequiredParameterMissingError
-    ParameterSchemaValidationError)))
+   [ring.util.codec :as codec]))
 
 ;; Formatting
 

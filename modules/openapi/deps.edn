@@ -1,0 +1,15 @@
+;; Copyright © 2020, JUXT LTD.
+
+{:paths ["src"]
+ :deps
+ {clj-yaml {:mvn/version "0.4.0"}
+  ;;juxt/muuntaja {:mvn/version "0.6.6"}
+  ;;ring/ring-core {:mvn/version "1.7.1"}
+  metosin/reitit-core {:mvn/version "0.3.10"}
+  metosin/reitit-ring {:mvn/version "0.3.10"}
+  ;;org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
+  }
+
+ :aliases
+ {:dev
+  {}}}

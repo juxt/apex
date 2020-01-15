@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+  <modelVersion>4.0.0</modelVersion>
+    
+  <groupId>juxt.apex</groupId>
+    
+  <artifactId>redoc</artifactId>
+    
+  <version>2-alpha-1</version>
+    
+  <name>redoc</name>
+    
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.10.1</version>
+    </dependency>
+    <dependency>
+      <groupId>comb</groupId>
+      <artifactId>comb</artifactId>
+      <version>0.1.1</version>
+    </dependency>
+  </dependencies>
+    
+  <build>
+        
+    <sourceDirectory>src</sourceDirectory>
+      
+  </build>
+    
+  <repositories>
+    <repository>
+      <id>clojars</id>
+      <url>https://repo.clojars.org/</url>
+    </repository>
+  </repositories>
+  
+</project>

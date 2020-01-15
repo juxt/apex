@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>params</groupId>
+  <artifactId>params</artifactId>
+  <version>0.1.0</version>
+  <name>params</name>
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.10.1</version>
+    </dependency>
+    <dependency>
+      <groupId>metosin</groupId>
+      <artifactId>muuntaja</artifactId>
+      <version>0.6.6</version>
+    </dependency>
+    <dependency>
+      <groupId>jinx</groupId>
+      <artifactId>jinx</artifactId>
+      <version>0.1.6</version>
+      <exclusions>
+        <exclusion>
+          <groupId>cljs-node-io</groupId>
+          <artifactId>cljs-node-io</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>ring</groupId>
+      <artifactId>ring-codec</artifactId>
+      <version>1.1.2</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+  </build>
+  <repositories/>
+</project>

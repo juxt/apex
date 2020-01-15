@@ -8,6 +8,22 @@ descriptions.
 Apex is a Clojure web library that takes an Open API 3.0 description,
 some attachments, and returns a Ring handler.
 
+== Objective
+
+Apex will be considered a success if it meets the following acceptance
+criteria:
+
+* Developers with limited experience of Clojure can create web APIs
+  without too much difficulty, including security.
+
+* Web APIs created with Apex are broadly conformant to HTTP standards
+  and performance is acceptable for the vast majority of use-cases.
+
+This requires the following:
+
+* Error handling is informative and leads developers quickly to the
+  actual cause of the error.
+
 == Rationale
 
 https://github.com/juxt/yada[yada], the web library we wrote to
@@ -78,7 +94,7 @@ https://apisyouwonthate.com/blog/
 
 The MIT License (MIT)
 
-Copyright © 2019 JUXT LTD.
+Copyright © 2020 JUXT LTD.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

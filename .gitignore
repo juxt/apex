@@ -2,3 +2,4 @@
 .cpcache/
 /dev/log
 target/
+examples/petstore/dev/log/*.log

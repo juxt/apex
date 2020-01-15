@@ -1,0 +1,40 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Apex Traces
+  license:
+    name: MIT
+paths:
+  /init:
+    get:
+      summary: OAuth2 init
+      operationId: init
+      responses:
+        '200':
+          description: All requests
+          content:
+            text/html:
+        default:
+          description: Error
+          content:
+            text/html:
+  /callback:
+    get:
+      summary: OAuth2 callback
+      operationId: callback
+      parameters:
+        - name: code
+          in: query
+          required: true
+        - name: state
+          in: query
+          required: true
+      responses:
+        '200':
+          description: All requests
+          content:
+            text/html:
+        default:
+          description: Error
+          content:
+            text/html:

@@ -1,0 +1,22 @@
+= juxt.apex.alpha.oauth2.jwt
+
+This is a small wrapper around an excellent Java library for JWT,
+https://connect2id.com/products/nimbus-jose-jwt[Nimbus].
+
+The choice of Nimbus over Buddy https://github.com/funcool/buddy.
+
+Nimbus uses algorithms 'native' to the JDK which are more mainstream
+than bouncycastle, used by Buddy. Since Apex is extremely judicious in
+adding dependencies, this is seen as a benefit. Also, Nimbus is
+written with JWT verification in mind, as opposed to a lower-level
+general crypto library.
+
+Nimbus is apparently used in production and relatively well
+battle-tested.
+
+NOTE: Under the current legal regime in Australia (Assistance and Access
+Bill 2018), crypto eminating from there cannot be considered
+trustworthy.
+
+This wrapper supports RSA and EC. OKP and `oct` are as yet
+unsupported.
