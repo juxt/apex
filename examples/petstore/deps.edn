@@ -5,11 +5,7 @@
   juxt.apex/trace {:local/root "../../modules/trace"}
   juxt.apex/redoc {:local/root "../../modules/redoc"}
 
-  ;; TODO: Why do we need these? Are they not brought in with the
-  ;; deps above?
-  metosin/reitit-core {:mvn/version "0.3.10"}
   metosin/reitit-ring {:mvn/version "0.3.10"}
-  metosin/muuntaja {:mvn/version "0.6.6"}
 
   ;; For OpenID Connect Discovery
   juxt.apex/oauth2 {:local/root "../../modules/oauth2"}
