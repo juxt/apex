@@ -123,7 +123,9 @@
     (let [openapi
           (yaml/parse-string
            (slurp
-            (io/resource "petstore-expanded-plus-security.yaml")))]
+            (io/resource "petstore-expanded-plus-security.yaml")))
+
+          ]
 
       ;; Keycloak
       [
@@ -137,13 +139,16 @@
           [oic/wrap-openid-authorization]]}]
 
        ["/keycloak"
-        (let [
-              client-id "petstore"
-              redirect-uri "http://localhost:8090/keycloak/callback"
-              jwks
+        (let [jwks
               (jwt/jwks
-               (java.net.URL. (get openid-config "jwks_uri")))]
+               (java.net.URL. (get openid-config "jwks_uri")))
 
+              opts {:openid-config openid-config
+                    :client-id "petstore"
+                    :client-secret "ee185f56-197b-44c0-88e8-581781440c9b"
+                    :redirect-uri "http://localhost:8090/keycloak/callback"
+                    :jwks jwks
+                    :success-uri "/welcome"}]
           [
            ;; TODO: In developer mode, /login could present a page
            ;; where one of a set of built-in users can be chosen and a
@@ -153,32 +158,23 @@
 
            ["/login"
             {:get
-             (oic/create-init-handler
-              {:client-id client-id
-               :redirect-uri redirect-uri
-               :openid-config-f (constantly openid-config)})
+             (fn this
+               ([req]
+                (oic/init-handler req opts))
+               ([req respond raise]
+                (respond (oic/init-handler req respond raise opts))))
+
              :middleware
              [[session/wrap-session session-opts]]}]
 
            ["/callback"
             {:get
-             (oic/create-callback-handler
-              {:client-id client-id
-               :client-secret "e9082fee-e803-46b3-9cb2-06f998527d75"
-               :redirect-uri redirect-uri
-               :openid-config-f (constantly openid-config)
-               :jwks-f (constantly jwks)
-               ;; Rather than an on-success, better to bind
-               ;; id-token and access-token in the oic library.
-               :success-uri "/welcome"
-               #_:on-success
-               #_(fn [req respond raise]
-                   ;;
-                   (respond
-                    {:status 200
-                     :body (str "login success!!!!!" (pr-str (:apex.oic/claims req)))
-                     :session {:username (get (:apex.oic/claims req) "preferred_username")
-                               :name (get (:apex.oic/claims req) "name")}}))})
+             (fn this
+               ([req]
+                (oic/callback-handler req opts))
+               ([req respond raise]
+                (oic/callback-handler req respond raise opts)))
+
              :middleware
              [[session/wrap-session session-opts]
               [params/wrap-openapi-params
