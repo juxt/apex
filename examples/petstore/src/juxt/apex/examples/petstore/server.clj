@@ -30,92 +30,95 @@
          "4" {"name" "Kaia" "type" "Cat"}
          "5" {"name" "Vega" "type" "Dog"}}))
 
-(defn create-root-router [{:apex/keys [request-history-atom session-opts] :as opts}]
+(defn create-root-router
+  [{openid-config :apex.openid/config
+    :keys [apex/request-history-atom
+           apex/session-opts]
+    :as opts}]
   (ring/router
    [
-    (let [openapi (yaml/parse-string
-                   (slurp
-                    (io/resource "petstore-expanded.yaml")))]
-      ;; Redoc
-      ["/doc/pets-api/redoc.html"
-       (redoc/new-redoc-handler "/doc/pets-api/swagger.json")]
+    #_(let [openapi (yaml/parse-string
+                     (slurp
+                      (io/resource "petstore-expanded.yaml")))]
+        ;; Redoc
+        ["/doc/pets-api/redoc.html"
+         (redoc/new-redoc-handler "/doc/pets-api/swagger.json")]
 
-      ;; Swagger UI
-      ["/doc/pets-api/swagger-ui.html"
-       (redoc/new-swagger-ui-handler "/doc/pets-api/swagger.json")]
+        ;; Swagger UI
+        ["/doc/pets-api/swagger-ui.html"
+         (redoc/new-swagger-ui-handler "/doc/pets-api/swagger.json")]
 
-      ;; TODO: Promote something like this to openapi module
-      ["/doc/pets-api/swagger.json"
-       {:get
-        {:handler
-         (fn [req respond raise]
-           (respond
-            {:status 200
-             :headers {"content-type" "application/json"}
-             :body (jsonista/write-value-as-string
-                    (->
-                     openapi
-                     (assoc
-                      "servers"
-                      [{"url" "http://localhost:8090/docs/pets-api"}])))}))}}]
+        ;; TODO: Promote something like this to openapi module
+        ["/doc/pets-api/swagger.json"
+         {:get
+          {:handler
+           (fn [req respond raise]
+             (respond
+              {:status 200
+               :headers {"content-type" "application/json"}
+               :body (jsonista/write-value-as-string
+                      (->
+                       openapi
+                       (assoc
+                        "servers"
+                        [{"url" "http://localhost:8090/docs/pets-api"}])))}))}}]
 
-      (let [handler
-            (fn this
-              ([req]
-               (this req identity #(throw %)))
-              ([req respond raise]
+        (let [handler
+              (fn this
+                ([req]
+                 (this req identity #(throw %)))
+                ([req respond raise]
 
-               ;; OK, let's have a look at the session here
-               (println "sesssion keys are" (keys (:session req)))
+                 ;; OK, let's have a look at the session here
+                 (println "sesssion keys are" (keys (:session req)))
 
 
 
-               (let [limit (get-in req [:apex/params :query "limit" :value])]
-                 #_(throw (ex-info "Forced exception" {:data 123
-                                                       :type :forced}))
-                 (respond
-                  {:status 200
-                   :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))]
-        [
-         ["/api/pets"
-          ["/pets"
-           (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-             {
-              :get
-              ;; Option A: Traditional Ring wrapping
-              (->
-               handler
-               (params/wrap-openapi-params (get openapi-operation "parameters"))
-               (session/wrap-session session-opts))})]]
+                 (let [limit (get-in req [:apex/params :query "limit" :value])]
+                   #_(throw (ex-info "Forced exception" {:data 123
+                                                         :type :forced}))
+                   (respond
+                    {:status 200
+                     :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))]
+          [
+           ["/api/pets"
+            ["/pets"
+             (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+               {
+                :get
+                ;; Option A: Traditional Ring wrapping
+                (->
+                 handler
+                 (params/wrap-openapi-params (get openapi-operation "parameters"))
+                 (session/wrap-session session-opts))})]]
 
-         ["/api/pets2"
-          ["/pets"
-           (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-             {
-              :get
-              ;; Option B: Reitit middleware, this approach is
-              ;; compatible with Apex's tracing facility.
-              handler
+           ["/api/pets2"
+            ["/pets"
+             (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+               {
+                :get
+                ;; Option B: Reitit middleware, this approach is
+                ;; compatible with Apex's tracing facility.
+                handler
 
-              ;; TODO: It might be that Apex is 'a bespoke set of Ring
-              ;; middleware, each of which is configurable via
-              ;; OpenAPI'. Put this statement in the documentation.
-              ;;
-              ;; TODO?: Perhaps return the collection of middleware from a custom
-              ;; 'builder', each middleware of the result would be
-              ;; separately compiled its :compile step.
+                ;; TODO: It might be that Apex is 'a bespoke set of Ring
+                ;; middleware, each of which is configurable via
+                ;; OpenAPI'. Put this statement in the documentation.
+                ;;
+                ;; TODO?: Perhaps return the collection of middleware from a custom
+                ;; 'builder', each middleware of the result would be
+                ;; separately compiled its :compile step.
 
-              :middleware
-              [
-               [params/openapi-parameters-middleware
-                (get-in openapi ["paths" "/pets" "get" "parameters"])]
-               [session/wrap-session session-opts]]})]]]))
+                :middleware
+                [
+                 [params/openapi-parameters-middleware
+                  (get-in openapi ["paths" "/pets" "get" "parameters"])]
+                 [session/wrap-session session-opts]]})]]]))
 
     ;; TODO: Improve the mocking such that each route in the OpenAPI
     ;; document is accounted for and presents a default page, perhaps
     ;; utilising the 'examples' and 'responses' section to form a
     ;; 'happy-path' response.
-
 
     (let [openapi
           (yaml/parse-string
@@ -134,10 +137,7 @@
           [oic/wrap-openid-authorization]]}]
 
        ["/keycloak"
-        (let [openid-config
-              (jsonista/read-value
-               ;; TODO: Careful, this is read on each request in dev
-               (slurp "http://localhost:8080/auth/realms/master/.well-known/openid-configuration"))
+        (let [
               client-id "petstore"
               redirect-uri "http://localhost:8090/keycloak/callback"
               jwks
@@ -262,8 +262,8 @@
 
   (let [request-history-atom (atom [])
         session-opts {:store
-                      ; TODO: Consider adding :key here for sessions
-                      ; to survive resets
+                                        ; TODO: Consider adding :key here for sessions
+                                        ; to survive resets
                       (ring.middleware.session.cookie/cookie-store)
                       :cookie-name "apex-session"
                       }]
@@ -280,7 +280,10 @@
               (h req)))))
        ;; Production
        (create-root-handler {:apex/request-history-atom request-history-atom
-                             :apex/session-opts session-opts}))
+                             :apex/session-opts session-opts
+                             :apex.openid/config (jsonista/read-value
+                                                  ;; TODO: Careful, this is read on each request in dev
+                                                  (slurp "http://localhost:8080/auth/realms/master/.well-known/openid-configuration"))}))
      (-> opts
          (dissoc :handler)
          (assoc :port listener-port
