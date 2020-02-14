@@ -7,11 +7,10 @@
    [clojure.pprint :refer [pprint]]
    [clojure.string :as str]
    [reitit.core :as r]
-   [ring.util.codec :as codec]
    [reitit.ring :as ring]
    [juxt.apex.alpha.openapi.yaml :as yaml]
    [juxt.apex.alpha.params.parameters :as params]
-   [juxt.apex.alpha.trace.html :as html]
+   [juxt.apex.alpha.html.html :as html]
    [juxt.apex.alpha.trace.trace :as trace]))
 
 ;; Could be duplicated - if changing this, check for other instances
@@ -34,20 +33,6 @@
    (fn [x] (get x k)))
   ([k default]
    (fn [x] (get x k default))))
-
-(defn section [title description body]
-  (let [anchor (codec/url-encode (str/replace (.toLowerCase title) #"\s+" "--"))]
-    {:title title
-     :anchor anchor
-     :description description
-     :content
-     (html/content-from-template
-      (slurp
-       (io/resource "juxt/apex/alpha/trace/section.html"))
-      {"title" title
-       "body" body
-       "description" description
-       "anchor" anchor})}))
 
 (defn debug [body]
   (html/content-from-template
@@ -85,31 +70,10 @@
                  :full-path full-path
                  :path path})))))
 
-(defn template-model-base []
-  {"style" (delay (slurp (io/resource "juxt/apex/alpha/trace/style.css")))
-   "footer" (delay (slurp (io/resource "juxt/apex/alpha/trace/footer.html")))})
-
-(defn toc [sections]
-  (str
-   "<table>"
-   (apply str
-          (for [{:keys [title anchor description]} sections]
-            (format "<tr><td><a href=\"#%s\">%s</a></td><td>%s</td></tr>" anchor title description)
-            ))
-   "</table>"))
-
-(defn navbar [items]
-  (str
-   "<ul>"
-   "<li>apex</li>"
-   (apply str (for [{:keys [title href]} items]
-                (str "<li><a href=\"" href "\">" title "</a></li>")))
-   "</ul>"))
-
 (defn requests-index [req params request-history-atom]
   (let [limit (fast-get-in params [:query "limit" :value] 10)
         sections
-        [(section
+        [(html/section
           "Requests"
           "An index of all incoming requests, over time"
           (html/vec->table
@@ -136,7 +100,7 @@
            (cond->>
                (reverse @request-history-atom)
                limit (take limit))))
-         (section
+         (html/section
           "Control"
           "A form that can be used to control this page"
           (str
@@ -168,10 +132,10 @@
             (slurp
              (io/resource "juxt/apex/alpha/trace/trace-console.html"))
             (merge
-             (template-model-base)
+             (html/template-model-base)
              {"title" "Requests Index"
-              "toc" (toc sections)
-              "navbar" (navbar [])
+              "toc" (html/toc sections)
+              "navbar" (html/navbar [])
 
               #_"debug"
               #_(debug {:router (reitit.core/options (:reitit.core/router req))})
@@ -203,12 +167,12 @@
         _ (def item item)
         sections
         [
-         (section
+         (html/section
           "Summary"
           "Overall status of request"
           "")
 
-         (section
+         (html/section
           "Request"
           "A summary table of the inbound request prior to processing."
           (html/map->table
@@ -220,7 +184,7 @@
                          {:render (comp html/default-render str/upper-case name)}
                          {:render html/default-render}))}))
 
-         (section
+         (html/section
           "Processing Steps"
           "A trace of the steps involved in processing the request."
           (delay
@@ -265,7 +229,7 @@
              )))
 
          ;; TODO: Extract this elsewhere to an extension mechanism
-         (section
+         (html/section
           "Query Parameters"
           "The results of extracting parameters encoded into the query string of the request."
           (delay
@@ -315,7 +279,7 @@
              (seq (get-in (first (get journal-entries-by-type :invoke-handler))
                           [:apex.trace/request-state :apex/params :query])))))
 
-         (section
+         (html/section
           "Path Parameters"
           "The results of extracting parameters encoded into the path of the request."
           (delay
@@ -365,13 +329,13 @@
              (seq (get-in (first (get journal-entries-by-type :invoke-handler))
                           [:apex.trace/request-state :apex/params :path])))))
 
-         (section
+         (html/section
           "Pre-processed Request"
           "A dump of the entire request state, prior to processing."
           (html/map->table (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
           )
 
-         (section
+         (html/section
           "Post-processed Request"
           "A dump of the final request state, after middleware processing and prior to calling the handler, if appropriate."
           (html/map->table (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-inner)))))
@@ -382,12 +346,12 @@
             (slurp
              (io/resource "juxt/apex/alpha/trace/trace-console.html"))
             (merge
-             (template-model-base)
+             (html/template-model-base)
              {"title" "Request Trace"
-              "navbar" (navbar
+              "navbar" (html/navbar
                         [{:title "All requests"
                           :href (href (:reitit.core/router req) "/traces/requests")}])
-              "toc" (toc sections)
+              "toc" (html/toc sections)
               "jumbo" (to-url (:apex.trace/request-state (first (get journal-entries-by-trace-id trace/wrap-trace-outer))))
               "body"
               (apply str (map :content sections))}))}))
@@ -399,7 +363,7 @@
         state-index (fast-get-in params [:path "stateId" :value])
         state (get-in journal [state-index :apex.trace/request-state])
         sections
-        [(section
+        [(html/section
           "Summary"
           "A summary table of the request state"
           (html/map->table
@@ -412,10 +376,10 @@
             (slurp
              (io/resource "juxt/apex/alpha/trace/trace-console.html"))
             (merge
-             (template-model-base)
+             (html/template-model-base)
              {"title" "Request State"
               "navbar"
-              (navbar
+              (html/navbar
                [{:title "All requests"
                  :href (href (:reitit.core/router req) "/requests")}
                 {:title (index-number-format 4 index)
