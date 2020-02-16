@@ -9,6 +9,22 @@
    ;; significantly impact performance and therefore should not be
    ;; enabled in production or test environments where accepted
    ;; performance is required. Defaults to nil.
-   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev false :default false}}
+   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev false :default false}
+
+
+   :juxt.apex.examples.petstore.server/auth-config
+   ;; AWS Cognito
+   #_{:openid-config-url
+    "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_XtCrJJi5g/.well-known/openid-configuration"
+    :client-id "18qbjn64mkqta3oj8370i3er47"
+    :client-secret "otturr5ogvajptdofsf8shhnvcnt82jge3lan5ja2d8l3temg5v"}
+
+   ;; Keycloak
+   {:openid-config-url
+    "http://localhost:8080/auth/realms/master/.well-known/openid-configuration"
+    :client-id "petstore"
+    :client-secret "ee185f56-197b-44c0-88e8-581781440c9b"
+    }
+   }
 
   :juxt.apex.examples.petstore.client/seed {}}}
