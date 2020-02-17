@@ -156,7 +156,6 @@
              200
              (try
                (let [body (json/read-value (.body result))
-                     _ (println "body:" body)
                      id-token (get body "id_token")
                      _ (when-not id-token (raise (ex-info "No id-token in response" {})))
                      id-token-jwt (jwt/signed-jwt id-token)
