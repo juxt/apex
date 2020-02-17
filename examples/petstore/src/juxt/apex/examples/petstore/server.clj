@@ -240,7 +240,7 @@
   (let [request-history-atom (atom [])
         session-opts
         {:store (ring.middleware.session.memory/memory-store)
-         :cookie-name "apex-session"
+         :cookie-name "session"
          }]
     (jetty/run-jetty
      (if new-handler-on-each-request?
