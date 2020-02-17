@@ -54,10 +54,6 @@
            on-success (. (thenAccept
                           (reify java.util.function.Consumer
                             (accept [_ result]
-                              (println "OK:" result)
-                              (println "OK statusCode:" (.statusCode result))
-                              (println "OK headers:" (pr-str (.headers result)))
-                              (println "OK body:" (.body result))
                               (on-success result))))))
        (try
          (let [result (.send client request response-body-handler)]
