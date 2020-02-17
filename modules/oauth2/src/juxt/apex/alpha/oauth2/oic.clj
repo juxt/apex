@@ -15,12 +15,10 @@
 
   :jwks - a map containing the JWKS key set (read from JSON, with string keys preserved)
 
-  :success-uri - the URI that to redirect to on successful authentication
-
+  :scope - scope query parameter sent to the authorization_endpoint (optional, defaults to 'openid')
 
   IMPORTANT: All handlers in this namespace require ring-session to be
   present in the middleware chain.
-
   "
   (:require
    [juxt.apex.alpha.oauth2.jwt :as jwt]
@@ -51,7 +49,7 @@
        client-id
        redirect-uri
        "code"
-       "openid"
+       (get opts :scope "openid")
        (new Nonce)
        state))))
 
