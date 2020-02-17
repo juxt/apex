@@ -1,4 +1,26 @@
-{:ig/system
+{
+ :openid-providers
+ {"cognito"
+  {:openid-config-url
+   "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_XtCrJJi5g/.well-known/openid-configuration"
+   :client-id "18qbjn64mkqta3oj8370i3er47"
+   :client-secret "otturr5ogvajptdofsf8shhnvcnt82jge3lan5ja2d8l3temg5v"}
+
+  "keycloak"
+  {:openid-config-url
+   "http://localhost:8080/auth/realms/master/.well-known/openid-configuration"
+   :client-id "petstore"
+   :client-secret "ee185f56-197b-44c0-88e8-581781440c9b"}
+
+  "onelogin"
+  {:openid-config-url
+      "https://juxt-dev.onelogin.com/oidc/.well-known/openid-configuration"
+      :client-id "926c11b0-13ce-0138-8f1d-0a2a13b62018140139"
+      :client-secret "ac41d73df09841ddeda710ac7bf6861d8b7ab371536a435f45e3e0b61291c810"}}
+
+ :openid-provider #ref [:openid-providers "keycloak"]
+
+ :ig/system
  {:juxt.apex.examples.petstore.server/jetty
   {:juxt.apex.examples.petstore.server/listener-port 8090
 
@@ -12,19 +34,6 @@
    :juxt.apex.dev/new-handler-on-each-request? #profile {:dev false :default false}
 
 
-   :juxt.apex.examples.petstore.server/auth-config
-   ;; AWS Cognito
-   #_{:openid-config-url
-    "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_XtCrJJi5g/.well-known/openid-configuration"
-    :client-id "18qbjn64mkqta3oj8370i3er47"
-    :client-secret "otturr5ogvajptdofsf8shhnvcnt82jge3lan5ja2d8l3temg5v"}
-
-   ;; Keycloak
-   {:openid-config-url
-    "http://localhost:8080/auth/realms/master/.well-known/openid-configuration"
-    :client-id "petstore"
-    :client-secret "ee185f56-197b-44c0-88e8-581781440c9b"
-    }
-   }
+   :juxt.apex.examples.petstore.server/auth-config #ref [:openid-provider]}
 
   :juxt.apex.examples.petstore.client/seed {}}}

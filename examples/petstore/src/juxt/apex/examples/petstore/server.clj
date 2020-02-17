@@ -202,57 +202,7 @@
                [[session/wrap-session session-opts]
                 [params/wrap-openapi-params
                  [{"name" "state" "in" "query" "required" "true" "style" "form"}
-                  {"name" "code" "in" "query" "required" "true" "style" "form"}]]]}]])]
-
-         ;; TODO: Restore this because it's useful to be able to
-         ;; demonstrate different identity providers (IdPs)
-         ;; Onelogin
-         #_["/onelogin"
-            (let [openid-config
-                  ;; A local copy of https://juxt-dev.onelogin.com/oidc/.well-known/openid-configuration
-                  (jsonista/read-value
-                   (slurp
-                    (io/resource "onelogin-openid-configuration.json")))
-
-                  jwks
-                  ;; A local copy of https://juxt-dev.onelogin.com/oidc/certs
-                  (get (jsonista/read-value
-                        (slurp
-                         (io/resource "onelogin-jwks.json"))) "keys")
-
-                  ;; Required OAuth2 application parameters
-                  client-id "926c11b0-13ce-0138-8f1d-0a2a13b62018140139"
-                  redirect-uri "http://localhost:8090/onelogin/callback"]
-              [
-               ;; Onelogin example
-               ;; Try alice/ilovecats
-               ["/login"
-                ;; need to add ring-session middleware - and explain why
-                {:get
-                 (oic/create-init-handler
-                  {:client-id client-id
-                   :redirect-uri redirect-uri
-                   :openid-config-f (constantly openid-config)})
-                 :middleware
-                 [[session/wrap-session session-opts]
-                  ]}]
-               ;; TODO: check for errors
-               ;; e.g. http://localhost:8090/onelogin/callback?error=access_denied&error_description=End-user%20does%20not%20have%20access%20to%20this%20application&state=wBh0lN4SGHNyBOCLLR48Kwyv3sVxl0TiBP9zI6EebFM
-               ["/callback"
-                {:get
-                 (oic/create-callback-handler
-                  {:client-id client-id
-                   :client-secret "ac41d73df09841ddeda710ac7bf6861d8b7ab371536a435f45e3e0b61291c810"
-                   :redirect-uri redirect-uri
-                   :openid-config-f (constantly openid-config)
-                   :jwks-f (constantly jwks)
-                   :on-success (fn [req respond raise]
-                                 (respond {:status 200 :body (str "login success!!!!!" (pr-str (:apex.oic/claims req)))}))})
-                 :middleware
-                 [[session/wrap-session session-opts]
-                  [params/wrap-openapi-params
-                   [{"name" "state" "in" "query" "required" "true" "style" "form"}
-                    {"name" "code" "in" "query" "required" "true" "style" "form"}]]]}]])]])
+                  {"name" "code" "in" "query" "required" "true" "style" "form"}]]]}]])]])
 
       (console/trace-console opts)]
 
