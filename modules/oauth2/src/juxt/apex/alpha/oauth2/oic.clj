@@ -197,7 +197,8 @@
              (raise
               (ex-info
                (format "Token exchange request returned a non-OK response (%s)" (.statusCode result))
-               {:status (.statusCode result)}))))
+               {:status (.statusCode result)
+                :body (slurp (.body result))}))))
 
          :on-error raise ; TODO: Possibly should augment error with context
          })))))
