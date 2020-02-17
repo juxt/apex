@@ -122,16 +122,6 @@
       ;; utilising the 'examples' and 'responses' section to form a
       ;; 'happy-path' response.
 
-      [
-       ["/test-pets-api"
-        {:get (fn
-                ([req respond raise]
-                 (respond
-                  {:status 200 :body "Hi Dan!"}))
-                ([req]
-                 {:status 200 :body "Hi Dan!"}))}
-        ]]
-
 
       (let [openapi
             (yaml/parse-string
