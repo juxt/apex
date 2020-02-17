@@ -231,10 +231,7 @@
 
   (let [request-history-atom (atom [])
         session-opts
-        {:store
-         ;; TODO: Consider adding :key here for sessions
-         ;; to survive resets
-         (ring.middleware.session.cookie/cookie-store)
+        {:store (ring.middleware.session.memory/memory-store)
          :cookie-name "apex-session"
          }]
     (jetty/run-jetty
