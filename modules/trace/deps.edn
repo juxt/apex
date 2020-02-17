@@ -1,6 +1,7 @@
 {:paths ["src"]
  :deps
- {juxt.apex/openapi {:local/root "../../modules/openapi"}}
+ {juxt.apex/openapi {:local/root "../../modules/openapi"}
+  juxt.apex/html {:local/root "../../modules/html"}}
  :aliases
  {:dev {}}
 

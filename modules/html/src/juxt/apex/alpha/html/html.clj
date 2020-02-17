@@ -1,11 +1,11 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.trace.html
+(ns juxt.apex.alpha.html.html
   (:require
    [clojure.java.io :as io]
+   [ring.util.codec :as codec]
    [clojure.string :as str]))
 
-;; TODO: Replace with comb
 (def handlebars-pattern #"\{\{([^\}]*)\}\}")
 
 (defn escape [s]
@@ -19,6 +19,18 @@
        "'" "&apos;"
        "\"" "&quot;"))))
 
+(defn template-model-base []
+  {"style" (delay (slurp (io/resource "juxt/apex/alpha/html/style.css")))
+   "footer" (delay (slurp (io/resource "juxt/apex/alpha/html/footer.html")))})
+
+(defn navbar [items]
+  (str
+   "<ul>"
+   "<li>apex</li>"
+   (apply str (for [{:keys [title href]} items]
+                (str "<li><a href=\"" href "\">" title "</a></li>")))
+   "</ul>"))
+
 (defn content-from-template [template model]
   (str/replace
    template
@@ -26,6 +38,29 @@
    (fn [[_ s]]
      (let [v (model s)]
        (str (if (delay? v) @v v))))))
+
+(defn section [title description body]
+  (let [anchor (codec/url-encode (str/replace (.toLowerCase title) #"\s+" "--"))]
+    {:title title
+     :anchor anchor
+     :description description
+     :content
+     (content-from-template
+      (slurp
+       (io/resource "juxt/apex/alpha/html/section.html"))
+      {"title" title
+       "body" body
+       "description" description
+       "anchor" anchor})}))
+
+(defn toc [sections]
+  (str
+   "<table>"
+   (apply str
+          (for [{:keys [title anchor description]} sections]
+            (format "<tr><td><a href=\"#%s\">%s</a></td><td>%s</td></tr>" anchor title description)
+            ))
+   "</table>"))
 
 (defn monospace [s]
   (str "<span class=\"cell-value\">" s "</span>"))
