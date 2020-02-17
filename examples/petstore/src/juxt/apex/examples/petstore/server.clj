@@ -17,6 +17,7 @@
    [juxt.apex.alpha.params.parameters :as params]
    [juxt.apex.alpha.html.html :as html]
    [reitit.core :as r]
+   [ring.util.response :as response]
    reitit.middleware
    [reitit.ring :as ring]
    [ring.adapter.jetty :as jetty]))
@@ -144,7 +145,7 @@
                                  [{:title "Login"
                                    :href "/openid/login"}])
                                 "body"
-                                "Welcome!"
+                                (str "Welcome!\n" (pr-str (get-in req [:session :subject])))
                                 #_(apply str (map :content sections))}))}))
 
            :middleware
@@ -161,7 +162,7 @@
                       :client-secret client-secret
                       :redirect-uri "http://localhost:8090/openid/callback"
                       :jwks jwks
-                      :success-uri "/welcome"}]
+                      }]
             [
              ;; TODO: In developer mode, /login could present a page
              ;; where one of a set of built-in users can be chosen and a
@@ -186,7 +187,24 @@
                  ([req]
                   (oic/callback-handler req opts))
                  ([req respond raise]
-                  (oic/callback-handler req respond raise opts)))
+                  ;; TODO: This callback needs to take something that is in 'user-space'.
+                  ;;
+                  (let [on-success
+                        (fn [req respond raise {:apex.openid/keys [claims]}]
+                          (respond
+                           (conj
+                            (response/redirect
+                             "/welcome"
+                             :see-other)
+                            [:session
+                             ;; Iff we can use session keys mapped to an
+                             ;; internal session database, then it's ok to
+                             ;; cache the claims between the requests, TODO:
+                             ;; we should do exactly this.
+                             {:subject {:iss (get claims "iss")
+                                        :sub (get claims "sub")}}]))
+                          )]
+                    (oic/callback-handler req respond raise on-success opts))))
 
                :middleware
                [[session/wrap-session session-opts]

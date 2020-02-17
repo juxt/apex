@@ -83,16 +83,28 @@
 ;; refetching/cacheing for convenience.
 
 ;; TODO: Readup on OAuth2 as to the preferred name of this
+
+;; TODO: callback-handler has poor cohesion with its required query
+;; parameters. Ideally, a classic Ring version of this handler can be
+;; provided that wraps params/wrap-openapi-params. (How to signal the
+;; requirement of wrap-session is another matter). Another Reitit
+;; version could be provided that is traceable (by Apex's
+;; trace-console).
+
 (defn callback-handler
-  ([req opts]
+  "Create a Ring handler that is the target for a redirect by an OAuth2
+  provider. Must take query parameters 'state' and 'code'. The
+  argument on-success is a function which takes the request (plus
+  respond and raise in the asynchronous form), and a map
+  containing (at least) string keys for id_token and access_token."
+  ([req on-success opts]
    (throw (ex-info "TODO: Implement sync version of callback-handler" {})))
-  ([req respond raise opts]
+  ([req respond raise on-success opts]
    (let [{:keys [redirect-uri
                  client-id
                  client-secret
                  openid-config
-                 jwks
-                 success-uri]} opts
+                 jwks]} opts
          session (:session req)
 
          code (get-in req [:apex/params :query "code" :value])
@@ -164,6 +176,8 @@
                      (raise
                       (ex-info "Access token has invalid signature" {:apex.response/status 400})))
 
+                 _ (println "jwt/claims of id token:")
+                 _ (pprint (jwt/claims id-token-jwt))
                  _ (println "jwt/claims of access token:")
                  _ (pprint (jwt/claims access-token-jwt))
 
@@ -172,31 +186,10 @@
                  ;; TODO: How to revoke these JWTs? What part of the
                  ;; JWT corresponds to the id that can be revoked?
 
-                 (respond
-                  (conj
-                   (response/redirect
-                    success-uri
-                    :see-other)
-                   [:session
-                    ;; Iff we can use session keys mapped to an
-                    ;; internal session database, then it's ok to
-                    ;; cache the claims between the requests, TODO:
-                    ;; we should do exactly this.
-                    {"id_token" id-token
-                     "access_token" access-token}]))
-
-
-                 #_(on-success
-                    ;; TODO: Should redirect here, because otherwise
-                    ;; we're left in a state where a refresh can cause
-                    ;; the error: "No session state, system cannot
-                    ;; defend against a CSRF attack"
-                    (assoc req
-                           ;; TODO: document me!
-                           ;;:apex.jwt/claims #_(jwt/claims id-token-jwt)
-                           )
-                    respond
-                    raise))
+                 (on-success
+                  req respond raise
+                  {:apex.openid/claims (jwt/claims id-token-jwt)
+                   :apex.oauth2/access-token access-token}))
 
                (catch Exception e
                  (raise e)))
