@@ -21,8 +21,8 @@
  :openid-provider #ref [:openid-providers "keycloak"]
 
  :ig/system
- {:juxt.apex.examples.petstore.server/jetty
-  {:juxt.apex.examples.petstore.server/listener-port 8090
+ {:juxt.apex.examples.petstore.api-server/jetty
+  {:juxt.apex.examples/listener-port 8090
 
    ;; This declaration is for convenience during development. It will
    ;; recreate the handler from the document every time, which allows
@@ -34,6 +34,6 @@
    :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}
 
 
-   :juxt.apex.examples.petstore.server/auth-config #ref [:openid-provider]}
+   :juxt.apex.examples.client/auth-config #ref [:openid-provider]}
 
   :juxt.apex.examples.petstore.client/seed {}}}

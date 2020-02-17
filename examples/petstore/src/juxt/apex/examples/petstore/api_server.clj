@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.examples.petstore.server
+(ns juxt.apex.examples.petstore.api-server
   (:require
    ring.middleware.session.cookie
    [ring.middleware.session :as session]
@@ -233,8 +233,8 @@
 
 (defmethod ig/init-key ::jetty
   [_ {:keys [juxt.apex.dev/new-handler-on-each-request?
-             juxt.apex.examples.petstore.server/listener-port
-             juxt.apex.examples.petstore.server/auth-config]
+             juxt.apex.examples/listener-port
+             juxt.apex.examples.client/auth-config]
       :as opts}]
 
   (let [request-history-atom (atom [])
