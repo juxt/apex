@@ -31,7 +31,7 @@
    ;; significantly impact performance and therefore should not be
    ;; enabled in production or test environments where accepted
    ;; performance is required. Defaults to nil.
-   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev false :default false}
+   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}
 
 
    :juxt.apex.examples.petstore.server/auth-config #ref [:openid-provider]}

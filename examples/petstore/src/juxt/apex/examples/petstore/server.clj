@@ -248,11 +248,10 @@
          ([req]
           (this req nil nil))
          ([req respond raise]
-          (let [h (merge
-                   auth-config
-                   (create-root-handler
-                    {:apex/request-history-atom request-history-atom
-                     :apex/session-opts session-opts}))]
+          (let [h (create-root-handler
+                   (merge auth-config
+                          {:apex/request-history-atom request-history-atom
+                           :apex/session-opts session-opts}))]
             (if respond
               (h req respond raise)
               (h req)))))
