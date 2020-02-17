@@ -176,11 +176,6 @@
                      (raise
                       (ex-info "Access token has invalid signature" {:apex.response/status 400})))
 
-                 _ (println "jwt/claims of id token:")
-                 _ (pprint (jwt/claims id-token-jwt))
-                 _ (println "jwt/claims of access token:")
-                 _ (pprint (jwt/claims access-token-jwt))
-
                  ;; TODO: Always check expiry of tokens, here and in the middleware for each request
 
                  ;; TODO: How to revoke these JWTs? What part of the
