@@ -66,7 +66,7 @@
          state (str (new Nonce))]
      (merge
       (response/redirect (login-url state opts))
-      {:session (merge session {:state state})})))
+      {:session (merge session {:apex.oauth2/state state})})))
   ([req respond raise opts]
    (respond (init-handler req opts))))
 
@@ -98,15 +98,16 @@
          session (:session req)
 
          code (get-in req [:apex/params :query "code" :value])
-         state (get-in req [:apex/params :query "state" :value])]
+         state (get-in req [:apex/params :query "state" :value])
+         original-state (:apex.oauth2/state session)]
+
+     (when-not original-state
+       (raise (ex-info "No session state, system cannot defend against a CSRF attack" {})))
 
      (when-not state
        (raise (ex-info "No state query parameter returned from provider" {})))
 
-     (when-not (:state session)
-       (raise (ex-info "No session state, system cannot defend against a CSRF attack" {})))
-
-     (when-not (= state (:state session))
+     (when-not (= state original-state)
        (raise (ex-info "State returned from provided doesn't match that in session" {})))
 
      (let [token-url (get openid-config "token_endpoint")
