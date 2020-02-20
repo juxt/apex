@@ -68,9 +68,15 @@
    (let [session (:session req)
          ;; We create some state that we'll send to the OAuth2
          ;; Authentication Server and also store in our
-         ;; session. That way we'll be able to defend against fake
-         ;; callbacks. TODO: link to further documentation on this
-         ;; security defence.
+         ;; session. That way we'll be able to defend against CSRF attacks.
+         ;; See https://tools.ietf.org/html/rfc6749#section-10.12
+
+         ;; The com.nimbusds.openid.connect.sdk.Nonce instance, from
+         ;; javadoc: "Creates a new nonce with a randomly generated
+         ;; 256-bit (32-byte) value, Base64URL-encoded.".  This meets
+         ;; the requirement in
+         ;; https://tools.ietf.org/html/rfc6749#section-10.10 for
+         ;; greater than 160-bits of entropy.
          state (str (new Nonce))]
      (merge
       (response/redirect (login-url state opts))
@@ -128,6 +134,9 @@
        (raise (ex-info "No state query parameter returned from provider" {})))
 
      (when-not (= state original-state)
+       ;; See OpenID Connect 3.1.2.7
+       ;; https://openid.net/specs/openid-connect-core-1_0.html#AuthResponseValidation
+       ;; RFC 6749, especially Sections 4.1.2 and 10.12.
        (raise (ex-info "State returned from provided doesn't match that in session" {})))
 
      ;; TODO: Can also encode the client id and client secret in the
