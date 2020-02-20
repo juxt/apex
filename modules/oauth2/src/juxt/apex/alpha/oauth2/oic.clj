@@ -43,6 +43,16 @@
       ;; TODO: Use a URL builder (see java.net.URL ?) - or Stuart
       ;; Sierra's wrapper, since authorization_endpoint may contain
       ;; query params which need to be auto-escaped
+
+      ;; TODO: The nonce parameter is from the onelogin documentation - it
+      ;; doesn't appear to be used by Cognito - check the RFCs.
+
+      ;; TODO: Support Authorization Code Grant with PKCE as an option
+      ;; https://tools.ietf.org/html/rfc7636
+      ;; https://nat.sakimura.org/2016/01/25/cut-and-pasted-code-attack-in-oauth-2-0-rfc6749/
+      ;; Also https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html
+      ;; This requires the addition of a code_challenge_method (S256) and code_challenge of CODE_CHALLENGE - check openid-config to see support
+
       (format
        "%s?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&nonce=%s&state=%s"
        authorization-endpoint
@@ -120,6 +130,10 @@
      (when-not (= state original-state)
        (raise (ex-info "State returned from provided doesn't match that in session" {})))
 
+     ;; TODO: Can also encode the client id and client secret in the
+     ;; Authorization request header with:
+     ;; Authorization: Basic Base64Encode(client_id:client_secret)
+
      (let [token-url (get openid-config "token_endpoint")
            client (http/new-client)
            body (http/->www-form-urlencoded
@@ -128,6 +142,8 @@
                   "redirect_uri" redirect-uri
                   "client_id" client-id
                   "client_secret" client-secret})]
+
+       ;; TODO: Support PKCE's code_verifier
 
        (http/request
         client :post

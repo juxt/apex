@@ -14,9 +14,9 @@
 
   "onelogin"
   {:openid-config-url
-      "https://juxt-dev.onelogin.com/oidc/.well-known/openid-configuration"
-      :client-id "926c11b0-13ce-0138-8f1d-0a2a13b62018140139"
-      :client-secret "ac41d73df09841ddeda710ac7bf6861d8b7ab371536a435f45e3e0b61291c810"}}
+   "https://juxt-dev.onelogin.com/oidc/.well-known/openid-configuration"
+   :client-id "926c11b0-13ce-0138-8f1d-0a2a13b62018140139"
+   :client-secret "ac41d73df09841ddeda710ac7bf6861d8b7ab371536a435f45e3e0b61291c810"}}
 
  :openid-provider #ref [:openid-providers "keycloak"]
 
@@ -31,9 +31,9 @@
    ;; significantly impact performance and therefore should not be
    ;; enabled in production or test environments where accepted
    ;; performance is required. Defaults to nil.
-   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}
+   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}}
 
-
-   :juxt.apex.examples.client/auth-config #ref [:openid-provider]}
-
-  :juxt.apex.examples.petstore.client/seed {}}}
+  :juxt.apex.examples.petstore.customer-client/jetty
+  {:juxt.apex.examples/listener-port 8091
+   :juxt.apex.examples.client/cookie-name "session"
+   :juxt.apex.examples.client/auth-config #ref [:openid-provider]}}}

@@ -234,14 +234,15 @@
 (defmethod ig/init-key ::jetty
   [_ {:keys [juxt.apex.dev/new-handler-on-each-request?
              juxt.apex.examples/listener-port
-             juxt.apex.examples.client/auth-config]
+             juxt.apex.examples.client/auth-config
+             juxt.apex.examples.client/cookie-name]
       :as opts}]
 
   (let [request-history-atom (atom [])
         session-opts
-        {:store (ring.middleware.session.memory/memory-store)
-         :cookie-name "session"
-         }]
+        {:store (ring.middleware.session.memory/memory-store (atom {}))
+         :cookie-name cookie-name}]
+
     (jetty/run-jetty
      (if new-handler-on-each-request?
        (fn this
