@@ -69,6 +69,7 @@
                      :client-secret client-secret
                      :redirect-uri "http://localhost:8091/openid/callback"
                      :jwks jwks
+                     :scope "openid" ;; TODO: Make this a vector?
                      }]
            [
             ;; TODO: In developer mode, /login could present a page
@@ -97,7 +98,7 @@
                  ;; TODO: This callback needs to take something that is in 'user-space'.
                  ;;
                  (let [on-success
-                       (fn [req respond raise {:apex.openid/keys [claims]}]
+                       (fn [req respond raise data]
                          (respond
                           (conj
                            (response/redirect
@@ -108,9 +109,13 @@
                             ;; internal session database, then it's ok to
                             ;; cache the claims between the requests, TODO:
                             ;; we should do exactly this.
-                            {:subject {:iss (get claims "iss")
-                                       :sub (get claims "sub")}
-                             :session claims}]))
+                            (merge
+                             {:access-token-claims (:apex.oic/access-token-claims data)}
+                             (when-let [id-token-claims (:apex.oic/id-token-claims data)]
+                               {:subject {:iss (get-in data [:apex.oic/id-token-claims "iss"])
+                                          :sub (get-in data [:apex.oic/id-token-claims "sub"])}
+                                :id-token-claims id-token-claims})
+                             )]))
                          )]
                    (oic/callback-handler req respond raise on-success opts))))
 

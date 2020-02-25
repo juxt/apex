@@ -188,8 +188,13 @@
              (try
                (let [body (json/read-value (.body result))
                      id-token (get body "id_token")
-                     _ (when-not id-token (raise (ex-info "No id-token in response" {})))
-                     id-token-jwt (jwt/signed-jwt id-token)
+
+                     ;; TODO: this may be ok, because may not be
+                     ;; passing the 'openid' scope -so in this case
+                     ;; it's not particularly an error
+                     ;; _ (when-not id-token (raise (ex-info "No id-token in response" {})))
+
+                     id-token-jwt  (when id-token (jwt/signed-jwt id-token))
 
                      access-token (get body "access_token")
                      _ (when-not access-token (raise (ex-info "No access-token in response" {})))
@@ -200,10 +205,11 @@
                  ;; issuer identifier must match to the openid-config
                  ;; issuer.
 
-                 (when-not
-                     (jwt/validate-jws id-token-jwt jwks)
+                 (when id-token
+                   (when-not
+                       (jwt/validate-jws id-token-jwt jwks)
                      (raise
-                      (ex-info "Claims have an invalid signature" {:apex.response/status 400})))
+                      (ex-info "Claims have an invalid signature" {:apex.response/status 400}))))
 
                  (when-not
                      (jwt/validate-jws access-token-jwt jwks)
@@ -217,8 +223,11 @@
 
                  (on-success
                   req respond raise
-                  {:apex.openid/claims (jwt/claims id-token-jwt)
-                   :apex.oauth2/access-token access-token}))
+                  (merge
+                   (when id-token
+                     {:apex.oic/id-token-claims (jwt/claims id-token-jwt)})
+                   {:apex.oic/access-token-claims (jwt/claims access-token-jwt)
+                    :apex.oic/access-token access-token})))
 
                (catch Exception e
                  (raise e)))
