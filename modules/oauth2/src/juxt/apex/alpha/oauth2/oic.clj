@@ -233,10 +233,14 @@
                  (raise e)))
 
              (raise
-              (ex-info
-               (format "Token exchange request returned a non-OK response (%s)" (.statusCode result))
-               {:status (.statusCode result)
-                :body (slurp (.body result))}))))
+              (let [body (slurp (.body result))]
+                (ex-info
+                 ;; TODO: Might get "error": "invalid_grant" if (in
+                 ;; keycloak) the user doesn't consent to one or more
+                 ;; of the scopes requested.
+                 (format "Token exchange request returned a non-OK response (%s) - %s" (.statusCode result) body)
+                 {:status (.statusCode result)
+                  :body body})))))
 
          :on-error raise ; TODO: Possibly should augment error with context
          })))))
