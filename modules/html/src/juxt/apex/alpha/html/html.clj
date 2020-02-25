@@ -101,7 +101,7 @@
 (declare map->table)
 
 (defn default-render [x]
-  (when-not x
+  #_(when-not x
     (throw (ex-info "X" {}))
     )
   (cond
