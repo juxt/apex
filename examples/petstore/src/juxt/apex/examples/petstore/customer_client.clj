@@ -34,19 +34,26 @@
             (respond
              {:status 200
               :headers {"content-type" "text/html;charset=utf8"}
-              :body (html/content-from-template
-                     (slurp
-                      (io/resource "juxt/apex/examples/petstore/welcome.html"))
-                     (merge
-                      (html/template-model-base)
-                      {"title" "Apex Petstore"
-                       "navbar"
-                       (html/navbar
-                        [{:title "Login"
-                          :href "/openid/login"}])
-                       "body"
-                       (str "Welcome!\n" (pr-str (get-in req [:session :subject])))
-                       #_(apply str (map :content sections))}))}))
+              :body (let [sections [(html/section
+                                     "Subject" "Subject details captured from cookie"
+                                     (html/map->table
+                                      {:subject (get-in req [:session :subject])
+                                       :session (get-in req [:session])}))]]
+                      (html/content-from-template
+                       (slurp
+                        (io/resource "juxt/apex/examples/petstore/welcome.html"))
+                       (merge
+                        (html/template-model-base)
+                        {"title" "Apex Petstore"
+                         "toc" (html/toc sections)
+                         "navbar"
+                         (html/navbar
+                          [{:title "Login"
+                            :href "/openid/login"}])
+                         "body"
+                         (apply str (map :content sections))
+
+                         #_(apply str (map :content sections))})))}))
 
           :middleware
           [[session/wrap-session session-opts]
@@ -102,7 +109,8 @@
                             ;; cache the claims between the requests, TODO:
                             ;; we should do exactly this.
                             {:subject {:iss (get claims "iss")
-                                       :sub (get claims "sub")}}]))
+                                       :sub (get claims "sub")}
+                             :session claims}]))
                          )]
                    (oic/callback-handler req respond raise on-success opts))))
 
