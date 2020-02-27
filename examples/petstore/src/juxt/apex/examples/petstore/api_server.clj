@@ -26,13 +26,11 @@
 
 (defn create-root-router
   [opts]
-
   (let [{:keys [apex/session-opts
                 client-id
                 client-secret
                 openid-config-url]} opts
 
-        _ (println "openid-config-url is" openid-config-url)
         openid-config (jsonista/read-value (slurp openid-config-url))]
 
     (ring/router
@@ -40,11 +38,10 @@
       (let [openapi (yaml/parse-string
                      (slurp
                       (io/resource "petstore-expanded.yaml")))]
-        ;; Redoc
         [
+         ;; Redoc
          ["/doc/pets-api/redoc.html"
-          (redoc/new-redoc-handler "/doc/pets-api/swagger.json")
-          ]
+          (redoc/new-redoc-handler "/doc/pets-api/swagger.json")]
 
          ;; Swagger UI
          ["/doc/pets-api/swagger-ui.html"
@@ -69,8 +66,7 @@
          [
           ["/api/pets"
 
-           (seq
-
+           (seq ; Reitit needs a sequence
             (->
              (util/create-reitit-route-map openapi)
 
@@ -94,22 +90,9 @@
                                           limit (take limit)))}))))
                  :middleware [[{:name "OpenAPI Parameters"
                                 :wrap params/wrap-openapi-params} (get operation "parameters")]
-                              [session/wrap-session session-opts]]}))
+                              [session/wrap-session session-opts]]}))))]]])]
 
-             ))]]
-
-         ])
-
-      ;; TODO: Improve the mocking such that each route in the OpenAPI
-      ;; document is accounted for and presents a default page, perhaps
-      ;; utilising the 'examples' and 'responses' section to form a
-      ;; 'happy-path' response.
-
-      ]
-
-     {:reitit.middleware/transform reitit.ring.middleware.dev/print-request-diffs}
-
-     )))
+     {:reitit.middleware/transform reitit.ring.middleware.dev/print-request-diffs})))
 
 (defn create-root-handler
   ([opts]
