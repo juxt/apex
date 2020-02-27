@@ -8,6 +8,7 @@
    [juxt.apex.alpha.openapi.yaml :as yaml]
    [juxt.apex.alpha.params.parameters :as params]
    [juxt.apex.alpha.redoc.redoc :as redoc]
+   [juxt.apex.examples.petstore.util :as util]
    reitit.middleware
    [reitit.ring :as ring]
    reitit.ring.middleware.dev
@@ -64,33 +65,40 @@
                          "servers"
                          [{"url" "http://localhost:8090/api/pets"}])))}))}}]
 
-         (let [handler
-               (fn this
-                 ([req]
-                  (this req identity #(throw %)))
-                 ([req respond raise]
 
-                  (let [limit (get-in req [:apex/params :query "limit" :value])
-                        tags (set (get-in req [:apex/params :query "tags" :value]))]
-                    (respond
-                     {:status 200
-                      :headers {"content-type" "application/json"}
-                      :body (jsonista/write-value-as-string
-                             (cond->> (vals @database)
-                               (seq tags) (filter (comp tags #(get % "tag")))
-                               limit (take limit)))}))))]
-           [
-            ["/api/pets"
-             ["/pets"
-              (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-                {
-                 :get {:middleware [[{:name "OpenAPI Parameters"
-                                      :wrap params/wrap-openapi-params} (get openapi-operation "parameters")]
-                                    [session/wrap-session session-opts]]
-                       :handler handler}
-                 })]]
+         [
+          ["/api/pets"
 
-            ])])
+           (seq
+
+            (->
+             (util/create-reitit-route-map openapi)
+
+             ;; Mount a custom handler
+             (update-in
+              ["/pets" :get]
+              (fn [{:apex/keys [operation]}]
+                {:handler (fn this
+                            ([req]
+                             (this req identity #(throw %)))
+                            ([req respond raise]
+
+                             (let [limit (get-in req [:apex/params :query "limit" :value])
+                                   tags (set (get-in req [:apex/params :query "tags" :value]))]
+                               (respond
+                                {:status 200
+                                 :headers {"content-type" "application/json"}
+                                 :body (jsonista/write-value-as-string
+                                        (cond->> (vals @database)
+                                          (seq tags) (filter (comp tags #(get % "tag")))
+                                          limit (take limit)))}))))
+                 :middleware [[{:name "OpenAPI Parameters"
+                                :wrap params/wrap-openapi-params} (get operation "parameters")]
+                              [session/wrap-session session-opts]]}))
+
+             ))]]
+
+         ])
 
       ;; TODO: Improve the mocking such that each route in the OpenAPI
       ;; document is accounted for and presents a default page, perhaps
