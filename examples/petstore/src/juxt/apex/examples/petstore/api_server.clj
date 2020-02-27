@@ -74,9 +74,6 @@
                  (this req identity #(throw %)))
                 ([req respond raise]
 
-                 ;; OK, let's have a look at the session here
-                 (println "sesssion keys are" (keys (:session req)))
-
                  (let [limit (get-in req [:apex/params :query "limit" :value])]
                    (respond
                     {:status 200
