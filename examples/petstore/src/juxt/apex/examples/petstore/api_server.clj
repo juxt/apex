@@ -74,10 +74,18 @@
                  (this req identity #(throw %)))
                 ([req respond raise]
 
-                 (let [limit (get-in req [:apex/params :query "limit" :value])]
+                 (prn (get-in req [:apex/params :query "limit"]))
+                 (prn (get-in req [:apex/params :query "tags"]))
+
+                 (let [limit (get-in req [:apex/params :query "limit" :value])
+                       tags (set (get-in req [:apex/params :query "tags" :value]))]
                    (respond
                     {:status 200
-                     :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))]
+                     :headers {"content-type" "application/json"}
+                     :body (jsonista/write-value-as-string
+                            (cond->> (vals @database)
+                              (seq tags) (filter (comp tags #(get % "tag")))
+                              limit (take limit)))}))))]
           [
            ["/api/pets"
             ["/pets"
@@ -96,7 +104,7 @@
       ;; utilising the 'examples' and 'responses' section to form a
       ;; 'happy-path' response.
 
-     ]
+      ]
 
      )))
 
