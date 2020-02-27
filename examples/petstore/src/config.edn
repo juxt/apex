@@ -1,10 +1,9 @@
 {
  :openid-providers
- {"cognito"
-  #_{:openid-config-url
-   "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_XtCrJJi5g/.well-known/openid-configuration"
-   :client-id "18qbjn64mkqta3oj8370i3er47"
-     :client-secret "otturr5ogvajptdofsf8shhnvcnt82jge3lan5ja2d8l3temg5v"}
+ {"google"
+  {:openid-config-url "https://accounts.google.com/.well-known/openid-configuration"}
+
+  "cognito"
   {:openid-config-url
    "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_LXe3f7tLq/.well-known/openid-configuration"
    :client-id "6mqhkcrllmajchv8h9dig88hjj"
