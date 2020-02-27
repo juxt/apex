@@ -62,9 +62,9 @@
                         openapi
                         (assoc
                          "servers"
-                         [{"url" "http://localhost:8090/docs/pets-api"}])))}))}}]]
+                         [{"url" "http://localhost:8090/api/pets"}])))}))}}]]
 
-        #_(let [handler
+        (let [handler
                 (fn this
                   ([req]
                    (this req identity #(throw %)))
