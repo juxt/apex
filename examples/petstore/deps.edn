@@ -7,6 +7,8 @@
 
   metosin/reitit-ring {:mvn/version "0.3.10"}
 
+  metosin/reitit-middleware {:mvn/version "0.4.2"}
+
   ;; For OpenID Connect Discovery
   juxt.apex/oauth2 {:local/root "../../modules/oauth2"}
   }

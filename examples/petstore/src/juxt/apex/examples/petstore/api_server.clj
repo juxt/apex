@@ -2,23 +2,17 @@
 
 (ns juxt.apex.examples.petstore.api-server
   (:require
-   ring.middleware.session.cookie
-   [ring.middleware.session :as session]
    [clojure.java.io :as io]
-   [juxt.apex.alpha.oauth2.oic :as oic]
    [integrant.core :as ig]
    [jsonista.core :as jsonista]
-   [juxt.apex.alpha.openapi.openapi :as openapi]
    [juxt.apex.alpha.openapi.yaml :as yaml]
-   [juxt.apex.alpha.oauth2.jwt :as jwt]
-   [juxt.apex.alpha.redoc.redoc :as redoc]
    [juxt.apex.alpha.params.parameters :as params]
-   [juxt.apex.alpha.html.html :as html]
-   [reitit.core :as r]
-   [ring.util.response :as response]
+   [juxt.apex.alpha.redoc.redoc :as redoc]
    reitit.middleware
    [reitit.ring :as ring]
-   [ring.adapter.jetty :as jetty]))
+   reitit.ring.middleware.dev
+   [ring.adapter.jetty :as jetty]
+   [ring.middleware.session :as session]))
 
 (def database
   (atom {"1" {"name" "Sven" "tag" "dog"}
@@ -91,11 +85,11 @@
             ["/pets"
              (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
                {
-                :get
-                (->
-                 handler
-                 (params/wrap-openapi-params (get openapi-operation "parameters"))
-                 (session/wrap-session session-opts))})]]
+                :get {:middleware [[{:name "OpenAPI Parameters"
+                                     :wrap params/wrap-openapi-params} (get openapi-operation "parameters")]
+                                   [session/wrap-session session-opts]]
+                      :handler handler}
+                })]]
 
            ]))
 
@@ -105,6 +99,8 @@
       ;; 'happy-path' response.
 
       ]
+
+     {:reitit.middleware/transform reitit.ring.middleware.dev/print-request-diffs}
 
      )))
 
