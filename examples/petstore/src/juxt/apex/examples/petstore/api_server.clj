@@ -21,11 +21,13 @@
    [ring.adapter.jetty :as jetty]))
 
 (def database
-  (atom {"1" {"name" "Sven" "type" "Dog"}
-         "2" {"name" "Luna" "type" "Cat"}
-         "3" {"name" "Arya" "type" "Cat"}
-         "4" {"name" "Kaia" "type" "Cat"}
-         "5" {"name" "Vega" "type" "Dog"}}))
+  (atom {"1" {"name" "Sven" "tag" "dog"}
+         "2" {"name" "Luna" "tag" "cat"}
+         "3" {"name" "Arya" "tag" "cat"}
+         "4" {"name" "Kaia" "tag" "cat"}
+         "5" {"name" "Vega" "tag" "dog"}
+         ;; Not quite sure what kind of pet Lizz is
+         "6" {"name" "Lizz"}}))
 
 (defn create-root-router
   [opts]
