@@ -1,18 +1,17 @@
 ;; Copyright © 2020, JUXT LTD.
 
 (ns juxt.apex.examples.petstore.customer-client
-  (:require
-   [reitit.ring :as ring]
-   [clojure.java.io :as io]
-   [juxt.apex.alpha.oauth2.oic :as oic]
-   [ring.middleware.session :as session]
-   [juxt.apex.alpha.oauth2.jwt :as jwt]
-   [jsonista.core :as jsonista]
-   [ring.util.response :as response]
-   [integrant.core :as ig]
-   [juxt.apex.alpha.params.parameters :as params]
-   [juxt.apex.alpha.html.html :as html]
-   [ring.adapter.jetty :as jetty]))
+  (:require [clojure.java.io :as io]
+            [integrant.core :as ig]
+            [jsonista.core :as jsonista]
+            [juxt.apex.alpha.html.html :as html]
+            [juxt.apex.alpha.oauth2.jwt :as jwt]
+            [juxt.apex.alpha.oauth2.oic :as oic]
+            [juxt.apex.alpha.params.parameters :as params]
+            [reitit.ring :as ring]
+            [ring.adapter.jetty :as jetty]
+            [ring.middleware.session :as session]
+            [ring.util.response :as response]))
 
 (defn create-root-handler
   ([opts]
