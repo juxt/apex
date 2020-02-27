@@ -62,35 +62,35 @@
                         openapi
                         (assoc
                          "servers"
-                         [{"url" "http://localhost:8090/api/pets"}])))}))}}]]
+                         [{"url" "http://localhost:8090/api/pets"}])))}))}}]
 
-        (let [handler
-                (fn this
-                  ([req]
-                   (this req identity #(throw %)))
-                  ([req respond raise]
+         (let [handler
+               (fn this
+                 ([req]
+                  (this req identity #(throw %)))
+                 ([req respond raise]
 
-                   (let [limit (get-in req [:apex/params :query "limit" :value])
-                         tags (set (get-in req [:apex/params :query "tags" :value]))]
-                     (respond
-                      {:status 200
-                       :headers {"content-type" "application/json"}
-                       :body (jsonista/write-value-as-string
-                              (cond->> (vals @database)
-                                (seq tags) (filter (comp tags #(get % "tag")))
-                                limit (take limit)))}))))]
-            [
-             ["/api/pets"
-              ["/pets"
-               (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-                 {
-                  :get {:middleware [[{:name "OpenAPI Parameters"
-                                       :wrap params/wrap-openapi-params} (get openapi-operation "parameters")]
-                                     [session/wrap-session session-opts]]
-                        :handler handler}
-                  })]]
+                  (let [limit (get-in req [:apex/params :query "limit" :value])
+                        tags (set (get-in req [:apex/params :query "tags" :value]))]
+                    (respond
+                     {:status 200
+                      :headers {"content-type" "application/json"}
+                      :body (jsonista/write-value-as-string
+                             (cond->> (vals @database)
+                               (seq tags) (filter (comp tags #(get % "tag")))
+                               limit (take limit)))}))))]
+           [
+            ["/api/pets"
+             ["/pets"
+              (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+                {
+                 :get {:middleware [[{:name "OpenAPI Parameters"
+                                      :wrap params/wrap-openapi-params} (get openapi-operation "parameters")]
+                                    [session/wrap-session session-opts]]
+                       :handler handler}
+                 })]]
 
-             ]))
+            ])])
 
       ;; TODO: Improve the mocking such that each route in the OpenAPI
       ;; document is accounted for and presents a default page, perhaps
