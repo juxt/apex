@@ -12,8 +12,6 @@
    [juxt.apex.alpha.openapi.yaml :as yaml]
    [juxt.apex.alpha.oauth2.jwt :as jwt]
    [juxt.apex.alpha.redoc.redoc :as redoc]
-   [juxt.apex.alpha.trace.trace-console :as console]
-   [juxt.apex.alpha.trace.trace :as trace]
    [juxt.apex.alpha.params.parameters :as params]
    [juxt.apex.alpha.html.html :as html]
    [reitit.core :as r]
@@ -32,8 +30,7 @@
 (defn create-root-router
   [opts]
 
-  (let [{:keys [apex/request-history-atom
-                apex/session-opts
+  (let [{:keys [apex/session-opts
                 client-id
                 client-secret
                 openid-config-url]} opts
@@ -79,8 +76,6 @@
                  (println "sesssion keys are" (keys (:session req)))
 
                  (let [limit (get-in req [:apex/params :query "limit" :value])]
-                   #_(throw (ex-info "Forced exception" {:data 123
-                                                         :type :forced}))
                    (respond
                     {:status 200
                      :body (str (vec (cond->> (vals @database) limit (take limit))) "\n")}))))]
@@ -90,43 +85,21 @@
              (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
                {
                 :get
-                ;; Option A: Traditional Ring wrapping
                 (->
                  handler
                  (params/wrap-openapi-params (get openapi-operation "parameters"))
                  (session/wrap-session session-opts))})]]
 
-           ["/api/pets2"
-            ["/pets"
-             (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-               {
-                :get
-                ;; Option B: Reitit middleware, this approach is
-                ;; compatible with Apex's tracing facility.
-                handler
-
-                ;; TODO: It might be that Apex is 'a bespoke set of Ring
-                ;; middleware, each of which is configurable via
-                ;; OpenAPI'. Put this statement in the documentation.
-                ;;
-                ;; TODO?: Perhaps return the collection of middleware from a custom
-                ;; 'builder', each middleware of the result would be
-                ;; separately compiled its :compile step.
-
-                :middleware
-                [
-                 [params/openapi-parameters-middleware
-                  (get-in openapi ["paths" "/pets" "get" "parameters"])]
-                 [session/wrap-session session-opts]]})]]]))
+           ]))
 
       ;; TODO: Improve the mocking such that each route in the OpenAPI
       ;; document is accounted for and presents a default page, perhaps
       ;; utilising the 'examples' and 'responses' section to form a
       ;; 'happy-path' response.
 
-      (console/trace-console opts)]
+     ]
 
-     {:reitit.middleware/transform (trace/trace-middleware-transform request-history-atom)})))
+     )))
 
 (defn create-root-handler
   ([opts]
@@ -150,8 +123,7 @@
              juxt.apex.examples.client/cookie-name]
       :as opts}]
 
-  (let [request-history-atom (atom [])
-        session-opts
+  (let [session-opts
         {:store (ring.middleware.session.memory/memory-store (atom {}))
          :cookie-name cookie-name}]
 
@@ -163,8 +135,7 @@
          ([req respond raise]
           (let [h (create-root-handler
                    (merge auth-config
-                          {:apex/request-history-atom request-history-atom
-                           :apex/session-opts session-opts}))]
+                          {:apex/session-opts session-opts}))]
             (if respond
               (h req respond raise)
               (h req)))))
@@ -172,8 +143,7 @@
        (create-root-handler
         (merge
          auth-config
-         {:apex/request-history-atom request-history-atom
-          :apex/session-opts session-opts})))
+         {:apex/session-opts session-opts})))
      (-> opts
          (dissoc :handler)
          (assoc :port listener-port

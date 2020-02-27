@@ -2,7 +2,6 @@
  :deps
  {juxt.apex/openapi {:local/root "../../modules/openapi"}
   juxt.apex/params {:local/root "../../modules/params"}
-  juxt.apex/trace {:local/root "../../modules/trace"}
   juxt.apex/html {:local/root "../../modules/html"}
   juxt.apex/redoc {:local/root "../../modules/redoc"}
 
