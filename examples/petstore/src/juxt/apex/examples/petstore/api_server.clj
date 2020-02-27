@@ -40,55 +40,57 @@
                      (slurp
                       (io/resource "petstore-expanded.yaml")))]
         ;; Redoc
-        ["/doc/pets-api/redoc.html"
-         (redoc/new-redoc-handler "/doc/pets-api/swagger.json")]
+        [
+         ["/doc/pets-api/redoc.html"
+          (redoc/new-redoc-handler "/doc/pets-api/swagger.json")
+          ]
 
-        ;; Swagger UI
-        ["/doc/pets-api/swagger-ui.html"
-         (redoc/new-swagger-ui-handler "/doc/pets-api/swagger.json")]
+         ;; Swagger UI
+         ["/doc/pets-api/swagger-ui.html"
+          (redoc/new-swagger-ui-handler "/doc/pets-api/swagger.json")]
 
-        ;; TODO: Promote something like this to openapi module
-        ["/doc/pets-api/swagger.json"
-         {:get
-          {:handler
-           (fn [req respond raise]
-             (respond
-              {:status 200
-               :headers {"content-type" "application/json"}
-               :body (jsonista/write-value-as-string
-                      (->
-                       openapi
-                       (assoc
-                        "servers"
-                        [{"url" "http://localhost:8090/docs/pets-api"}])))}))}}]
+         ;; TODO: Promote something like this to openapi module
+         ["/doc/pets-api/swagger.json"
+          {:get
+           {:handler
+            (fn [req respond raise]
+              (respond
+               {:status 200
+                :headers {"content-type" "application/json"}
+                :body (jsonista/write-value-as-string
+                       (->
+                        openapi
+                        (assoc
+                         "servers"
+                         [{"url" "http://localhost:8090/docs/pets-api"}])))}))}}]]
 
-        (let [handler
-              (fn this
-                ([req]
-                 (this req identity #(throw %)))
-                ([req respond raise]
+        #_(let [handler
+                (fn this
+                  ([req]
+                   (this req identity #(throw %)))
+                  ([req respond raise]
 
-                 (let [limit (get-in req [:apex/params :query "limit" :value])
-                       tags (set (get-in req [:apex/params :query "tags" :value]))]
-                   (respond
-                    {:status 200
-                     :headers {"content-type" "application/json"}
-                     :body (jsonista/write-value-as-string
-                            (cond->> (vals @database)
-                              (seq tags) (filter (comp tags #(get % "tag")))
-                              limit (take limit)))}))))]
-          [
-           ["/api/pets"
-            ["/pets"
-             (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
-               {
-                :get {:middleware [[{:name "OpenAPI Parameters"
-                                     :wrap params/wrap-openapi-params} (get openapi-operation "parameters")]
-                                   [session/wrap-session session-opts]]
-                      :handler handler}
-                })]]
+                   (let [limit (get-in req [:apex/params :query "limit" :value])
+                         tags (set (get-in req [:apex/params :query "tags" :value]))]
+                     (respond
+                      {:status 200
+                       :headers {"content-type" "application/json"}
+                       :body (jsonista/write-value-as-string
+                              (cond->> (vals @database)
+                                (seq tags) (filter (comp tags #(get % "tag")))
+                                limit (take limit)))}))))]
+            [
+             ["/api/pets"
+              ["/pets"
+               (let [openapi-operation (get-in openapi ["paths" "/pets" "get"])]
+                 {
+                  :get {:middleware [[{:name "OpenAPI Parameters"
+                                       :wrap params/wrap-openapi-params} (get openapi-operation "parameters")]
+                                     [session/wrap-session session-opts]]
+                        :handler handler}
+                  })]]
 
-           ]))
+             ]))
 
       ;; TODO: Improve the mocking such that each route in the OpenAPI
       ;; document is accounted for and presents a default page, perhaps
