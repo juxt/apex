@@ -68,9 +68,6 @@
                  (this req identity #(throw %)))
                 ([req respond raise]
 
-                 (prn (get-in req [:apex/params :query "limit"]))
-                 (prn (get-in req [:apex/params :query "tags"]))
-
                  (let [limit (get-in req [:apex/params :query "limit" :value])
                        tags (set (get-in req [:apex/params :query "tags" :value]))]
                    (respond
