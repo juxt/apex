@@ -1,6 +1,6 @@
 = Apex
 
-Apex stands of **AP**I **Ex**ecution.
+Apex stands for **AP**I **Ex**ecution.
 
 Apex is a Clojure library that produces Ring handlers from OpenAPI
 descriptions.
