@@ -8,6 +8,16 @@ descriptions.
 Apex is a Clojure web library that takes an Open API 3.0 description,
 some attachments, and returns a Ring handler.
 
+== Status
+
+PRE-ALPHA:
+
+Apex consists of a set of Ring-compatible middleware, configured with
+OpenAPI. Some of this middleware will be marked as ready for use prior
+to others. For now, this project is being developed in the open for
+the purposes of soliticing feedback from the community and not
+recommended for actual use in systems.
+
 == Objective
 
 Apex will be considered a success if it meets the following acceptance
@@ -30,8 +40,7 @@ https://github.com/juxt/yada[yada], the web library we wrote to
 replace Liberator, is beginning to show its age. When we started yada,
 the web looked a little different than today:
 
-
-* There was no async option in Ring, and we wanted to avoid
+* There was no async option in Ring, and we wanted to avoid the
   thread-per-request model for some of the high-traffic websites we
   were producing in our consulting projects.
 
@@ -81,9 +90,6 @@ should encourage compliance due to the multiplier effect of multiple
 applications built on them.
 
 
-== Status
-
-ALPHA
 
 == References
 
