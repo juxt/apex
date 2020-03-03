@@ -1,10 +1,14 @@
 ;; Copyright © 2020, JUXT LTD.
 
 {:paths ["src"]
- :deps {
-        jinx {:mvn/version "0.1.6"
+ :deps {jinx {:mvn/version "0.1.6"
               :exclusions [cljs-node-io]}
 
         metosin/muuntaja {:mvn/version "0.6.6"}
 
-        ring/ring-codec {:mvn/version "1.1.2"}}}
+        ring/ring-codec {:mvn/version "1.1.2"}}
+ :aliases
+ {:test {:extra-paths ["test"]
+         :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                 :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
+         :main-opts ["-m" "cognitect.test-runner"]}}}

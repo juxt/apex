@@ -1,18 +1,11 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha2.parameters-test
+(ns juxt.apex.alpha.params.parameters-test
   (:require
-   [clojure.string :as str]
-   [clojure.java.io :as io]
    [clojure.test :refer [deftest is are testing]]
-   [juxt.apex.alpha2.parameters
+   [juxt.apex.alpha.params.parameters
     :refer [process-path-parameters
-            format-with-style
             process-query-string]]
-   [criterium.core :as crt]
-   muuntaja.format.core
-   muuntaja.format.json
-   [muuntaja.core :as m]
    [ring.util.codec :as codec]))
 
 ;; Formatting
@@ -85,21 +78,6 @@
     :string "n/a",
     :array "n/a",
     :object "color[R]=100&color[G]=200&color[B]=150"}])
-
-;; Test all the cases found in style-test-data
-(deftest style-test
-  (doseq [m style-test-data
-          [k v] {:empty nil
-                 :string "blue"
-                 :array ["blue","black","brown"]
-                 :object {"R" 100 "G" 200 "B" 150}}
-          :let [expected (get m k)
-                style (get m :style)
-                explode? (Boolean/valueOf (get m :explode))]
-          :when (not= expected "n/a")]
-
-    (testing (format "Format '%s' with style '%s', explode %s, type %s" v style explode? k)
-      (is (= expected (format-with-style "color" v {:style style :explode? explode?}))))))
 
 ;; Simple Scenarios
 
