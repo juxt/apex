@@ -1,0 +1,16 @@
+= Apex Petstore example
+
+== Set up
+
+Start keycloak with keycloak's `bin/standalone.sh`. This runs on port
+8080, make sure it is available on your machine.
+
+== API Server
+
+The API Server is a set of resources served on port 8090. These
+resources are open for access.
+
+== Customer client
+
+To demonstrate how secure access to the API could be achieved, this
+application runs on port 8091.

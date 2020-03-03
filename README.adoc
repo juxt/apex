@@ -18,6 +18,18 @@ to others. For now, this project is being developed in the open for
 the purposes of soliticing feedback from the community and not
 recommended for actual use in systems.
 
+== Getting started
+
+Start with the petstore example in `examples/petstore`. See
+link:examples/petstore/README.adoc[].
+
+Individual modules are:
+
+params:: An implementation of OpenAPI parameter parsing.
+
+oauth2:: An implementation of OpenID Connect upon OAuth2 driven by OpenID Connect Discovery configuration.
+
+
 == Objective
 
 Apex will be considered a success if it meets the following acceptance
