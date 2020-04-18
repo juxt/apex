@@ -1,0 +1,10 @@
+{
+
+ :ig/system
+ {:juxt.apex.examples.async.server/jetty
+  {:juxt.apex.examples/listener-port 9011
+   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}
+   }
+  :juxt.apex.examples.async.vertx/listener
+  {:juxt.apex.examples/listener-port 9090
+   }}}

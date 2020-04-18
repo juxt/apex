@@ -1,0 +1,17 @@
+name: Alice Doglover
+user: alice
+password: ilovecats
+
+client id:
+926c11b0-13ce-0138-8f1d-0a2a13b62018140139
+
+client secret:
+ac41d73df09841ddeda710ac7bf6861d8b7ab371536a435f45e3e0b61291c810
+
+http://localhost:8080/onelogin/login
+http://localhost:8080/onelogin/callback
+
+https://juxt-dev.onelogin.com/oidc/.well-known/openid-configuration
+-> file:src/onelogin-openid-configuration.json
+
+See https://swagger.io/docs/specification/authentication/openid-connect-discovery/
