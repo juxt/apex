@@ -19,12 +19,15 @@
       (fn this
         ([req]
          (this req identity #(throw %)))
-        ([_ respond _]
+        ([req respond _]
          (respond
           {:status 200
            :headers {"content-type" "application/json"}
-           :body (jsonista/write-value-as-string
-                  {"message" "Hello World!"})})))}]]
+           :body (str
+                  (jsonista/write-value-as-string
+                   {"message" "Hello World!"
+                    "body" (slurp (:body req))})
+                  "\r\n")})))}]]
    {}))
 
 (defn create-root-handler
