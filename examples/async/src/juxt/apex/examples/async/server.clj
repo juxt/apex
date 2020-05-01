@@ -26,6 +26,8 @@
            :body (str
                   (jsonista/write-value-as-string
                    {"message" "Hello World!"
+                    "request" (dissoc req :reitit.core/router :reitit.core/match)
+                    "body-info" {"type" (type (:body req))}
                     "body" (slurp (:body req))})
                   "\r\n")})))}]]
    {}))

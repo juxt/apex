@@ -1,20 +1,27 @@
 {
 
  :ig/system
- {:juxt.apex.examples.async.server/jetty
-  {:juxt.apex.examples/listener-port 9011
-   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}
-   }
-  :juxt.apex.examples.async.vertx/vertx
-  {
-   }
+ {:juxt.apex.examples.async.vertx/vertx
+  {}
 
   :juxt.apex.examples.async.vertx/http-server
   {
-   :port 9090
+   :port 8000
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
    }
 
-  #_:juxt.apex.examples.async.vertx/listener
-  #_{:juxt.apex.examples/listener-port 9090
-   }}}
+  :juxt.apex.examples.async.vertx/event-publisher
+  {
+   :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
+   }
+
+  ;; To compare against
+  :juxt.apex.examples.async.server/jetty
+  {:juxt.apex.examples/listener-port 8001
+   :juxt.apex.dev/new-handler-on-each-request? #profile {:dev true :default false}
+   }
+
+
+
+
+  }}
