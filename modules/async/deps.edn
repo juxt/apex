@@ -1,0 +1,11 @@
+;; Copyright © 2020, JUXT LTD.
+
+{:paths ["src"]
+ :deps
+ {io.vertx/vertx-core {:mvn/version "3.9.0"}
+  io.vertx/vertx-rx-java2 {:mvn/version "3.9.0"}
+  }
+
+ :aliases
+ {:dev
+  {}}}

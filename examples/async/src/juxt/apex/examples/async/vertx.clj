@@ -5,6 +5,7 @@
    [clojure.reflect :refer [reflect]]
    [integrant.core :as ig]
    [jsonista.core :as jsonista]
+   [juxt.apex.alpha.async.flowable :as f]
    reitit.middleware
    [clojure.string :as string]
    reitit.ring.middleware.dev
@@ -46,7 +47,7 @@
       (get m k not-found))))
 
 (defn ^HttpServer run-http-server
-  [handler {:keys [vertx port]}]
+  [router {:keys [vertx port] :as opts}]
   (let [options (new HttpServerOptions)
         server
         (..
@@ -76,7 +77,8 @@
                                   [(string/lower-case k) v]))
                  :apex.vertx/vertx vertx
                  #_(->RingHeaders (.headers req))}]
-            (handler
+            (router
+             opts
              ring-req
              ;; Respond function
              (fn [{:keys [status headers body]}]
@@ -104,111 +106,66 @@
                    ;; v can be a String, or Iterable<String>
                    (.putHeader response k (str v)))
 
-                 #_(.setPeriodic
-                    vertx 1000
-                    (->VertxHandler
-                     (fn [i]
-                       (println "Timed event" (.ended response))
-                       (if (.ended response)
-                         (.cancelTimer vertx i)
-                         (.write response "event!\r\n\r\n"))
 
-                       )))
-
-                 ;; Send file
-                 #_(.. vertx
-                       fileSystem
-                       (open
-                        "/home/malcolm/dominic.jpg"
-                        (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
-                        (new VertxHandler
-                             (fn [result]
-                               (if (.succeeded result)
-                                 (let [file (.result result)]
-                                   (.pipeTo
-                                    file response
-                                    (new VertxHandler
-                                         (fn [result]
-                                           (if (.succeeded result)
-                                             (.end response))))))
-                                 (println "Not succeeded: result is" result))))))
 
                  ;; Now, make flowable
 
                  ;; If the body is not a String, InputStream etc..
 
 
-                 (if (clojure.core/instance? io.reactivex.Flowable body)
+                 ;; On Java 9 and above, body may return a
+                 ;; java.util.concurrent.Flow.Publisher.  Java 8 and below should
+                 ;; use org.reactivestreams.Publisher:
+                 ;; http://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/org/reactivestreams/Publisher.html?is-external=true
 
+                 (if (clojure.core/instance? io.reactivex.Flowable body)
 
                    (let [subscriber (.toSubscriber response)]
                      (.onWriteStreamError
-                      subscriber
-                      (reify io.reactivex.functions.Consumer
-                        (accept [_ obj]
-                          (println "on-write-stream-error")
-                          )))
+                        subscriber
+                        (reify io.reactivex.functions.Consumer
+                          (accept [_ obj]
+                            (println "on-write-stream-error")
+                            )))
 
-                     (.onWriteStreamEnd
-                      subscriber
-                      (reify io.reactivex.functions.Action
-                        (run [_]
-                          (println "on-write-stream-end")
-                          )))
+                     #_(.onWriteStreamEnd
+                        subscriber
+                        (reify io.reactivex.functions.Action
+                          (run [_]
+                            (println "on-write-stream-end")
+                            )))
 
-                     (.onWriteStreamEndError
-                      subscriber
-                      (reify io.reactivex.functions.Consumer
-                        (accept [_ obj]
-                          (println "on-write-stream-end-error")
-                          )))
+                     #_(.onWriteStreamEndError
+                        subscriber
+                        (reify io.reactivex.functions.Consumer
+                          (accept [_ obj]
+                            (println "on-write-stream-end-error")
+                            )))
 
-                     (.onError
-                      subscriber
-                      (reify io.reactivex.functions.Consumer
-                        (accept [_ obj]
-                          (println "on-error: " obj)
-                          )))
+                     #_(.onError
+                        subscriber
+                        (reify io.reactivex.functions.Consumer
+                          (accept [_ obj]
+                            (println "on-error: " obj)
+                            )))
 
-                     (.onComplete
-                      subscriber
-                      (reify io.reactivex.functions.Action
-                        (run [_]
-                          (println "on-complete")
-                          )))
+                     #_(.onComplete
+                        subscriber
+                        (reify io.reactivex.functions.Action
+                          (run [_]
+                            (println "on-complete")
+                            )))
 
-                     (println "type of subscriber is" subscriber)
+                     (.subscribe body subscriber))
 
-
-                     (.. vertx
-                         eventBus
-                         (consumer "news-feed")
-                         toFlowable
-                         (map (reify io.reactivex.functions.Function
-                                (apply [_ t]
-                                  (io.vertx.reactivex.core.buffer.Buffer/buffer (format "data: %s\r\n\r\n" (.body t))))))
-                         (subscribe
-                          subscriber
-                          #_(reify org.reactivestreams.Subscriber
-                              (onComplete [_] (println "on-complete"))
-                              (onError [_ t] (println "on-error" t))
-                              (onNext [_ ev] (println "on-next" ev))
-                              (onSubscribe [_ s] (println "on-subscribe, s is" s)))
-                          ;; onNext?
-
-                          #_(.toSubscriber response))))
-                   #_(cond-> response
-                       body (.write "TODO")
-                       true (.end)
-                       )
 
                    (cond-> response
                      body (.write body)
                      true (.end)
                      ))))
 
-             (fn [e] (println "ERROR" e))))
-          )))
+             (fn [e] (println "ERROR" e)))))))
+
      listen)))
 
 
@@ -238,15 +195,33 @@
    (fn [req respond raise]
 
      #_(.. (:apex.vertx/vertx req)
-         fileSystem
-         (open
-          "/home/malcolm/dominic.jpg"
-          (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
-          (reify Handler
-            (handle
-                (fn [ar]
+           fileSystem
+           (open
+            "/home/malcolm/dominic.jpg"
+            (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
+            (reify Handler
+              (handle
+                  (fn [ar]
 
-                  )))))
+                    )))))
+
+     ;; Send file
+     #_(.. vertx
+           fileSystem
+           (open
+            "/home/malcolm/dominic.jpg"
+            (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
+            (new VertxHandler
+                 (fn [result]
+                   (if (.succeeded result)
+                     (let [file (.result result)]
+                       (.pipeTo
+                        file response
+                        (new VertxHandler
+                             (fn [result]
+                               (if (.succeeded result)
+                                 (.end response))))))
+                     (println "Not succeeded: result is" result))))))
 
      #_(.. vertx
            fileSystem
@@ -292,25 +267,32 @@
 
 
 (defn sse-example [req respond raise]
-
-  ;; Create a RxJava flowable
   (respond
    {:status 200
     :headers {"content-type" "text/event-stream"}
-    ;; On Java 9 and above, body may return a
-    ;; java.util.concurrent.Flow.Publisher.  Java 8 and below should
-    ;; use org.reactivestreams.Publisher:
-    ;; http://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/org/reactivestreams/Publisher.html?is-external=true
-    :body #_(.publish (Flowable/range 1 1000000))
-    (Flowable/range 1 1000000)})
-  )
+    :body (->>
+           (f/range 1 10000)
+           ;;(f/throttle-first 100 TimeUnit/MILLISECONDS)
+           ;;(#(.timestamp %))
+           (#(.limit % 50))
+           (#(.materialize %))
+;;           (#(.dematerialize %))
+           (f/map f/server-sent-event))}))
 
+(defn ticker-example [{:keys [vertx topic]} req respond raise]
+  (assert topic)
+  (respond
+   {:status 200
+    :headers {"content-type" "text/event-stream"}
+    :body (->>
+           (.. vertx eventBus (consumer topic) toFlowable)
+           (f/map (memfn body))
+           (f/map f/server-sent-event))}))
 
-
-(defn router [req respond raise]
+(defn router [opts req respond raise]
   (condp re-matches (:uri req)
 
-     #"/file.jpg"
+    #"/file.jpg"
     (file-serving-example req respond raise)
 
     #"/cache-example"
@@ -318,6 +300,8 @@
 
     ;; SSE
     #"/sse" (sse-example req respond raise)
+
+    #"/ticker" (ticker-example (:juxt-feed opts) req respond raise)
 
     #"/debug"
     (respond
@@ -332,9 +316,7 @@
                })
              "\r\n")})
 
-    (respond {:status 404})
-
-    ))
+    (respond {:status 404})))
 
 (defmethod ig/init-key ::vertx
   [_ _]
@@ -355,20 +337,23 @@
 (defmethod ig/halt-key! ::http-server [_ server]
   (.close server))
 
-(defmethod ig/init-key ::event-publisher
-  [_ {:keys [vertx]}]
-  (let [eb (.eventBus vertx)]
-    {:vertx vertx
-     :timer-id (.setPeriodic
-                vertx 500
-                (reify Handler (handle [_ ev]
-                                 #_(println "Publishing news!")
-                                 (.publish eb "news-feed" "Some news!"))))}))
+(defmethod ig/init-key ::stock-feed-publisher
+  [_ {:keys [topic vertx freq]}]
+  (let [eb (.eventBus vertx)
+        price (atom 100)]
+    (let [timer-id (.setPeriodic
+                    vertx freq
+                    (reify Handler (handle [_ ev]
+                                     (.publish eb topic (pr-str {"equity" topic
+                                                                 "price" (swap! price + (rand) -0.5)})))))]
+      (printf "Initialising publisher on topic %s (timer-id: %d)\n" topic timer-id)
+      {:topic topic
+       :vertx vertx
+       :timer-id timer-id})))
 
-(defmethod ig/halt-key! ::event-publisher [_ {:keys [vertx timer-id]}]
-  (println "cancelling timer" timer-id)
+(defmethod ig/halt-key! ::stock-feed-publisher [_ {:keys [topic vertx timer-id]}]
+  (printf "Cancelling publisher on topic %s (timer-id: %d)\n" topic timer-id)
   (.cancelTimer vertx timer-id))
-
 
 ;; Write the following:
 
@@ -385,19 +370,7 @@
 ;; A GET request for a file
 ;; Websockets
 
-
-;;(.exists (java.io.File. "/photos/Personal/ski2020/IMG_20200128_162602.jpg"))
-
-#_(.. (io.vertx.core.Vertx/vertx)
-      fileSystem
-      (open
-       #_"/photos/Personal/ski2020/IMG_20200128_162602.jpg"
-       "/home/malcolm/dominic.jpg"
-       (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
-       (new VertxHandler
-            (fn [ar]
-              (println "ar is" ar)
-              ))))
+;; Backpressure
 
 
 #_(reflect io.reactivex.functions.Consumer)

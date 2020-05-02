@@ -2,11 +2,10 @@
  :deps
  {juxt.apex/params {:local/root "../../modules/params"}
   juxt.apex/html {:local/root "../../modules/html"}
+  juxt.apex/async {:local/root "../../modules/async"}
 
   metosin/reitit-ring {:mvn/version "0.3.10"}
-
   metosin/reitit-middleware {:mvn/version "0.4.2"}
-
   }
 
  :aliases
@@ -24,11 +23,6 @@
     org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
 
     metosin/jsonista {:mvn/version "0.2.5"}
-
-    ring/ring-jetty-adapter {:mvn/version "1.7.1"}
-
-    io.vertx/vertx-core {:mvn/version "3.9.0"}
-    io.vertx/vertx-rx-java2 {:mvn/version "3.9.0"}
 
     criterium {:mvn/version "0.4.5"}
     ;;hiccup {:mvn/version "2.0.0-alpha2"}
