@@ -287,12 +287,11 @@
    (let [bus (.. (:vertx opts) eventBus)]
      {:status 200
       :headers {"content-type" "text/event-stream"}
-      :body (->>
-             (Flowable/merge
-              (for [feed [:juxt-feed :crux-feed]]
-                (.. bus (consumer (get-in opts [feed :topic])) toFlowable)))
-             (f/map (memfn body))
-             (f/map f/server-sent-event))})))
+      :body (Flowable/merge
+             (for [feed [:juxt-feed :crux-feed]]
+               (->>
+                (.. bus (consumer (get-in opts [feed :topic])) toFlowable)
+                (f/map (comp f/server-sent-event (memfn body))))))})))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
