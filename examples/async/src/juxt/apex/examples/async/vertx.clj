@@ -2,6 +2,7 @@
 
 (ns juxt.apex.examples.async.vertx
   (:require
+   [jsonista.core :as json]
    [clojure.reflect :refer [reflect]]
    [integrant.core :as ig]
    [jsonista.core :as jsonista]
@@ -279,15 +280,19 @@
 ;;           (#(.dematerialize %))
            (f/map f/server-sent-event))}))
 
-(defn ticker-example [{:keys [vertx topic]} req respond raise]
-  (assert topic)
+(defn ticker-example
+  "An example demonstrating how to merges together two separate feeds."
+  [opts req respond raise]
   (respond
-   {:status 200
-    :headers {"content-type" "text/event-stream"}
-    :body (->>
-           (.. vertx eventBus (consumer topic) toFlowable)
-           (f/map (memfn body))
-           (f/map f/server-sent-event))}))
+   (let [bus (.. (:vertx opts) eventBus)]
+     {:status 200
+      :headers {"content-type" "text/event-stream"}
+      :body (->>
+             (Flowable/merge
+              (for [feed [:juxt-feed :crux-feed]]
+                (.. bus (consumer (get-in opts [feed :topic])) toFlowable)))
+             (f/map (memfn body))
+             (f/map f/server-sent-event))})))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
@@ -301,7 +306,7 @@
     ;; SSE
     #"/sse" (sse-example req respond raise)
 
-    #"/ticker" (ticker-example (:juxt-feed opts) req respond raise)
+    #"/ticker" (ticker-example opts req respond raise)
 
     #"/debug"
     (respond
@@ -343,32 +348,36 @@
         price (atom 100)]
     (let [timer-id (.setPeriodic
                     vertx freq
-                    (reify Handler (handle [_ ev]
-                                     (.publish eb topic (pr-str {"equity" topic
-                                                                 "price" (swap! price + (rand) -0.5)})))))]
+                    (reify Handler
+                      (handle [_ ev]
+                        (.publish
+                         eb topic
+                         (jsonista/write-value-as-string
+                          {"equity" topic
+                           "price" (swap! price + (rand) -0.5)})))))]
       (printf "Initialising publisher on topic %s (timer-id: %d)\n" topic timer-id)
       {:topic topic
-       :vertx vertx
-       :timer-id timer-id})))
+       :timer-id timer-id
+       :close! #(.cancelTimer vertx timer-id)})))
 
-(defmethod ig/halt-key! ::stock-feed-publisher [_ {:keys [topic vertx timer-id]}]
+(defmethod ig/halt-key! ::stock-feed-publisher [_ {:keys [topic close! timer-id]}]
   (printf "Cancelling publisher on topic %s (timer-id: %d)\n" topic timer-id)
-  (.cancelTimer vertx timer-id))
+  (close!))
 
 ;; Write the following:
 
-;; Caching middleware
-;; Charset conversion middleware - BAD IDEA - no good way of being sure what the handler produces (or consumes)
-;; Language translation middleware
-;; Gzip encoding example (using Vertx compression level - see io.vertx.core.http.HttpServerOptions)
-;; A GET response with a sync string body
-;; A GET response with an async body
-;; A SSE feed with an async body
-;; A POST request with a sync string body
-;; A POST request with a async body stream (file upload)
-;; A multipart/form-data POST/PUT
-;; A GET request for a file
-;; Websockets
+;; - [X] A SSE feed with an async body
+;; - [ ] A GET request for a file (streaming a large photo)
+;; - [ ] A GET response with an async body
+;; - [ ] Caching middleware
+;; - [ ] Charset conversion middleware - BAD IDEA - no good way of being sure what the handler produces (or consumes)
+;; - [ ] Language translation middleware
+;; - [ ] Gzip encoding example (using Vertx compression level - see io.vertx.core.http.HttpServerOptions)
+;; - [ ] A GET response with a sync string body
+;; - [ ] A POST request with a sync string body
+;; - [ ] A POST request with a async body stream (file upload)
+;; - [ ] A multipart/form-data POST/PUT
+;; - [ ] Websockets
 
 ;; Backpressure
 

@@ -23,7 +23,7 @@
   {
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
    :topic "CRUX"
-   :freq 500
+   :freq 1200
    }
 
   }}
