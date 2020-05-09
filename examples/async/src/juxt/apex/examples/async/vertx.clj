@@ -10,21 +10,51 @@
    reitit.middleware
    [clojure.string :as string]
    reitit.ring.middleware.dev
+   [juxt.apex.examples.async.ring :as aring]
    [clojure.string :as string])
   (:import
    (io.vertx.core Handler MultiMap Promise)
    (io.vertx.core.http HttpServerOptions)
    (io.vertx.core.json JsonObject)
    (io.vertx.reactivex.core Vertx)
+   (io.vertx.reactivex.core.buffer Buffer)
    (io.vertx.reactivex.core.http HttpServer)
-   (io.reactivex Flowable)
-   (java.util.concurrent TimeUnit)
+   (io.reactivex Flowable BackpressureStrategy)
+   (java.util.concurrent TimeUnit Flow$Subscription Flow$Publisher Flow$Subscriber)
    ))
+
+;; Adapt org.reactivestreams.Subscription to the Clojure protocol
+;; See https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Subscription.html
+(extend-protocol aring/Subscription
+  org.reactivestreams.Subscription
+  (cancel [s]
+    (println "aring/Subscription org.reactivestreams.Subscription cancel")
+    (.cancel s))
+  (request [s n]
+    (println "aring/Subscription org.reactivestreams.Subscription request" n)
+    (.request s n)))
+
+;; Adapt Vert.x subscriber to the Clojure protocol (e.g. the Vert.x HTTP response)
+(extend-protocol aring/Subscriber
+  io.vertx.reactivex.WriteStreamSubscriber
+  (on-complete [s]
+    (println "on-complete")
+    (.onComplete s))
+  (on-error [s t]
+    (println "on-error")
+    (.onError s t))
+  (on-next [s item]
+    (println "on-next")
+    (.onNext s item))
+  (on-subscribe [s subscription]
+    (println "on-subscribe: subscription is" subscription)
+    (.onSubscribe s (reify org.reactivestreams.Subscription
+                      (cancel [_] (aring/cancel subscription))
+                      (request [_ n] (aring/request subscription n))))))
 
 ;;(clojure.reflect/reflect io.vertx.reactivex.WriteStreamSubscriber)
 
 ;;(clojure.reflect/reflect io.reactivex.Flowable)
-
 
 (deftype RingHeaders [mm]
   clojure.lang.ILookup
@@ -119,47 +149,54 @@
                  ;; use org.reactivestreams.Publisher:
                  ;; http://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/org/reactivestreams/Publisher.html?is-external=true
 
-                 (if (clojure.core/instance? io.reactivex.Flowable body)
+                 ;; Body must satisfy protocol
 
+                 (cond
+
+                   (satisfies? aring/Publisher body)
+                   (aring/subscribe body (.toSubscriber response))
+
+                   ;; Deprecated
+                   (clojure.core/instance? io.reactivex.Flowable body)
                    (let [subscriber (.toSubscriber response)]
                      (.onWriteStreamError
-                        subscriber
-                        (reify io.reactivex.functions.Consumer
-                          (accept [_ obj]
-                            (println "on-write-stream-error")
-                            )))
+                      subscriber
+                      (reify io.reactivex.functions.Consumer
+                        (accept [_ obj]
+                          (println "on-write-stream-error")
+                          )))
 
-                     #_(.onWriteStreamEnd
-                        subscriber
-                        (reify io.reactivex.functions.Action
-                          (run [_]
-                            (println "on-write-stream-end")
-                            )))
+                     (.onWriteStreamEnd
+                      subscriber
+                      (reify io.reactivex.functions.Action
+                        (run [_]
+                          (println "on-write-stream-end")
+                          )))
 
-                     #_(.onWriteStreamEndError
-                        subscriber
-                        (reify io.reactivex.functions.Consumer
-                          (accept [_ obj]
-                            (println "on-write-stream-end-error")
-                            )))
+                     (.onWriteStreamEndError
+                      subscriber
+                      (reify io.reactivex.functions.Consumer
+                        (accept [_ obj]
+                          (println "on-write-stream-end-error")
+                          )))
 
-                     #_(.onError
-                        subscriber
-                        (reify io.reactivex.functions.Consumer
-                          (accept [_ obj]
-                            (println "on-error: " obj)
-                            )))
+                     (.onError
+                      subscriber
+                      (reify io.reactivex.functions.Consumer
+                        (accept [_ obj]
+                          (println "on-error: " obj)
+                          )))
 
-                     #_(.onComplete
-                        subscriber
-                        (reify io.reactivex.functions.Action
-                          (run [_]
-                            (println "on-complete")
-                            )))
+                     (.onComplete
+                      subscriber
+                      (reify io.reactivex.functions.Action
+                        (run [_]
+                          (println "on-complete")
+                          )))
 
                      (.subscribe body subscriber))
 
-
+                   :else
                    (cond-> response
                      body (.write body)
                      true (.end)
@@ -188,8 +225,8 @@
         {:status 200
          :body (str "Body was" (slurp body))})))))
 
-;; toSubscriber (back pressure)
-;; toObserver (no back pressure)
+
+
 
 (def file-serving-example
   (->
@@ -293,8 +330,52 @@
                 (.. bus (consumer (get-in opts [feed :topic])) toFlowable)
                 (f/map (comp f/server-sent-event (memfn body))))))})))
 
+(defn flow-example [opts req respond raise]
+  (respond
+   {:status 200
+    ;; The body is a subscriber
+    ;; "The recommended way of creating custom Flowables is by using the create(FlowableOnSubscribe, BackpressureStrategy) factory method:" -- http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Flowable.html
+    ;;  Flowables support backpressure and require Subscribers to signal demand via Subscription.request(long).
+
+    :body
+    (Flowable/create
+     (reify io.reactivex.FlowableOnSubscribe
+       (subscribe [_ e]
+         (.onNext e (Buffer/buffer "Hello\n\n"))
+         (.onNext e (Buffer/buffer "Hello\n\n"))
+         (.onNext e (Buffer/buffer "Hello\n\n"))
+         (Thread/sleep 200)
+         (.onNext e (Buffer/buffer "Goodbye\n\n"))
+         (.onComplete e)))
+     BackpressureStrategy/BUFFER)}))
+
+(defn backpressure-example [opts req respond raise]
+  (respond
+   {:status 200
+    :headers {}
+    ;; We return a publisher
+
+    ;; NOTE: quite often we might use a subclass of java.util.concurrent.SubmissionPublisher
+
+    :body (reify aring/Publisher
+            (subscribe [_ subscriber]
+              (aring/on-subscribe
+               subscriber
+               (reify aring/Subscription
+                 (cancel [_]
+                   (println "bpe: cancelling subscription"))
+                 (request [_ n]
+                   (println "bpe: subscriber is requesting" n "items"))))
+              (println "bpe: subscribing with subscriber" subscriber)))}))
+
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
+
+    #"/flow"
+    (flow-example opts req respond raise)
+
+    #"/bp"
+    (backpressure-example opts req respond raise)
 
     #"/file.jpg"
     (file-serving-example req respond raise)
