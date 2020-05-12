@@ -388,6 +388,8 @@
     (handle [_ t]
       (cb t))))
 
+(defmacro a. [& args]
+  `(. ~@(butlast args) (h ~(last args))))
 
 (defn upload-file-example [opts req respond raise]
   (let [vertx-request (:apex.vertx/request req)
@@ -400,41 +402,39 @@
     ;; which is great for telling our CMS clients that we already have
     ;; a given file. Test with --http2
 
-    (.
-     vertx-request
-     uploadHandler
-     (h
-      (fn [upload]
-        (.. upload
-            (endHandler
-             (h (fn [_]
-                  (println "End of upload")
-                  (respond {:status 200 :body "Thanks 2!"}))))
+    (. vertx-request
+       uploadHandler
+       (h (fn [upload]
+            (.. upload
+                (endHandler
+                 (h (fn [_]
+                      (println "End of upload")
+                      (respond {:status 200 :body "Thanks 2!"}))))
 
-            (exceptionHandler
-             (h (fn [t]
-                  (println "Exception on upload!")
-                  (println t)
-                  (respond {:status 500 :body "Exception on upload!"})))))
+                (exceptionHandler
+                 (h (fn [t]
+                      (println "Exception on upload!")
+                      (println t)
+                      (respond {:status 500 :body "Exception on upload!"})))))
 
-        ;; Take the pipe now, don't start streaming from a handler
-        ;; otherwise the initial bytes will get dropped.
-        (let [pipe (.pipe upload)]
-          (. fs open
-             (str "COPY3-" (.filename upload))
-             (new io.vertx.core.file.OpenOptions)
-             (h (fn [ar]
-                  (if (.succeeded ar)
-                    (let [file (.result ar)]
-                      (println ">>> writing to file" file)
-                      (. pipe to file
-                           (h (fn [ar]
-                                (println ">>> pipe done" (.succeeded ar))
-                                (if (.succeeded ar)
-                                  ;; call end handler
-                                  (respond {:status 200 :body ">>> Thanks!\n\n"})
-                                  (respond {:status 500 :body ">>> Pipe failed!"}))))))
-                    (respond {:status 500 :body ">>> Open failed!"})))))))))))
+            ;; Take the pipe now, don't start streaming from a handler
+            ;; otherwise the initial bytes will get dropped.
+            (let [pipe (.pipe upload)]
+              (. fs open
+                 (str "COPY3-" (.filename upload))
+                 (new io.vertx.core.file.OpenOptions)
+                 (h (fn [ar]
+                      (if (.succeeded ar)
+                        (let [file (.result ar)]
+                          (println ">>> writing to file" file)
+                          (. pipe to file
+                             (h (fn [ar]
+                                  (println ">>> pipe done" (.succeeded ar))
+                                  (if (.succeeded ar)
+                                    ;; call end handler
+                                    (respond {:status 200 :body ">>> Thanks!\n\n"})
+                                    (respond {:status 500 :body ">>> Pipe failed!"}))))))
+                        (respond {:status 500 :body ">>> Open failed!"})))))))))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
