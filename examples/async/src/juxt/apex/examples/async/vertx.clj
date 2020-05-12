@@ -427,16 +427,14 @@
                  (str "COPY3-" (.filename upload))
                  (new io.vertx.core.file.OpenOptions)
                  (har
-                  {:on-success (fn [file]
-                                 (println ">>> writing to file" file)
-                                 (. pipe to file
-                                    (h (fn [ar]
-                                         (println ">>> pipe done" (.succeeded ar))
-                                         (if (.succeeded ar)
-                                           ;; call end handler
-                                           (respond {:status 200 :body ">>> Thanks!\n\n"})
-                                           (respond {:status 500 :body ">>> Pipe failed!"}))))))
-                   :on-failure (fn [t] (respond {:status 500 :body ">>> Open failed!"}))}))))))))
+                  {:on-success
+                   (fn [file]
+                     (println ">>> writing to file" file)
+                     (. pipe to file
+                        (har {:on-success (fn [_] (respond {:status 200 :body ">>> Thanks!\n\n"}))
+                              :on-failure raise})))
+                   :on-failure raise
+                   }))))))))
 
 
 (defn router [opts req respond raise]
