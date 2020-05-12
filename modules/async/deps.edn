@@ -4,6 +4,7 @@
  :deps
  {io.vertx/vertx-core {:mvn/version "3.9.0"}
   io.vertx/vertx-rx-java2 {:mvn/version "3.9.0"}
+  io.netty/netty-transport-native-epoll {:mvn/version "4.1.15.Final"}
   }
 
  :aliases
