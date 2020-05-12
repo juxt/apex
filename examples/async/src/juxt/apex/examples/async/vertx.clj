@@ -397,47 +397,43 @@
      vertx-request
      (reify Handler
        (handle [_ upload]
-         ;; ^HttpServerFileUpload ReadStream<Buffer> upload
-         (println "Streaming in" (.filename upload))
-         (println "upload is type" (type upload))
          (.. upload
-             (endHandler (reify Handler
-                           (handle [_ _]
-                             (println "End of upload")
-                             (respond {:status 200 :body "Thanks 2!"}))))
+             (endHandler
+              (reify
+                Handler
+                (handle [_ _]
+                  (println "End of upload")
+                  (respond {:status 200 :body "Thanks 2!"}))))
 
-             (exceptionHandler (reify Handler (handle [_ t]
-                                                (println "Exception on upload!")
-                                                (println t)
-                                                (respond {:status 500 :body "Exception on upload!"})
-                                                ))))
+             (exceptionHandler
+              (reify
+                Handler
+                (handle [_ t]
+                  (println "Exception on upload!")
+                  (println t)
+                  (respond {:status 500 :body "Exception on upload!"})))))
 
-         ;; This works
-         #_(.streamToFileSystem upload (str "COPY2-" (.filename upload)))
-
-         ;; This doesn't
-         (.open
-          fs
-          (str "COPY-" (.filename upload))
-          (new io.vertx.core.file.OpenOptions (new JsonObject {"write" true
-                                                               ;;"dsync" true ; tried, doesn't affect result
-                                                               }))
-          (reify Handler
-            (handle [_ ar]
-              (if (.succeeded ar)
-                (let [af (.result ar)]
-                  (println "writing to file" af)
-                  (.pipeTo
-                   upload
-                   af
-                   (reify Handler
-                     (handle [_ ar]
-                       (println "pipe done" (.succeeded ar))
-                       (if (.succeeded ar)
-                         (do #_(.flush af)
-                             (respond {:status 200 :body "Thanks!"}))
-                         (respond {:status 500 :body "Pipe failed!"}))))))
-                (respond {:status 500 :body "Open failed!"}))))))))))
+         ;; Take the pipe now, don't start streaming from a handler
+         ;; otherwise the initial bytes will get dropped.
+         (let [pipe (.pipe upload)]
+           (.open
+            fs
+            (str "COPY3-" (.filename upload))
+            (new io.vertx.core.file.OpenOptions)
+            (reify Handler
+              (handle [_ ar]
+                (if (.succeeded ar)
+                  (let [file (.result ar)]
+                    (println ">>> writing to file" file)
+                    (.to pipe file
+                         (reify Handler
+                           (handle [_ ar]
+                             (println ">>> pipe done" (.succeeded ar))
+                             (if (.succeeded ar)
+                               ;; call end handler
+                               (respond {:status 200 :body ">>> Thanks!\n\n"})
+                               (respond {:status 500 :body ">>> Pipe failed!"}))))))
+                  (respond {:status 500 :body ">>> Open failed!"})))))))))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
