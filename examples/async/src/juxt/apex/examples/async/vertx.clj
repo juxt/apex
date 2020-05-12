@@ -20,12 +20,7 @@
    (io.vertx.reactivex.core.buffer Buffer)
    (io.vertx.reactivex.core.http HttpServer)
    (io.reactivex Flowable BackpressureStrategy)
-   (java.util.concurrent TimeUnit Flow$Subscription Flow$Publisher Flow$Subscriber)
-   ))
-
-;; Convenience functions
-(defn file-system [req]
-  (.fileSystem (:apex.vertx/vertx req)))
+   (java.util.concurrent TimeUnit Flow$Subscription Flow$Publisher Flow$Subscriber)))
 
 ;; Adapt org.reactivestreams.Subscription to the Clojure protocol
 ;; See https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Subscription.html
@@ -146,8 +141,6 @@
                  (doseq [[k v] headers]
                    ;; v can be a String, or Iterable<String>
                    (.putHeader response k (str v)))
-
-
 
                  ;; Now, make flowable
 
@@ -524,8 +517,8 @@
 ;; - [ ] Gzip encoding example (using Vertx compression level - see io.vertx.core.http.HttpServerOptions)
 ;; - [ ] A GET response with a sync string body
 ;; - [ ] A POST request with a sync string body
-;; - [ ] A POST request with a async body stream (file upload)
-;; - [ ] A multipart/form-data POST/PUT
+;; - [X] A POST request with a async body stream (file upload)
+;; - [X] A multipart/form-data POST/PUT
 ;; - [ ] Websockets
 
 ;; Backpressure
