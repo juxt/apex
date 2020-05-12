@@ -362,17 +362,6 @@
          (on-success (. ar result))
          (on-failure (. ar cause))))))
 
-#_(defn pipe-to-file [{:keys [on-success on-failure]}]
-  (har
-   {:on-success
-    (fn [file]
-      (. pipe to file
-         (har {:on-success
-               (fn [_]
-                 (on-success file))
-               :on-failure on-failure})))
-    :on-failure on-failure}))
-
 (defn wrap-failure
   "Wrap failure to add additional context. The wrapper parameter
   typically returns a clojure.lang.ExceptionInfo."
@@ -380,9 +369,42 @@
   (fn [cause]
     (on-failure (wrapper cause))))
 
+(defn pipe-to-file [vertx source filename {:keys [on-success on-failure]}]
+  ;; Create the pipe now, don't start streaming from an
+  ;; on-success callback, otherwise the initial bytes will
+  ;; get dropped.
+  (let [pipe (. source pipe)]
+    (. (. vertx fileSystem)
+       open
+       filename
+       (new io.vertx.core.file.OpenOptions)
+       (har
+        {:on-success
+         (fn [file]
+           (. pipe to file
+              (har {:on-success
+                    (fn [_]
+                      (on-success file))
+                    :on-failure (wrap-failure
+                                 (fn [cause]
+                                   (ex-info
+                                    (str "Failed writing to %s after %s bytes" filename (.getWritePos file))
+                                    {:filename filename
+                                     :bytes-written (.getWritePos file)}
+                                    cause))
+                                 on-failure)})))
+         :on-failure
+         (wrap-failure
+          (fn [cause]
+            (ex-info
+             (str "Failed to open file: " filename)
+             {:filename filename}
+             cause))
+          on-failure)}))))
+
 (defn upload-file-example [opts req respond raise]
-  (let [vertx-request (:apex.vertx/request req)
-        fs (file-system req)]
+  (let [vertx (:apex.vertx/vertx req)
+        vertx-request (:apex.vertx/request req)]
 
     (.setExpectMultipart vertx-request true)
 
@@ -394,38 +416,15 @@
     (. vertx-request
        uploadHandler
        (h (fn [upload]
-            (let [filename (str "COPY3-" (.filename upload))]
-              ;; Create the pipe now, don't start streaming from an
-              ;; on-success callback, otherwise the initial bytes will
-              ;; get dropped.
-              (let [pipe (. upload pipe)]
-                (. fs open
-                   filename
-                   (new io.vertx.core.file.OpenOptions)
-                   (har
-                    {:on-success
-                     (fn [file]
-                       (. pipe to file
-                          (har {:on-success
-                                (fn [_]
-                                  (respond {:status 200
-                                            :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
-                                :on-failure (wrap-failure
-                                             (fn [cause]
-                                               (ex-info
-                                                (str "Failed writing to %s after %s bytes" filename (.getWritePos file))
-                                                {:filename filename
-                                                 :bytes-written (.getWritePos file)}
-                                                cause))
-                                             raise)})))
-                     :on-failure
-                     (wrap-failure
-                      (fn [cause]
-                        (ex-info
-                         (str "Failed to open file: " filename)
-                         {:filename filename}
-                         cause))
-                      raise)})))))))))
+            (pipe-to-file
+             vertx
+             upload
+             (str "COPY3-" (.filename upload))
+             {:on-success (fn [file]
+                            (respond {:status 200
+                                      :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
+              :on-failure raise})
+            )))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
