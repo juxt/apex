@@ -426,18 +426,18 @@
               (. fs open
                  (str "COPY3-" (.filename upload))
                  (new io.vertx.core.file.OpenOptions)
-                 (h (fn [ar]
-                      (if (.succeeded ar)
-                        (let [file (.result ar)]
-                          (println ">>> writing to file" file)
-                          (. pipe to file
-                             (h (fn [ar]
-                                  (println ">>> pipe done" (.succeeded ar))
-                                  (if (.succeeded ar)
-                                    ;; call end handler
-                                    (respond {:status 200 :body ">>> Thanks!\n\n"})
-                                    (respond {:status 500 :body ">>> Pipe failed!"}))))))
-                        (respond {:status 500 :body ">>> Open failed!"})))))))))))
+                 (har
+                  {:on-success (fn [file]
+                                 (println ">>> writing to file" file)
+                                 (. pipe to file
+                                    (h (fn [ar]
+                                         (println ">>> pipe done" (.succeeded ar))
+                                         (if (.succeeded ar)
+                                           ;; call end handler
+                                           (respond {:status 200 :body ">>> Thanks!\n\n"})
+                                           (respond {:status 500 :body ">>> Pipe failed!"}))))))
+                   :on-failure (fn [t] (respond {:status 500 :body ">>> Open failed!"}))}))))))))
+
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
