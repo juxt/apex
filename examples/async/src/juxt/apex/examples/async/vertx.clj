@@ -394,6 +394,21 @@
          (on-success (. ar result))
          (on-failure (. ar cause))))))
 
+#_(defn pipe-to-file [{:keys [on-success on-failure]}]
+  (har
+   {:on-success
+    (fn [file]
+      (. pipe to file
+         (har {:on-success
+               (fn [_]
+                 (on-success file))
+               :on-failure on-failure})))
+    :on-failure on-failure}))
+
+(defn fail-with-ex-info [message ex-data on-failure]
+  (fn [cause]
+    (on-failure (ex-info message ex-data cause))))
+
 (defn upload-file-example [opts req respond raise]
   (let [vertx-request (:apex.vertx/request req)
         fs (file-system req)]
@@ -408,34 +423,23 @@
     (. vertx-request
        uploadHandler
        (h (fn [upload]
-            (.. upload
-                (endHandler
-                 (h (fn [_]
-                      (println "End of upload")
-                      (respond {:status 200 :body "Thanks 2!"}))))
-
-                (exceptionHandler
-                 (h (fn [t]
-                      (println "Exception on upload!")
-                      (println t)
-                      (respond {:status 500 :body "Exception on upload!"})))))
-
-            ;; Take the pipe now, don't start streaming from a handler
-            ;; otherwise the initial bytes will get dropped.
-            (let [pipe (.pipe upload)]
+            ;; Create the pipe now, don't start streaming from an
+            ;; on-success callback, otherwise the initial bytes will
+            ;; get dropped.
+            (let [pipe (. upload pipe)]
               (. fs open
                  (str "COPY3-" (.filename upload))
                  (new io.vertx.core.file.OpenOptions)
                  (har
                   {:on-success
                    (fn [file]
-                     (println ">>> writing to file" file)
                      (. pipe to file
-                        (har {:on-success (fn [_] (respond {:status 200 :body ">>> Thanks!\n\n"}))
+                        (har {:on-success
+                              (fn [_]
+                                (respond {:status 200
+                                          :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
                               :on-failure raise})))
-                   :on-failure raise
-                   }))))))))
-
+                   :on-failure raise}))))))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
