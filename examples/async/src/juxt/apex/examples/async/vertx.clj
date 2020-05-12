@@ -388,8 +388,11 @@
     (handle [_ t]
       (cb t))))
 
-(defmacro a. [& args]
-  `(. ~@(butlast args) (h ~(last args))))
+(defn har [{:keys [on-success on-failure]}]
+  (h (fn [ar]
+       (if (. ar succeeded)
+         (on-success (. ar result))
+         (on-failure (. ar cause))))))
 
 (defn upload-file-example [opts req respond raise]
   (let [vertx-request (:apex.vertx/request req)
