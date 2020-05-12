@@ -382,6 +382,12 @@
              (println "bpe: subscriber is requesting" n "items"))))
         (println "bpe: subscribing with subscriber" subscriber)))}))
 
+
+(defn h [cb]
+  (reify Handler
+    (handle [_ t]
+      (cb t))))
+
 (defn upload-file-example [opts req respond raise]
   (let [vertx-request (:apex.vertx/request req)
         fs (file-system req)]
@@ -395,8 +401,8 @@
 
     (.uploadHandler
      vertx-request
-     (reify Handler
-       (handle [_ upload]
+     (h
+       (fn [upload]
          (.. upload
              (endHandler
               (reify
