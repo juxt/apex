@@ -369,38 +369,46 @@
   (fn [cause]
     (on-failure (wrapper cause))))
 
-(defn pipe-to-file [vertx source filename {:keys [on-success on-failure]}]
+(defn pipe-to-file
+  "Pipe the source to the filename"
+  [vertx source filename
+   {:keys [on-success                ; receives AsyncFile as parameter
+           on-failure]}]
   ;; Create the pipe now, don't start streaming from an
   ;; on-success callback, otherwise the initial bytes will
   ;; get dropped.
   (let [pipe (. source pipe)]
-    (. (. vertx fileSystem)
-       open
-       filename
-       (new io.vertx.core.file.OpenOptions)
-       (har
-        {:on-success
-         (fn [file]
-           (. pipe to file
-              (har {:on-success
-                    (fn [_]
-                      (on-success file))
-                    :on-failure (wrap-failure
-                                 (fn [cause]
-                                   (ex-info
-                                    (str "Failed writing to %s after %s bytes" filename (.getWritePos file))
-                                    {:filename filename
-                                     :bytes-written (.getWritePos file)}
-                                    cause))
-                                 on-failure)})))
-         :on-failure
-         (wrap-failure
-          (fn [cause]
-            (ex-info
-             (str "Failed to open file: " filename)
-             {:filename filename}
-             cause))
-          on-failure)}))))
+    (.
+     (. vertx fileSystem)
+     open
+     filename
+     (new io.vertx.core.file.OpenOptions)
+     (har
+      {:on-success                      ; of open
+       (fn [file]
+         (. pipe to file
+            (har
+             {:on-success               ; of write
+              (fn [_]
+                (on-success file))
+              :on-failure               ; to write
+              (wrap-failure
+               (fn [cause]
+                 (ex-info
+                  (format "Failed writing to %s after %s bytes"
+                          filename (.getWritePos file))
+                  {:filename filename
+                   :bytes-written (.getWritePos file)}
+                  cause))
+               on-failure)})))
+       :on-failure                      ; to open
+       (wrap-failure
+        (fn [cause]
+          (ex-info
+           (str "Failed to open file: " filename)
+           {:filename filename}
+           cause))
+        on-failure)}))))
 
 (defn upload-file-example [opts req respond raise]
   (let [vertx (:apex.vertx/vertx req)
@@ -421,10 +429,10 @@
              upload
              (str "COPY3-" (.filename upload))
              {:on-success (fn [file]
-                            (respond {:status 200
-                                      :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
-              :on-failure raise})
-            )))))
+                            (respond
+                             {:status 200
+                              :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
+              :on-failure raise}))))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
