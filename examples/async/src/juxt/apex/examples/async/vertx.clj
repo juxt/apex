@@ -14,7 +14,7 @@
    [clojure.string :as string])
   (:import
    (io.vertx.core Handler MultiMap Promise)
-   (io.vertx.core.http HttpServerOptions)
+   (io.vertx.core.http HttpServerOptions HttpServerFileUpload)
    (io.vertx.core.json JsonObject)
    (io.vertx.reactivex.core Vertx)
    (io.vertx.reactivex.core.buffer Buffer)
@@ -22,6 +22,10 @@
    (io.reactivex Flowable BackpressureStrategy)
    (java.util.concurrent TimeUnit Flow$Subscription Flow$Publisher Flow$Subscriber)
    ))
+
+;; Convenience functions
+(defn file-system [req]
+  (.fileSystem (:apex.vertx/vertx req)))
 
 ;; Adapt org.reactivestreams.Subscription to the Clojure protocol
 ;; See https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Subscription.html
@@ -106,6 +110,12 @@
                  :headers (into {}
                                 (for [[k v] (.entries (.headers req))]
                                   [(string/lower-case k) v]))
+
+                 ;; You need access to this for when there is no
+                 ;; alternative but to use a lower-level Vert.x API,
+                 ;; such as multipart uploads.
+                 :apex.vertx/request req ; low-level interface
+
                  :apex.vertx/vertx vertx
                  #_(->RingHeaders (.headers req))}]
             (router
@@ -228,6 +238,7 @@
 
 
 
+
 (def file-serving-example
   (->
    (fn [req respond raise]
@@ -314,7 +325,7 @@
            ;;(#(.timestamp %))
            (#(.limit % 50))
            (#(.materialize %))
-;;           (#(.dematerialize %))
+           ;;           (#(.dematerialize %))
            (f/map f/server-sent-event))}))
 
 (defn ticker-example
@@ -353,23 +364,86 @@
   (respond
    {:status 200
     :headers {}
+
+    ;; NOTE: We might often use a subclass of
+    ;; java.util.concurrent.SubmissionPublisher for managing
+    ;; subscriptions
+
+    :body
     ;; We return a publisher
+    (reify aring/Publisher
+      (subscribe [_ subscriber]
+        (aring/on-subscribe
+         subscriber
+         (reify aring/Subscription
+           (cancel [_]
+             (println "bpe: cancelling subscription"))
+           (request [_ n]
+             (println "bpe: subscriber is requesting" n "items"))))
+        (println "bpe: subscribing with subscriber" subscriber)))}))
 
-    ;; NOTE: quite often we might use a subclass of java.util.concurrent.SubmissionPublisher
+(defn upload-file-example [opts req respond raise]
+  (let [vertx-request (:apex.vertx/request req)
+        fs (file-system req)]
 
-    :body (reify aring/Publisher
-            (subscribe [_ subscriber]
-              (aring/on-subscribe
-               subscriber
-               (reify aring/Subscription
-                 (cancel [_]
-                   (println "bpe: cancelling subscription"))
-                 (request [_ n]
-                   (println "bpe: subscriber is requesting" n "items"))))
-              (println "bpe: subscribing with subscriber" subscriber)))}))
+    (.setExpectMultipart vertx-request true)
+
+    ;; NOTE: HTTP/2 supports stream reset at any time during the
+    ;; request/response -- https://vertx.io/docs/vertx-core/java/ --
+    ;; which is great for telling our CMS clients that we already have
+    ;; a given file. Test with --http2
+
+    (.uploadHandler
+     vertx-request
+     (reify Handler
+       (handle [_ upload]
+         ;; ^HttpServerFileUpload ReadStream<Buffer> upload
+         (println "Streaming in" (.filename upload))
+         (println "upload is type" (type upload))
+         (.. upload
+             (endHandler (reify Handler
+                           (handle [_ _]
+                             (println "End of upload")
+                             (respond {:status 200 :body "Thanks 2!"}))))
+
+             (exceptionHandler (reify Handler (handle [_ t]
+                                                (println "Exception on upload!")
+                                                (println t)
+                                                (respond {:status 500 :body "Exception on upload!"})
+                                                ))))
+
+         ;; This works
+         #_(.streamToFileSystem upload (str "COPY2-" (.filename upload)))
+
+         ;; This doesn't
+         (.open
+          fs
+          (str "COPY-" (.filename upload))
+          (new io.vertx.core.file.OpenOptions (new JsonObject {"write" true
+                                                               ;;"dsync" true ; tried, doesn't affect result
+                                                               }))
+          (reify Handler
+            (handle [_ ar]
+              (if (.succeeded ar)
+                (let [af (.result ar)]
+                  (println "writing to file" af)
+                  (.pipeTo
+                   upload
+                   af
+                   (reify Handler
+                     (handle [_ ar]
+                       (println "pipe done" (.succeeded ar))
+                       (if (.succeeded ar)
+                         (do #_(.flush af)
+                             (respond {:status 200 :body "Thanks!"}))
+                         (respond {:status 500 :body "Pipe failed!"}))))))
+                (respond {:status 500 :body "Open failed!"}))))))))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
+
+    #"/upload-file"
+    (upload-file-example opts req respond raise)
 
     #"/flow"
     (flow-example opts req respond raise)
