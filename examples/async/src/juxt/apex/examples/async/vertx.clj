@@ -166,53 +166,21 @@
                    (satisfies? aring/Publisher body)
                    (aring/subscribe body (.toSubscriber response))
 
-                   ;; Deprecated
-                   (clojure.core/instance? io.reactivex.Flowable body)
-                   (let [subscriber (.toSubscriber response)]
-                     (.onWriteStreamError
-                      subscriber
-                      (reify io.reactivex.functions.Consumer
-                        (accept [_ obj]
-                          (println "on-write-stream-error")
-                          )))
-
-                     (.onWriteStreamEnd
-                      subscriber
-                      (reify io.reactivex.functions.Action
-                        (run [_]
-                          (println "on-write-stream-end")
-                          )))
-
-                     (.onWriteStreamEndError
-                      subscriber
-                      (reify io.reactivex.functions.Consumer
-                        (accept [_ obj]
-                          (println "on-write-stream-end-error")
-                          )))
-
-                     (.onError
-                      subscriber
-                      (reify io.reactivex.functions.Consumer
-                        (accept [_ obj]
-                          (println "on-error: " obj)
-                          )))
-
-                     (.onComplete
-                      subscriber
-                      (reify io.reactivex.functions.Action
-                        (run [_]
-                          (println "on-complete")
-                          )))
-
-                     (.subscribe body subscriber))
-
                    :else
                    (cond-> response
                      body (.write body)
                      true (.end)
                      ))))
 
-             (fn [e] (println "ERROR" e)))))))
+             (fn [e]
+               (println "ERROR: " e)
+               (..
+                req
+                response
+                (setStatusCode 500)
+                (setChunked true)
+                (write "ERROR\n")
+                (end))))))))
 
      listen)))
 
@@ -405,9 +373,12 @@
                :on-failure on-failure})))
     :on-failure on-failure}))
 
-(defn fail-with-ex-info [message ex-data on-failure]
+(defn wrap-failure
+  "Wrap failure to add additional context. The wrapper parameter
+  typically returns a clojure.lang.ExceptionInfo."
+  [wrapper on-failure]
   (fn [cause]
-    (on-failure (ex-info message ex-data cause))))
+    (on-failure (wrapper cause))))
 
 (defn upload-file-example [opts req respond raise]
   (let [vertx-request (:apex.vertx/request req)
@@ -423,23 +394,38 @@
     (. vertx-request
        uploadHandler
        (h (fn [upload]
-            ;; Create the pipe now, don't start streaming from an
-            ;; on-success callback, otherwise the initial bytes will
-            ;; get dropped.
-            (let [pipe (. upload pipe)]
-              (. fs open
-                 (str "COPY3-" (.filename upload))
-                 (new io.vertx.core.file.OpenOptions)
-                 (har
-                  {:on-success
-                   (fn [file]
-                     (. pipe to file
-                        (har {:on-success
-                              (fn [_]
-                                (respond {:status 200
-                                          :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
-                              :on-failure raise})))
-                   :on-failure raise}))))))))
+            (let [filename (str "COPY3-" (.filename upload))]
+              ;; Create the pipe now, don't start streaming from an
+              ;; on-success callback, otherwise the initial bytes will
+              ;; get dropped.
+              (let [pipe (. upload pipe)]
+                (. fs open
+                   filename
+                   (new io.vertx.core.file.OpenOptions)
+                   (har
+                    {:on-success
+                     (fn [file]
+                       (. pipe to file
+                          (har {:on-success
+                                (fn [_]
+                                  (respond {:status 200
+                                            :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
+                                :on-failure (wrap-failure
+                                             (fn [cause]
+                                               (ex-info
+                                                (str "Failed writing to %s after %s bytes" filename (.getWritePos file))
+                                                {:filename filename
+                                                 :bytes-written (.getWritePos file)}
+                                                cause))
+                                             raise)})))
+                     :on-failure
+                     (wrap-failure
+                      (fn [cause]
+                        (ex-info
+                         (str "Failed to open file: " filename)
+                         {:filename filename}
+                         cause))
+                      raise)})))))))))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
