@@ -10,7 +10,7 @@
    reitit.ring.middleware.dev
    [org.reactivestreams.flow :as rs])
   (:import
-   (io.vertx.core Handler MultiMap)
+   (io.vertx.core MultiMap)
    (io.vertx.core.http HttpServerOptions)
    (io.vertx.reactivex.core Vertx)
    (io.vertx.reactivex.core.http HttpServer)))
