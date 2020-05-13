@@ -2,15 +2,13 @@
 
 (ns juxt.apex.examples.async.vertx
   (:require
-   [jsonista.core :as json]
+   [juxt.apex.examples.async.router :refer [router]]
    [clojure.reflect :refer [reflect]]
    [integrant.core :as ig]
-   [jsonista.core :as jsonista]
-   [juxt.apex.alpha.async.flowable :as f]
    reitit.middleware
    [clojure.string :as string]
    reitit.ring.middleware.dev
-   [juxt.apex.examples.async.ring :as aring]
+   [org.reactivestreams.flow :as rs]
    [clojure.string :as string])
   (:import
    (io.vertx.core Handler MultiMap Promise)
@@ -24,17 +22,17 @@
 
 ;; Adapt org.reactivestreams.Subscription to the Clojure protocol
 ;; See https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Subscription.html
-(extend-protocol aring/Subscription
+(extend-protocol rs/Subscription
   org.reactivestreams.Subscription
   (cancel [s]
-    (println "aring/Subscription org.reactivestreams.Subscription cancel")
+    (println "rs/Subscription org.reactivestreams.Subscription cancel")
     (.cancel s))
   (request [s n]
-    (println "aring/Subscription org.reactivestreams.Subscription request" n)
+    (println "rs/Subscription org.reactivestreams.Subscription request" n)
     (.request s n)))
 
 ;; Adapt Vert.x subscriber to the Clojure protocol (e.g. the Vert.x HTTP response)
-(extend-protocol aring/Subscriber
+(extend-protocol rs/Subscriber
   io.vertx.reactivex.WriteStreamSubscriber
   (on-complete [s]
     (println "on-complete")
@@ -48,8 +46,8 @@
   (on-subscribe [s subscription]
     (println "on-subscribe: subscription is" subscription)
     (.onSubscribe s (reify org.reactivestreams.Subscription
-                      (cancel [_] (aring/cancel subscription))
-                      (request [_ n] (aring/request subscription n))))))
+                      (cancel [_] (rs/cancel subscription))
+                      (request [_ n] (rs/request subscription n))))))
 
 ;;(clojure.reflect/reflect io.vertx.reactivex.WriteStreamSubscriber)
 
@@ -156,8 +154,8 @@
 
                  (cond
 
-                   (satisfies? aring/Publisher body)
-                   (aring/subscribe body (.toSubscriber response))
+                   (satisfies? rs/Publisher body)
+                   (rs/subscribe body (.toSubscriber response))
 
                    :else
                    (cond-> response
@@ -200,270 +198,22 @@
 
 
 
-(def file-serving-example
-  (->
-   (fn [req respond raise]
-
-     #_(.. (:apex.vertx/vertx req)
-           fileSystem
-           (open
-            "/home/malcolm/dominic.jpg"
-            (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
-            (reify Handler
-              (handle
-                  (fn [ar]
-
-                    )))))
-
-     ;; Send file
-     #_(.. vertx
-           fileSystem
-           (open
-            "/home/malcolm/dominic.jpg"
-            (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
-            (new VertxHandler
-                 (fn [result]
-                   (if (.succeeded result)
-                     (let [file (.result result)]
-                       (.pipeTo
-                        file response
-                        (new VertxHandler
-                             (fn [result]
-                               (if (.succeeded result)
-                                 (.end response))))))
-                     (println "Not succeeded: result is" result))))))
-
-     #_(.. vertx
-           fileSystem
-           (open
-            #_"/photos/Personal/ski2020/IMG_20200128_162602.jpg"
-            "/home/malcolm/dominic.jpg"
-            (new io.vertx.core.file.OpenOptions (new JsonObject {"read" true}))
 
 
-            (new VertxHandler
-                 (fn [ar]
-                   (println "ar is" ar)
-                   ))))
-     ;;(assert vertx)
-     (respond
-      {:status 200
-       :headers {"content-type" "image/jpeg"}
-       :body "TODO: Replace this with some file\n"}))))
-
-(defn wrap-cache [handler opts]
-  (fn [req respond raise]
-    (handler
-     (update req :headers conj ["cache-middleware" "yes"])
-     respond raise)))
-
-(def cache-example
-  (->
-   (fn [req respond raise]
-     (println "cache-middleware header?" (get-in req [:headers "cache-middleware"]))
-     (respond {:status 200
-               :headers {"example" "cache-example"}
-               :body "TODO: Replace this with some stream\n"}))
-   (wrap-cache {})))
-
-;; See https://www.baeldung.com/rxjava-2-flowable
-
-;; https://github.com/ReactiveX/RxJava/wiki/Connectable-Observable-Operators
-
-;; Essential reading:
-;; http://blog.josephwilk.net/clojure/building-clojure-services-at-scale.html
-;; Aleph, Async, HTTP, Clojure - https://gist.github.com/kachayev/9911710758b56477e7423b5bd8dad144
-;; https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/#nurseries-a-structured-replacement-for-go-statements
 
 
-(defn sse-example [req respond raise]
-  (respond
-   {:status 200
-    :headers {"content-type" "text/event-stream"}
-    :body (->>
-           (f/range 1 10000)
-           ;;(f/throttle-first 100 TimeUnit/MILLISECONDS)
-           ;;(#(.timestamp %))
-           (#(.limit % 50))
-           (#(.materialize %))
-           ;;           (#(.dematerialize %))
-           (f/map f/server-sent-event))}))
-
-(defn ticker-example
-  "An example demonstrating how to merges together two separate feeds."
-  [opts req respond raise]
-  (respond
-   (let [bus (.. (:vertx opts) eventBus)]
-     {:status 200
-      :headers {"content-type" "text/event-stream"}
-      :body (Flowable/merge
-             (for [feed [:juxt-feed :crux-feed]]
-               (->>
-                (.. bus (consumer (get-in opts [feed :topic])) toFlowable)
-                (f/map (comp f/server-sent-event (memfn body))))))})))
-
-(defn flow-example [opts req respond raise]
-  (respond
-   {:status 200
-    ;; The body is a subscriber
-    ;; "The recommended way of creating custom Flowables is by using the create(FlowableOnSubscribe, BackpressureStrategy) factory method:" -- http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Flowable.html
-    ;;  Flowables support backpressure and require Subscribers to signal demand via Subscription.request(long).
-
-    :body
-    (Flowable/create
-     (reify io.reactivex.FlowableOnSubscribe
-       (subscribe [_ e]
-         (.onNext e (Buffer/buffer "Hello\n\n"))
-         (.onNext e (Buffer/buffer "Hello\n\n"))
-         (.onNext e (Buffer/buffer "Hello\n\n"))
-         (Thread/sleep 200)
-         (.onNext e (Buffer/buffer "Goodbye\n\n"))
-         (.onComplete e)))
-     BackpressureStrategy/BUFFER)}))
-
-(defn backpressure-example [opts req respond raise]
-  (respond
-   {:status 200
-    :headers {}
-
-    ;; NOTE: We might often use a subclass of
-    ;; java.util.concurrent.SubmissionPublisher for managing
-    ;; subscriptions
-
-    :body
-    ;; We return a publisher
-    (reify aring/Publisher
-      (subscribe [_ subscriber]
-        (aring/on-subscribe
-         subscriber
-         (reify aring/Subscription
-           (cancel [_]
-             (println "bpe: cancelling subscription"))
-           (request [_ n]
-             (println "bpe: subscriber is requesting" n "items"))))
-        (println "bpe: subscribing with subscriber" subscriber)))}))
 
 
-(defn h [cb]
-  (reify Handler
-    (handle [_ t]
-      (cb t))))
 
-(defn har [{:keys [on-success on-failure]}]
-  (h (fn [ar]
-       (if (. ar succeeded)
-         (on-success (. ar result))
-         (on-failure (. ar cause))))))
 
-(defn wrap-failure
-  "Wrap failure to add additional context. The wrapper parameter
-  typically returns a clojure.lang.ExceptionInfo."
-  [wrapper on-failure]
-  (fn [cause]
-    (on-failure (wrapper cause))))
 
-(defn pipe-to-file
-  "Pipe the source to the filename"
-  [vertx source filename
-   {:keys [on-success                ; receives AsyncFile as parameter
-           on-failure]}]
-  ;; Create the pipe now, don't start streaming from an
-  ;; on-success callback, otherwise the initial bytes will
-  ;; get dropped.
-  (let [pipe (. source pipe)]
-    (.
-     (. vertx fileSystem)
-     open
-     filename
-     (new io.vertx.core.file.OpenOptions)
-     (har
-      {:on-success                      ; of open
-       (fn [file]
-         (. pipe to file
-            (har
-             {:on-success               ; of write
-              (fn [_]
-                (on-success file))
-              :on-failure               ; to write
-              (wrap-failure
-               (fn [cause]
-                 (ex-info
-                  (format "Failed writing to %s after %s bytes"
-                          filename (.getWritePos file))
-                  {:filename filename
-                   :bytes-written (.getWritePos file)}
-                  cause))
-               on-failure)})))
-       :on-failure                      ; to open
-       (wrap-failure
-        (fn [cause]
-          (ex-info
-           (str "Failed to open file: " filename)
-           {:filename filename}
-           cause))
-        on-failure)}))))
 
-(defn upload-file-example [opts req respond raise]
-  (let [vertx (:apex.vertx/vertx req)
-        vertx-request (:apex.vertx/request req)]
 
-    (.setExpectMultipart vertx-request true)
 
-    ;; NOTE: HTTP/2 supports stream reset at any time during the
-    ;; request/response -- https://vertx.io/docs/vertx-core/java/ --
-    ;; which is great for telling our CMS clients that we already have
-    ;; a given file. Test with --http2
 
-    (. vertx-request
-       uploadHandler
-       (h (fn [upload]
-            (pipe-to-file
-             vertx
-             upload
-             (str "COPY3-" (.filename upload))
-             {:on-success (fn [file]
-                            (respond
-                             {:status 200
-                              :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
-              :on-failure raise}))))))
 
-(defn router [opts req respond raise]
-  (condp re-matches (:uri req)
 
-    #"/upload-file"
-    (upload-file-example opts req respond raise)
 
-    #"/flow"
-    (flow-example opts req respond raise)
-
-    #"/bp"
-    (backpressure-example opts req respond raise)
-
-    #"/file.jpg"
-    (file-serving-example req respond raise)
-
-    #"/cache-example"
-    (cache-example req respond raise)
-
-    ;; SSE
-    #"/sse" (sse-example req respond raise)
-
-    #"/ticker" (ticker-example opts req respond raise)
-
-    #"/debug"
-    (respond
-     {:status 200
-      :headers {"foo" "bar"}
-      :body (str
-             (jsonista/write-value-as-string
-              {"message" "Hello World!"
-               "request" req
-               "body-info" {"type" (type (:body req))}
-               ;;"body" (slurp (:body req))
-               })
-             "\r\n")})
-
-    (respond {:status 404})))
 
 (defmethod ig/init-key ::vertx
   [_ _]
@@ -483,28 +233,6 @@
 
 (defmethod ig/halt-key! ::http-server [_ server]
   (.close server))
-
-(defmethod ig/init-key ::stock-feed-publisher
-  [_ {:keys [topic vertx freq]}]
-  (let [eb (.eventBus vertx)
-        price (atom 100)]
-    (let [timer-id (.setPeriodic
-                    vertx freq
-                    (reify Handler
-                      (handle [_ ev]
-                        (.publish
-                         eb topic
-                         (jsonista/write-value-as-string
-                          {"equity" topic
-                           "price" (swap! price + (rand) -0.5)})))))]
-      (printf "Initialising publisher on topic %s (timer-id: %d)\n" topic timer-id)
-      {:topic topic
-       :timer-id timer-id
-       :close! #(.cancelTimer vertx timer-id)})))
-
-(defmethod ig/halt-key! ::stock-feed-publisher [_ {:keys [topic close! timer-id]}]
-  (printf "Cancelling publisher on topic %s (timer-id: %d)\n" topic timer-id)
-  (close!))
 
 ;; Write the following:
 

@@ -8,22 +8,27 @@
   {
    :port 8000
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
-   :juxt-feed #ig/ref [:juxt.apex.examples.async.vertx/stock-feed-publisher :stock/juxt]
-   :crux-feed #ig/ref [:juxt.apex.examples.async.vertx/stock-feed-publisher :stock/crux]
+   :juxt-feed #ig/ref [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
+   :crux-feed #ig/ref [:juxt.apex.examples.async.events/stock-feed-publisher :stock/crux]
    }
 
-  [:juxt.apex.examples.async.vertx/stock-feed-publisher :stock/juxt]
+  [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
   {
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
    :topic "JUXT"
    :freq 500
    }
 
-  [:juxt.apex.examples.async.vertx/stock-feed-publisher :stock/crux]
+  [:juxt.apex.examples.async.events/stock-feed-publisher :stock/crux]
   {
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
    :topic "CRUX"
    :freq 1200
    }
+
+  :crux.cms.db/node
+  {}
+
+  :crux.cms.selmer/tags {}
 
   }}

@@ -1,5 +1,4 @@
-;; TODO: Promote
-(ns juxt.apex.examples.async.ring)
+(ns org.reactivestreams.flow)
 
 ;; Modelled on interfaces enclosed by JDK 9's java.util.concurrent.Flow class
 
