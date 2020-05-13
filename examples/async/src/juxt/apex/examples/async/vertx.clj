@@ -9,14 +9,10 @@
    reitit.ring.middleware.dev
    [org.reactivestreams.flow :as rs])
   (:import
-   (io.vertx.core Handler MultiMap Promise)
-   (io.vertx.core.http HttpServerOptions HttpServerFileUpload)
-   (io.vertx.core.json JsonObject)
+   (io.vertx.core Handler MultiMap)
+   (io.vertx.core.http HttpServerOptions)
    (io.vertx.reactivex.core Vertx)
-   (io.vertx.reactivex.core.buffer Buffer)
-   (io.vertx.reactivex.core.http HttpServer)
-   (io.reactivex Flowable BackpressureStrategy)
-   (java.util.concurrent TimeUnit Flow$Subscription Flow$Publisher Flow$Subscriber)))
+   (io.vertx.reactivex.core.http HttpServer)))
 
 ;; Adapt org.reactivestreams.Subscription to the Clojure protocol
 ;; See https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Subscription.html
@@ -174,7 +170,7 @@
      listen)))
 
 
-(defn body-input-stream-handler [req respond raise]
+(defn body-input-stream-handler [req respond _]
   ;; This demonstrates the use of calling .bodyHandler on the request.
   ;; body-buffer here is a Vertx Promise (let [body-buffer (Promise/promise)])
   #_(.bodyHandler
@@ -191,27 +187,6 @@
        (respond
         {:status 200
          :body (str "Body was" (slurp body))})))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 (defmethod ig/init-key ::vertx
   [_ _]

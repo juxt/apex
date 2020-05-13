@@ -43,4 +43,8 @@
                                :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}
     criterium {:mvn/version "0.4.5"}
     hiccup {:mvn/version "2.0.0-alpha2"}}
-   :main-opts ["-m" "cognitect.test-runner"]}}}
+   :main-opts ["-m" "cognitect.test-runner"]}
+
+  :lint
+  {:extra-deps {clj-kondo {:mvn/version "RELEASE"}}
+   :main-opts ["-m" "clj-kondo.main" "--lint" "src/juxt"]}}}

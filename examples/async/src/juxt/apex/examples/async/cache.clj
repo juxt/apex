@@ -2,7 +2,7 @@
 
 (ns juxt.apex.examples.async.cache)
 
-(defn wrap-cache [handler opts]
+(defn wrap-cache [handler _]
   (fn [req respond raise]
     (handler
      (update req :headers conj ["cache-middleware" "yes"])
@@ -10,7 +10,7 @@
 
 (def cache-example
   (->
-   (fn [req respond raise]
+   (fn [req respond _]
      (println "cache-middleware header?" (get-in req [:headers "cache-middleware"]))
      (respond {:status 200
                :headers {"example" "cache-example"}

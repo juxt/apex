@@ -12,7 +12,7 @@
 
 (def file-serving-example
   (->
-   (fn [req respond raise]
+   (fn [_ respond _]
 
      #_(.. (:apex.vertx/vertx req)
            fileSystem
@@ -61,7 +61,7 @@
        :headers {"content-type" "image/jpeg"}
        :body "TODO: Replace this with some file\n"}))))
 
-(defn flow-example [opts req respond raise]
+(defn flow-example [_ _ respond _]
   (respond
    {:status 200
     ;; The body is a subscriber
@@ -80,7 +80,7 @@
          (.onComplete e)))
      BackpressureStrategy/BUFFER)}))
 
-(defn backpressure-example [opts req respond raise]
+(defn backpressure-example [_ _ respond _]
   (respond
    {:status 200
     :headers {}
@@ -102,7 +102,7 @@
              (println "bpe: subscriber is requesting" n "items"))))
         (println "bpe: subscribing with subscriber" subscriber)))}))
 
-(defn upload-file-example [opts req respond raise]
+(defn upload-file-example [_ req respond raise]
   (let [vertx (:apex.vertx/vertx req)
         vertx-request (:apex.vertx/request req)]
 
@@ -137,7 +137,7 @@
 ;; https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/#nurseries-a-structured-replacement-for-go-statements
 
 
-(defn sse-example [req respond raise]
+(defn sse-example [_ respond _]
   (respond
    {:status 200
     :headers {"content-type" "text/event-stream"}
@@ -152,7 +152,7 @@
 
 (defn ticker-example
   "An example demonstrating how to merges together two separate feeds."
-  [opts req respond raise]
+  [opts _ respond _]
   (respond
    (let [bus (.. (:vertx opts) eventBus)]
      {:status 200
