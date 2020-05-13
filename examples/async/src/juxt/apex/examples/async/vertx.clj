@@ -5,6 +5,7 @@
    [juxt.apex.examples.async.router :refer [router]]
    [integrant.core :as ig]
    reitit.middleware
+   [juxt.apex.examples.async.async-helpers :refer [h]]
    [clojure.string :as string]
    reitit.ring.middleware.dev
    [org.reactivestreams.flow :as rs])
@@ -81,91 +82,91 @@
     (..
      server
      (requestHandler
-      (reify Handler
-        (handle [_ req]
-          (let [ring-req
-                {:server-port port
-                 :server-name (.getHost options)
-                 :remote-addr (str (.remoteAddress req))
-                 :uri (.path req)
-                 :query-string (.query req)
-                 :scheme (.scheme req)
-                 :request-method (keyword (string/lower-case (.rawMethod req)))
-                 :protocol (str (.version req))
-                 ;; This is aiming at Ring 2 lower-case request header
-                 ;; fields
-                 :headers (into {}
-                                (for [[k v] (.entries (.headers req))]
-                                  [(string/lower-case k) v]))
+      (h
+       (fn [req]
+         (let [ring-req
+               {:server-port port
+                :server-name (.getHost options)
+                :remote-addr (str (.remoteAddress req))
+                :uri (.path req)
+                :query-string (.query req)
+                :scheme (.scheme req)
+                :request-method (keyword (string/lower-case (.rawMethod req)))
+                :protocol (str (.version req))
+                ;; This is aiming at Ring 2 lower-case request header
+                ;; fields
+                :headers (into {}
+                               (for [[k v] (.entries (.headers req))]
+                                 [(string/lower-case k) v]))
 
-                 ;; You need access to this for when there is no
-                 ;; alternative but to use a lower-level Vert.x API,
-                 ;; such as multipart uploads.
-                 :apex.vertx/request req ; low-level interface
+                ;; You need access to this for when there is no
+                ;; alternative but to use a lower-level Vert.x API,
+                ;; such as multipart uploads.
+                :apex.vertx/request req ; low-level interface
 
-                 :apex.vertx/vertx vertx
-                 #_(->RingHeaders (.headers req))}]
-            (router
-             opts
-             ring-req
-             ;; Respond function
-             (fn [{:keys [status headers body]}]
-               ;; header-map here is only to allow us to preserve the
-               ;; case of response headers, while potentially retrieving
-               ;; them. Probably better to keep all as lower-case.
-               (let [header-map (cond-> (MultiMap/caseInsensitiveMultiMap)
-                                  headers (.. (addAll headers)))
-                     content-length (.get header-map "content-length")
+                :apex.vertx/vertx vertx
+                #_(->RingHeaders (.headers req))}]
+           (router
+            opts
+            ring-req
+            ;; Respond function
+            (fn [{:keys [status headers body]}]
+              ;; header-map here is only to allow us to preserve the
+              ;; case of response headers, while potentially retrieving
+              ;; them. Probably better to keep all as lower-case.
+              (let [header-map (cond-> (MultiMap/caseInsensitiveMultiMap)
+                                 headers (.. (addAll headers)))
+                    content-length (.get header-map "content-length")
+                    response
+                    (..
+                     req
                      response
-                     (..
-                      req
-                      response
-                      (setChunked (not content-length))
-                      ;;(setChunked false) ; while playing with SSE
-                      (setStatusCode status))]
+                     (setChunked (not content-length))
+                     ;;(setChunked false) ; while playing with SSE
+                     (setStatusCode status))]
 
-                 #_(.closeHandler (.connection req)
-                                  (->VertxHandler (fn [_]
-                                                    (println "connection closed")
-                                                    )))
-                 #_(println "connection" (.connection req))
+                #_(.closeHandler (.connection req)
+                                 (->VertxHandler (fn [_]
+                                                   (println "connection closed")
+                                                   )))
+                #_(println "connection" (.connection req))
 
-                 (doseq [[k v] headers]
-                   ;; v can be a String, or Iterable<String>
-                   (.putHeader response k (str v)))
+                (doseq [[k v] headers]
+                  ;; v can be a String, or Iterable<String>
+                  (.putHeader response k (str v)))
 
-                 ;; Now, make flowable
+                ;; Now, make flowable
 
-                 ;; If the body is not a String, InputStream etc..
+                ;; If the body is not a String, InputStream etc..
 
 
-                 ;; On Java 9 and above, body may return a
-                 ;; java.util.concurrent.Flow.Publisher.  Java 8 and below should
-                 ;; use org.reactivestreams.Publisher:
-                 ;; http://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/org/reactivestreams/Publisher.html?is-external=true
+                ;; On Java 9 and above, body may return a
+                ;; java.util.concurrent.Flow.Publisher.  Java 8 and below should
+                ;; use org.reactivestreams.Publisher:
+                ;; http://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/org/reactivestreams/Publisher.html?is-external=true
 
-                 ;; Body must satisfy protocol
+                ;; Body must satisfy protocol
 
-                 (cond
+                (cond
 
-                   (satisfies? rs/Publisher body)
-                   (rs/subscribe body (.toSubscriber response))
+                  (satisfies? rs/Publisher body)
+                  (rs/subscribe body (.toSubscriber response))
 
-                   :else
-                   (cond-> response
-                     body (.write body)
-                     true (.end)
-                     ))))
+                  :else
+                  (cond-> response
+                    body (.write body)
+                    true (.end)
+                    ))))
 
-             (fn [e]
-               (println "ERROR: " e)
-               (..
-                req
-                response
-                (setStatusCode 500)
-                (setChunked true)
-                (write "ERROR\n")
-                (end))))))))
+            (fn [e]
+              (println "ERROR: " e)
+              (..
+               req
+               response
+               (setStatusCode 500)
+               (setChunked true)
+               (write "ERROR\n")
+               (end))))))))
 
      listen)))
 
@@ -181,12 +182,11 @@
         (.complete body-buffer (io.netty.buffer.ByteBufInputStream. (.getByteBuf buffer))))))
   (.onSuccess
    (:body req)
-   (reify Handler
-     (handle [_ body]
-       (println "Body is" body)
-       (respond
-        {:status 200
-         :body (str "Body was" (slurp body))})))))
+   (h (fn [body]
+        (println "Body is" body)
+        (respond
+         {:status 200
+          :body (str "Body was" (slurp body))})))))
 
 (defmethod ig/init-key ::vertx
   [_ _]

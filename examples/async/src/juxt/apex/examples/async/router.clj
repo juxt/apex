@@ -3,7 +3,9 @@
 (ns juxt.apex.examples.async.router
   (:require
    [juxt.apex.examples.async.cache :refer [cache-example]]
-   [juxt.apex.examples.async.handlers :as h]))
+   [juxt.apex.examples.async.handlers :as h]
+   [juxt.apex.examples.async.flowables :as flowables]
+   [juxt.apex.examples.async.sse :as sse]))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
@@ -24,8 +26,8 @@
     (cache-example req respond raise)
 
     ;; SSE
-    #"/sse" (h/sse-example req respond raise)
+    #"/sse" (sse/sse-example req respond raise)
 
-    #"/ticker" (h/ticker-example opts req respond raise)
+    #"/ticker" (flowables/ticker-example opts req respond raise)
 
     (respond {:status 404})))

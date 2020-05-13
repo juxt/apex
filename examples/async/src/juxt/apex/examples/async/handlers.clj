@@ -3,12 +3,10 @@
 (ns juxt.apex.examples.async.handlers
   (:require
    [org.reactivestreams.flow :as rs]
-   [juxt.apex.alpha.async.flowable :as f]
    [juxt.apex.examples.async.async-helpers :refer [h pipe-to-file]])
   (:import
    (io.vertx.reactivex.core.buffer Buffer)
-   (io.reactivex Flowable BackpressureStrategy))
-  )
+   (io.reactivex Flowable BackpressureStrategy)))
 
 (def file-serving-example
   (->
@@ -125,40 +123,3 @@
                              {:status 200
                               :body (format "Thanks! Bytes received: %s\n" (.getWritePos file))}))
               :on-failure raise}))))))
-
-
-;; See https://www.baeldung.com/rxjava-2-flowable
-
-;; https://github.com/ReactiveX/RxJava/wiki/Connectable-Observable-Operators
-
-;; Essential reading:
-;; http://blog.josephwilk.net/clojure/building-clojure-services-at-scale.html
-;; Aleph, Async, HTTP, Clojure - https://gist.github.com/kachayev/9911710758b56477e7423b5bd8dad144
-;; https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/#nurseries-a-structured-replacement-for-go-statements
-
-
-(defn sse-example [_ respond _]
-  (respond
-   {:status 200
-    :headers {"content-type" "text/event-stream"}
-    :body (->>
-           (f/range 1 10000)
-           ;;(f/throttle-first 100 TimeUnit/MILLISECONDS)
-           ;;(#(.timestamp %))
-           (#(.limit % 50))
-           (#(.materialize %))
-           ;;           (#(.dematerialize %))
-           (f/map f/server-sent-event))}))
-
-(defn ticker-example
-  "An example demonstrating how to merges together two separate feeds."
-  [opts _ respond _]
-  (respond
-   (let [bus (.. (:vertx opts) eventBus)]
-     {:status 200
-      :headers {"content-type" "text/event-stream"}
-      :body (Flowable/merge
-             (for [feed [:juxt-feed :crux-feed]]
-               (->>
-                (.. bus (consumer (get-in opts [feed :topic])) toFlowable)
-                (f/map (comp f/server-sent-event (memfn body))))))})))

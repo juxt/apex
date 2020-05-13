@@ -1,6 +1,8 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.examples.async.async-helpers)
+(ns juxt.apex.examples.async.async-helpers
+  (:import
+   (io.vertx.core Handler)))
 
 (defn h [cb]
   (reify Handler
