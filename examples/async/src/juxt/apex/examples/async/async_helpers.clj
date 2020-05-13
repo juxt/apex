@@ -1,3 +1,5 @@
+;; Copyright © 2020, JUXT LTD.
+
 (ns juxt.apex.examples.async.async-helpers
   (:import
    (io.vertx.core Handler MultiMap Promise)))

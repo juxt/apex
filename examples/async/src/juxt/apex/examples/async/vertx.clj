@@ -3,13 +3,11 @@
 (ns juxt.apex.examples.async.vertx
   (:require
    [juxt.apex.examples.async.router :refer [router]]
-   [clojure.reflect :refer [reflect]]
    [integrant.core :as ig]
    reitit.middleware
    [clojure.string :as string]
    reitit.ring.middleware.dev
-   [org.reactivestreams.flow :as rs]
-   [clojure.string :as string])
+   [org.reactivestreams.flow :as rs])
   (:import
    (io.vertx.core Handler MultiMap Promise)
    (io.vertx.core.http HttpServerOptions HttpServerFileUpload)

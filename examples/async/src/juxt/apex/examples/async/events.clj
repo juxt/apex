@@ -1,3 +1,5 @@
+;; Copyright © 2020, JUXT LTD.
+
 (ns juxt.apex.examples.async.events
   (:require
    [jsonista.core :as jsonista]
