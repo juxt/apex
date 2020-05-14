@@ -201,8 +201,8 @@
 ;; for generating 503 as back-pressure on requests.
 
 (defmethod ig/init-key ::http-server
-  [_ opts]
-  (run-http-server #'router opts))
+  [_ {:keys [router] :as opts}]
+  (run-http-server router opts))
 
 (defmethod ig/halt-key! ::http-server [_ server]
   (.close server))

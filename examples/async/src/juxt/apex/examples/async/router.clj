@@ -6,7 +6,8 @@
    [juxt.apex.examples.async.flowables :as flowables]
    [juxt.apex.examples.async.upload :as upload]
    [juxt.apex.examples.async.rs :as rs]
-   [juxt.apex.examples.async.sse :as sse]))
+   [juxt.apex.examples.async.sse :as sse]
+   [integrant.core :as ig]))
 
 (defn router [opts req respond raise]
   (condp re-matches (:uri req)
@@ -29,3 +30,6 @@
     #"/ticker" (flowables/ticker-example opts req respond raise)
 
     (respond {:status 404})))
+
+(defmethod ig/init-key ::router [_ _]
+  #'router)

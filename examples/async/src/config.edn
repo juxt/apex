@@ -10,6 +10,7 @@
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
    :juxt-feed #ig/ref [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
    :crux-feed #ig/ref [:juxt.apex.examples.async.events/stock-feed-publisher :stock/crux]
+   :router #ig/ref :juxt.apex.examples.async.router/router
    }
 
   [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
@@ -26,9 +27,13 @@
    :freq 1200
    }
 
+  :juxt.apex.examples.async.router/router
+  {}
+
   :crux.cms.db/node
   {}
 
-  :crux.cms.selmer/tags {}
+  :crux.cms.selmer/tags
+  {}
 
   }}
