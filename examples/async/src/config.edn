@@ -13,6 +13,13 @@
    :router #ig/ref :juxt.apex.examples.async.router/router
    }
 
+  :juxt.apex.examples.async.router/router
+  {:cms-router #ig/ref :crux.cms.cms/router}
+
+  :crux.cms.cms/router
+  {:crux/node #ig/ref :crux.cms.db/node}
+
+
   [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
   {
    :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
@@ -26,9 +33,6 @@
    :topic "CRUX"
    :freq 1200
    }
-
-  :juxt.apex.examples.async.router/router
-  {}
 
   :crux.cms.db/node
   {}

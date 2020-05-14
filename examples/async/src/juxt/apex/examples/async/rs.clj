@@ -4,7 +4,7 @@
   (:require
    [org.reactivestreams.flow :as rs]))
 
-(defn backpressure-example [_ _ respond _]
+(defn backpressure-example [_ respond _]
   (respond
    {:status 200
     :headers {}

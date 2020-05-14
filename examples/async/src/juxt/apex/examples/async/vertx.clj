@@ -2,7 +2,6 @@
 
 (ns juxt.apex.examples.async.vertx
   (:require
-   [juxt.apex.examples.async.router :refer [router]]
    [integrant.core :as ig]
    reitit.middleware
    [juxt.apex.examples.async.async-helpers :refer [h]]
@@ -107,7 +106,6 @@
                 :apex.vertx/vertx vertx
                 #_(->RingHeaders (.headers req))}]
            (router
-            opts
             ring-req
             ;; Respond function
             (fn [{:keys [status headers body]}]

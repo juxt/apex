@@ -7,29 +7,34 @@
    [juxt.apex.examples.async.upload :as upload]
    [juxt.apex.examples.async.rs :as rs]
    [juxt.apex.examples.async.sse :as sse]
+   [crux.cms.cms :as cms]
    [integrant.core :as ig]))
 
-(defn router [opts req respond raise]
-  (condp re-matches (:uri req)
+(defn make-router [cms-router]
+  (fn [req respond raise]
+    (condp re-matches (:uri req)
 
-    #"/upload-file"
-    (upload/upload-file-example opts req respond raise)
+      #"/upload-file"
+      (upload/upload-file-example req respond raise)
 
-    #"/flow"
-    (flowables/flow-example opts req respond raise)
+      #"/flow"
+      (flowables/flow-example req respond raise)
 
-    #"/bp"
-    (rs/backpressure-example opts req respond raise)
+      #"/bp"
+      (rs/backpressure-example req respond raise)
 
-    #"/cache-example"
-    (cache/cache-example req respond raise)
+      #"/cache-example"
+      (cache/cache-example req respond raise)
 
-    ;; SSE
-    #"/sse" (sse/sse-example req respond raise)
+      ;; SSE
+      #"/sse" (sse/sse-example req respond raise)
 
-    #"/ticker" (flowables/ticker-example opts req respond raise)
+      #"/ticker" (flowables/ticker-example req respond raise)
 
-    (respond {:status 404})))
+      #"/cms" (cms-router req respond raise)
 
-(defmethod ig/init-key ::router [_ _]
-  #'router)
+      (respond {:status 404}))))
+
+(defmethod ig/init-key ::router [_ {:keys [cms-router]}]
+  (assert cms-router)
+  (make-router cms-router))

@@ -16,7 +16,7 @@
 ;; Aleph, Async, HTTP, Clojure - https://gist.github.com/kachayev/9911710758b56477e7423b5bd8dad144
 ;; https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/#nurseries-a-structured-replacement-for-go-statements
 
-(defn flow-example [_ _ respond _]
+(defn flow-example [_ respond _]
   (respond
    {:status 200
     ;; The body is a subscriber
@@ -40,9 +40,10 @@
 ;; Do we really need to be able to return Flowables?
 (defn ticker-example
   "An example demonstrating how to merges together two separate feeds."
-  [opts _ respond _]
+  [req respond _]
   (respond
-   (let [bus (.. (:vertx opts) eventBus)]
+   {:status 500 :body "TODO: restore"}
+   #_(let [bus (.. (:vertx opts) eventBus)]
      {:status 200
       :headers {"content-type" "text/event-stream"}
       :body (Flowable/merge

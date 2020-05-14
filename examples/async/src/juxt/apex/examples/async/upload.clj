@@ -4,7 +4,7 @@
   (:require
    [juxt.apex.examples.async.async-helpers :refer [h pipe-to-file]]))
 
-(defn upload-file-example [_ req respond raise]
+(defn upload-file-example [req respond raise]
   (let [vertx (:apex.vertx/vertx req)
         vertx-request (:apex.vertx/request req)]
 
