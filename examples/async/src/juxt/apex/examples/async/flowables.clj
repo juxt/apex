@@ -36,6 +36,8 @@
      BackpressureStrategy/BUFFER)}))
 
 
+;; Possibly outdated by rs example - should consider re-implementing
+;; Do we really need to be able to return Flowables?
 (defn ticker-example
   "An example demonstrating how to merges together two separate feeds."
   [opts _ respond _]
