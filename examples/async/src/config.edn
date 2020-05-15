@@ -17,8 +17,14 @@
   {:cms-router #ig/ref :crux.cms.cms/router}
 
   :crux.cms.cms/router
-  {:crux/node #ig/ref :crux.cms.db/node}
+  {:store #ig/ref #profile {:dev :crux.cms.local/content-store
+                            :prod :crux.cms.crux-content-store/content-store}}
 
+  :crux.cms.local/content-store
+  {}
+
+  :crux.cms.crux-content-store/content-store
+  {:node #ig/ref :crux.cms.db/node}
 
   [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
   {

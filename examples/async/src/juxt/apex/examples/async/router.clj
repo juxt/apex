@@ -7,11 +7,11 @@
    [juxt.apex.examples.async.upload :as upload]
    [juxt.apex.examples.async.rs :as rs]
    [juxt.apex.examples.async.sse :as sse]
-   [crux.cms.cms :as cms]
    [integrant.core :as ig]))
 
 (defn make-router [cms-router]
   (fn [req respond raise]
+    (println "uri:" (:uri req))
     (condp re-matches (:uri req)
 
       #"/upload-file"
@@ -31,9 +31,7 @@
 
       #"/ticker" (flowables/ticker-example req respond raise)
 
-      #"/cms" (cms-router req respond raise)
-
-      (respond {:status 404}))))
+      (cms-router req respond raise))))
 
 (defmethod ig/init-key ::router [_ {:keys [cms-router]}]
   (assert cms-router)

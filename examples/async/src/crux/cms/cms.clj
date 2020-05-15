@@ -2,6 +2,7 @@
   (:require
    [crux.api :as crux]
    [selmer.parser :as selmer]
+   [selmer.util :refer [*custom-resource-path*]]
    [integrant.core :as ig]))
 
 (defn uri [req]
@@ -10,31 +11,36 @@
           (-> req :headers (get "host"))
           (-> req :uri)))
 
-(defn make-router [{:keys [crux/node]}]
+(defprotocol ContentStore
+  (find-entity [_ id] "Find the entity with the given id"))
+
+(defn handle-entity [ent req respond raise]
+  (cond
+    (:crux.web/redirect ent)
+    (respond {:status 302 :headers {"location" (str (:crux.web/redirect ent))}})
+
+    :else
+    (respond {:status 200 :body "TODO: Render entity"})
+    )
+  )
+
+(defn make-router [{:keys [store]}]
   (fn [req respond raise]
-    (respond {:status 200 :body "CMS\n"})
-    #_(try
-      (let [db (crux/db node)]
+    (if-let [ent (find-entity store (java.net.URI. (uri req)))]
+      (handle-entity ent req respond raise)
 
-        (if-let [e (crux/entity db (java.net.URI. (uri req)))]
-
-          (cond
-            (:content e) {:status 200 :body (:content e)}
-            (:template e)
-            (do
-              (println "template is" (:template e))
-              {:status 200
-               :body
-               (binding [selmer.util/*custom-resource-path*
-                         (java.net.URL. "http://localhost:8000/templates/")]
-                 (selmer/render-file
-                  (.toURL (:template e)) (dissoc e :template)
-                  :custom-resource-path (java.net.URL. "http://localhost:8000/templates/")))})
-            :else {:status 400 :body "TODO"})
-          {:status 404 :body "Not found"}))
-      (catch Exception e
-        (println e)
-        {:status 500 :body "ERROR: Check the logs"}))))
+      #_(cond
+          (:content e) {:status 200 :body (:content e)}
+          (:template e)
+          {:status 200
+           :body
+           (binding [*custom-resource-path*
+                     (java.net.URL. "http://localhost:8000/templates/")]
+             (selmer/render-file
+              (.toURL (:template e)) (dissoc e :template)
+              :custom-resource-path (java.net.URL. "http://localhost:8000/templates/")))}
+          :else {:status 400 :body "TODO"})
+      (respond {:status 404 :body "Crux CMS: 404 (Not found)"}))))
 
 (defmethod ig/init-key ::router [_ opts]
   (make-router opts))
