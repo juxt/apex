@@ -50,22 +50,38 @@
       :headers {"location" (str (:crux.web/redirect ent))}})
 
     (string? (:crux.cms/content ent))
-    (respond {:status 200
-              :headers (cond-> {}
-                         (:crux.web/content-type ent) (conj ["content-type" (:crux.web/content-type ent)]))
-              :body (:crux.cms/content ent)})
+    (respond
+     {:status 200
+      :headers
+      (cond-> {}
+        (:crux.web/content-type ent)
+        (conj ["content-type" (:crux.web/content-type ent)]))
+      :body (:crux.cms/content ent)})
 
     (:crux.cms.selmer/template ent)
     (a/execute-blocking-code
      vertx
      (fn [] (render-entity-with-selmer-template ent))
-     {:on-success (fn [body]
-                    (respond {:status 200
-                              :body body}))
-      :on-failure (fn [t] (raise (ex-info "Failed to render template" {:template (:crux.cms.selmer/template ent)} t)))})
+     {:on-success
+      (fn [body]
+        (respond
+         {:status 200
+          :body body}))
+      :on-failure
+      (fn [t]
+        (raise
+         (ex-info
+          "Failed to render template"
+          {:template (:crux.cms.selmer/template ent)} t)))})
 
     :else
-    (respond {:status 500 :body (str "<body><h2>ERROR - Not handled</h2>" (entity-as-html ent) "</body>")})))
+    (respond
+     {:status 500
+      :body
+      (str
+       "<body><h2>ERROR - Not handled</h2>"
+       (entity-as-html ent)
+       "</body>")})))
 
 (defn make-router [{:keys [store vertx]}]
   (->
