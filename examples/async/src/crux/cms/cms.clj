@@ -22,8 +22,7 @@
   (str "<pre>"
        (->
         (with-out-str (pprint ent))
-        (str/replace "<" "&lt;")
-        )
+        (str/replace "<" "&lt;"))
        "</pre>"))
 
 (defn respond-entity [ent req respond raise]
@@ -37,8 +36,7 @@
             (java.net.URL. "http://localhost:8000/templates/")]
     (selmer/render-file
      (.toURL (:crux.cms.selmer/template ent)) (dissoc ent :template)
-     :custom-resource-path (java.net.URL. "http://localhost:8000/templates/")
-     )))
+     :custom-resource-path (java.net.URL. "http://localhost:8000/templates/"))))
 
 (defn redirect? [ent]
   (when-let [status (:crux.web/status ent)]
