@@ -22,6 +22,17 @@
   (fn [cause]
     (on-failure (wrapper cause))))
 
+(defn execute-blocking-code [vertx f {:keys [on-success on-failure]}]
+  (.executeBlocking
+   vertx
+   (h (fn [p]
+        (try
+          (.complete p (f))
+          (catch Throwable t
+            (.fail p t)))))
+   (har {:on-success on-success
+         :on-failure on-failure})))
+
 (defn pipe-to-file
   "Pipe the source to the filename"
   [vertx source filename

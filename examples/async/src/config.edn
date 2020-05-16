@@ -18,7 +18,8 @@
 
   :crux.cms.cms/router
   {:store #ig/ref #profile {:dev :crux.cms.local/content-store
-                            :prod :crux.cms.crux-content-store/content-store}}
+                            :prod :crux.cms.crux-content-store/content-store}
+   :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx}
 
   :crux.cms.local/content-store
   {}
@@ -45,5 +46,8 @@
 
   :crux.cms.selmer/tags
   {}
+
+  :crux.cms.selmer/cache
+  {:cache? false}
 
   }}

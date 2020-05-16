@@ -7,3 +7,6 @@
    :href
    (fn [[target & nvs] context-map]
      "")))
+
+(defmethod ig/init-key ::cache [_ {:keys [cache?]}]
+  (reset! selmer/cache? cache?))

@@ -7,12 +7,15 @@
  ;; a specific URL.
 
  {:crux.db/id #crux/uri "http://localhost:8000/"
-  :crux.web/redirect #crux/uri "http://localhost:8000/index.html"
-  :crux.web/description "Redirects a / path to the index page"}
+  :crux.web/description "Redirects a / path to the index page"
+  :crux.web/status 302
+  :crux.web/location #crux/uri "http://localhost:8000/index.html"
+  }
 
  {:crux.db/id #crux/uri "http://localhost:8000/index.html"
   :crux.web/content-type "text/html;charset=utf-8"
-  :crux.web/content-language "en"}
+  :crux.web/content-language "en"
+  :crux.cms.selmer/template #crux/uri "http://localhost:8000/templates/index2.html"}
 
 
 

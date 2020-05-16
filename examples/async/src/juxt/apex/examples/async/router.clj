@@ -11,7 +11,6 @@
 
 (defn make-router [cms-router]
   (fn [req respond raise]
-    (println "uri:" (:uri req))
     (condp re-matches (:uri req)
 
       #"/upload-file"
