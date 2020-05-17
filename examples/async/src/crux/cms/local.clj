@@ -5,6 +5,9 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]))
 
+;; This is for development, but will be quite quickly be replaced by a
+;; local Crux database for development once things are stable.
+
 (defrecord LocalContentStore [entities]
   cms/ContentStore
   (find-entity [_ id]
