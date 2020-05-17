@@ -32,12 +32,14 @@
     :headers {"content-type" "text/html"}
     :body (entity-as-html ent)}))
 
+(def templates-source-uri (java.net.URI. "https://juxt.pro/_sources/templates/"))
+
 (defn render-entity-with-selmer-template [ent]
   (binding [*custom-resource-path*
-            (java.net.URL. "http://localhost:8000/templates/")]
+            (. templates-source-uri toURL)]
     (selmer/render-file
      (.toURL (:crux.cms.selmer/template ent)) (dissoc ent :template)
-     :custom-resource-path (java.net.URL. "http://localhost:8000/templates/"))))
+     :custom-resource-path (. templates-source-uri toURL))))
 
 (defn redirect? [ent]
   (when-let [status (:crux.web/status ent)]
@@ -96,12 +98,37 @@
        (entity-as-html ent)
        "</body>")})))
 
+(defn url-rewrite-request [request {:keys [canonical _]}]
+  (-> request
+      (assoc-in [:headers "host"] (:host-header canonical))
+      (assoc :scheme (:scheme canonical))))
+
+(defn url-rewrite-response [response opts]
+  response)
+
+(defn wrap-url-rewrite [handler opts]
+  (fn
+    ([request]
+     (-> request
+         (url-rewrite-request opts)
+         handler
+         (url-rewrite-response opts)))
+    ([request respond raise]
+     (handler
+      ;;(-> request (assoc :scheme (:scheme canonical)) (assoc-in [:headers "host"] (:host-header canonical)))
+      (url-rewrite-request request opts)
+      (fn [response] (respond (url-rewrite-response response opts)))
+      raise))))
+
 (defn make-router [{:keys [store vertx]}]
   (->
    (fn [req respond raise]
+     (println "Serving request:" (uri req))
      (let [debug (get-in req [:query-params "debug"])]
 
-       (if-let [ent (find-entity store (java.net.URI. (uri req)))]
+       (if-let [ent (find-entity
+                     store
+                     (java.net.URI. (uri req)))]
          (if debug
            (respond-entity ent req respond raise)
            (respond-entity-response ent vertx req respond raise))
@@ -115,6 +142,12 @@
    ;; This is for strict semantics, but handlers should still check
    ;; the request-method prior to generating expensive bodies.
    wrap-head
+
+   (wrap-url-rewrite {:canonical {:scheme :https
+                                  :host-header "juxt.pro"}
+                      :actual {:scheme :http
+                               :host-header "localhost:8000"}})
+
 
    ))
 

@@ -7,7 +7,9 @@
 
 (defrecord LocalContentStore [entities]
   cms/ContentStore
-  (find-entity [_ id] (get entities id)))
+  (find-entity [_ id]
+    (println "LocalContentStore: find-entity" id)
+    (get entities id)))
 
 (def WEBSITE_REPO_DIR
   (io/file
@@ -28,7 +30,7 @@
       (for [f (file-seq dir)
             :when (.isFile f)
             :let [p (str (.relativize (.toPath dir) (.toPath f)))]]
-        {:crux.db/id (java.net.URI. (str "http://localhost:8000/templates/" p))
+        {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/templates/" p))
          :crux.web/content-type "text/plain;charset=utf-8"
          :crux.web/content-language "en"
          :crux.cms/content (slurp f)})))
