@@ -3,6 +3,7 @@
    [juxt.apex.examples.async.async-helpers :as a]
    [clojure.pprint :refer [pprint]]
    [ring.middleware.params :refer [wrap-params]]
+   [ring.middleware.head :refer [wrap-head]]
    [crux.api :as crux]
    [selmer.parser :as selmer]
    [selmer.util :refer [*custom-resource-path*]]
@@ -55,7 +56,10 @@
       :headers
       (cond-> {}
         (:crux.web/content-type ent)
-        (conj ["content-type" (:crux.web/content-type ent)]))
+        (conj ["content-type" (:crux.web/content-type ent)])
+        (:crux.web/content-language ent)
+        ;; TODO: Support vectors for multiple languages
+        (conj ["content-language" (:crux.web/content-language ent)]))
       :body (:crux.cms/content ent)})
 
     (:crux.cms.selmer/template ent)
@@ -66,6 +70,15 @@
       (fn [body]
         (respond
          {:status 200
+          :headers
+          (cond-> {}
+            (:crux.web/content-type ent)
+            (conj ["content-type" (:crux.web/content-type ent)])
+            (:crux.web/content-language ent)
+            ;; TODO: Support vectors for multiple languages (see
+            ;; identical TODO above)
+            (conj ["content-language" (:crux.web/content-language ent)]))
+
           :body body}))
       :on-failure
       (fn [t]
@@ -93,23 +106,17 @@
            (respond-entity ent req respond raise)
            (respond-entity-response ent vertx req respond raise))
 
-         (respond {:status 404 :body "Crux CMS: 404 (Not found)"}))))
+         (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
 
-   wrap-params))
+   ;; To get the debug query parameter.  Arguably we could use Apex's
+   ;; OpenAPI-compatible replacement.
+   wrap-params
+
+   ;; This is for strict semantics, but handlers should still check
+   ;; the request-method prior to generating expensive bodies.
+   wrap-head
+
+   ))
 
 (defmethod ig/init-key ::router [_ opts]
   (make-router opts))
-
-
-#_(time
- (let [ent
-       {:crux.db/id (java.net.URI. "http://localhost:8000/index.html")
-        :crux.web/content-type "text/html;charset=utf-8"
-        :crux.web/content-language "en"
-        :crux.cms.selmer/template (java.net.URI. "http://localhost:8000/templates/index2.html")}]
-
-   (binding [*custom-resource-path*
-             (java.net.URL. "http://localhost:8000/templates/")]
-     (selmer/render-file
-      (.toURL (:crux.cms.selmer/template ent)) (dissoc ent :template)
-      ))))

@@ -6,16 +6,24 @@
  ;; The overall resource, as well as each of the representations, have
  ;; a specific URL.
 
+
+ ;; TODO: Change these to juxt.pro asap !
+
  {:crux.db/id #crux/uri "http://localhost:8000/"
   :crux.web/description "Redirects a / path to the index page"
   :crux.web/status 302
   :crux.web/location #crux/uri "http://localhost:8000/index.html"
+
   }
 
  {:crux.db/id #crux/uri "http://localhost:8000/index.html"
   :crux.web/content-type "text/html;charset=utf-8"
   :crux.web/content-language "en"
   :crux.cms.selmer/template #crux/uri "http://localhost:8000/templates/index2.html"}
+
+ {:crux.db/id #crux/uri "http://localhost:8000/frontpage.css"
+  :crux.web/content-type "text/css;charset=utf-8"
+  :crux.cms/file "/resources"}
 
 
 
