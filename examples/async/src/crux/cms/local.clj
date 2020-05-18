@@ -11,7 +11,6 @@
 (defrecord LocalContentStore [entities]
   cms/ContentStore
   (find-entity [_ id]
-    (println "LocalContentStore: find-entity" id)
     (get entities id)))
 
 (def WEBSITE_REPO_DIR
