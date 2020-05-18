@@ -10,20 +10,23 @@
  {:crux.db/id #crux/uri "https://juxt.pro/"
   :crux.web/description "Redirects a / path to the index page"
   :crux.web/status 302
-  :crux.web/location #crux/uri "https://juxt.pro/index.html"
-
-  }
+  :crux.web/location #crux/uri "/index.html"}
 
  {:crux.db/id #crux/uri "https://juxt.pro/index.html"
   :crux.web/content-type "text/html;charset=utf-8"
   :crux.web/content-language "en"
-  :crux.cms.selmer/template #crux/uri "https://juxt.pro/_sources/templates/index2.html"}
+  :crux.cms.selmer/template #crux/uri "index2.html"}
 
- #_{:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
+ {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  }
+  :crux.cms/content #crux.cms/include "juxt.website/target/dev/frontpage.css"}
 
+ {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
+  :crux.web/content-type "text/css;charset=utf-8"
+  :crux.cms/file #crux.cms/file "juxt.website/assets/font-awesome-4.5.0/css/font-awesome.min.css"}
 
-
+ {:crux.db/id #crux/uri "https://juxt.pro/scripts/lazysizes.min.js"
+  :crux.web/content-type "text/javascript;charset=utf-8"
+  :crux.cms/file #crux.cms/file "juxt.website/assets/scripts/lazysizes.min.js"}
 
  ]

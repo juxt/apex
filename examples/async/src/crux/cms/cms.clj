@@ -5,6 +5,7 @@
    [ring.middleware.params :refer [wrap-params]]
    [ring.middleware.head :refer [wrap-head]]
    [crux.api :as crux]
+   [clojure.java.io :as io]
    [selmer.parser :as selmer]
    [selmer.util :refer [*custom-resource-path*]]
    [integrant.core :as ig]
@@ -32,13 +33,13 @@
     :headers {"content-type" "text/html"}
     :body (entity-as-html ent)}))
 
-(def templates-source-uri (java.net.URI. "https://juxt.pro/_sources/templates/"))
+(def templates-source-uri (java.net.URI. "http://localhost:8000/_sources/templates/"))
 
 (defn render-entity-with-selmer-template [ent]
   (binding [*custom-resource-path*
             (. templates-source-uri toURL)]
     (selmer/render-file
-     (.toURL (:crux.cms.selmer/template ent)) (dissoc ent :template)
+     (java.net.URL. (str templates-source-uri (:crux.cms.selmer/template ent))) (dissoc ent :template)
      :custom-resource-path (. templates-source-uri toURL))))
 
 (defn redirect? [ent]
@@ -46,64 +47,76 @@
     (and (>= status 300) (< status 400))))
 
 (defn respond-entity-response [ent vertx req respond raise]
-  (cond
-    (redirect? ent)
-    (respond
-     {:status (:crux.web/status ent)
-      :headers {"location" (str (:crux.web/redirect ent))}})
+  (try
+    (cond
+      (redirect? ent)
+      (respond
+       {:status (:crux.web/status ent)
+        :headers {"location" (str (:crux.web/location ent))}})
 
-    (string? (:crux.cms/content ent))
-    (respond
-     {:status 200
-      :headers
-      (cond-> {}
-        (:crux.web/content-type ent)
-        (conj ["content-type" (:crux.web/content-type ent)])
-        (:crux.web/content-language ent)
-        ;; TODO: Support vectors for multiple languages
-        (conj ["content-language" (:crux.web/content-language ent)]))
-      :body (:crux.cms/content ent)})
+      (:crux.cms/file ent)
+      (respond
+       {:status 200
+        :body
+        (io/file (:crux.cms/file ent))
+        })
 
-    (:crux.cms.selmer/template ent)
-    (a/execute-blocking-code
-     vertx
-     (fn [] (render-entity-with-selmer-template ent))
-     {:on-success
-      (fn [body]
-        (respond
-         {:status 200
-          :headers
-          (cond-> {}
-            (:crux.web/content-type ent)
-            (conj ["content-type" (:crux.web/content-type ent)])
-            (:crux.web/content-language ent)
-            ;; TODO: Support vectors for multiple languages (see
-            ;; identical TODO above)
-            (conj ["content-language" (:crux.web/content-language ent)]))
+      (string? (:crux.cms/content ent))
+      (respond
+       {:status 200
+        :headers
+        (cond-> {}
+          (:crux.web/content-type ent)
+          (conj ["content-type" (:crux.web/content-type ent)])
+          (:crux.web/content-language ent)
+          ;; TODO: Support vectors for multiple languages
+          (conj ["content-language" (:crux.web/content-language ent)]))
+        :body (:crux.cms/content ent)})
 
-          :body body}))
-      :on-failure
-      (fn [t]
-        (raise
-         (ex-info
-          "Failed to render template"
-          {:template (:crux.cms.selmer/template ent)} t)))})
+      (:crux.cms.selmer/template ent)
+      (a/execute-blocking-code
+       vertx
+       (fn [] (render-entity-with-selmer-template ent))
+       {:on-success
+        (fn [body]
+          (respond
+           {:status 200
+            :headers
+            (cond-> {}
+              (:crux.web/content-type ent)
+              (conj ["content-type" (:crux.web/content-type ent)])
+              (:crux.web/content-language ent)
+              ;; TODO: Support vectors for multiple languages (see
+              ;; identical TODO above)
+              (conj ["content-language" (:crux.web/content-language ent)]))
 
-    :else
-    (respond
-     {:status 500
-      :body
-      (str
-       "<body><h2>ERROR - Not handled</h2>"
-       (entity-as-html ent)
-       "</body>")})))
+            :body body}))
+        :on-failure
+        (fn [t]
+          (raise
+           (ex-info
+            "Failed to render template"
+            {:template (:crux.cms.selmer/template ent)} t)))})
+
+      :else
+      (respond
+       {:status 500
+        :body
+        (str
+         "<body><h2>ERROR - Not handled</h2>"
+         (entity-as-html ent)
+         "</body>")}))
+
+    (catch Throwable t
+      (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t))
+      )))
 
 (defn url-rewrite-request [request {:keys [canonical _]}]
   (-> request
       (assoc-in [:headers "host"] (:host-header canonical))
       (assoc :scheme (:scheme canonical))))
 
-(defn url-rewrite-response [response opts]
+(defn url-rewrite-response [response _]
   response)
 
 (defn wrap-url-rewrite [handler opts]
@@ -115,7 +128,6 @@
          (url-rewrite-response opts)))
     ([request respond raise]
      (handler
-      ;;(-> request (assoc :scheme (:scheme canonical)) (assoc-in [:headers "host"] (:host-header canonical)))
       (url-rewrite-request request opts)
       (fn [response] (respond (url-rewrite-response response opts)))
       raise))))
@@ -123,7 +135,7 @@
 (defn make-router [{:keys [store vertx]}]
   (->
    (fn [req respond raise]
-     (println "Serving request:" (uri req))
+
      (let [debug (get-in req [:query-params "debug"])]
 
        (if-let [ent (find-entity
@@ -143,13 +155,10 @@
    ;; the request-method prior to generating expensive bodies.
    wrap-head
 
-   (wrap-url-rewrite {:canonical {:scheme :https
-                                  :host-header "juxt.pro"}
-                      :actual {:scheme :http
-                               :host-header "localhost:8000"}})
-
-
-   ))
+   ;; Dev only, removed on production
+   (wrap-url-rewrite
+    {:canonical {:scheme :https :host-header "juxt.pro"}
+     :actual {:scheme :http :host-header "localhost:8000"}})))
 
 (defmethod ig/init-key ::router [_ opts]
   (make-router opts))

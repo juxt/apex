@@ -147,6 +147,9 @@
 
                 (cond
 
+                  (instance? java.io.File body)
+                  (. response sendFile (.getAbsolutePath body))
+
                   (satisfies? rs/Publisher body)
                   (rs/subscribe body (.toSubscriber response))
 
