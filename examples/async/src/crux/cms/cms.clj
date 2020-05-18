@@ -58,8 +58,7 @@
       (respond
        {:status 200
         :body
-        (io/file (:crux.cms/file ent))
-        })
+        (io/file (:crux.cms/file ent))})
 
       (string? (:crux.cms/content ent))
       (respond
