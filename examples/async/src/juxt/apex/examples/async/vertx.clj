@@ -70,13 +70,16 @@
 
 (defn ^HttpServer run-http-server
   [router {:keys [vertx port] :as opts}]
-  (let [options (new HttpServerOptions)
+  (let [server-options
+        (..
+         (new HttpServerOptions)
+         (setLogActivity (get opts :vertx/log-activity false)))
         server
         (..
          vertx
          (createHttpServer
           (..
-           options
+           server-options
            (setPort port))))]
     (..
      server
@@ -85,7 +88,7 @@
        (fn [req]
          (let [ring-req
                {:server-port port
-                :server-name (.getHost options)
+                :server-name (.getHost server-options)
                 :remote-addr (str (.remoteAddress req))
                 :uri (.path req)
                 :query-string (.query req)

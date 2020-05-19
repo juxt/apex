@@ -131,6 +131,11 @@
       (fn [response] (respond (url-rewrite-response response opts)))
       raise))))
 
+(defn wrap-log [handler]
+  (fn [request respond raise]
+    (println "Incoming request:\n" (with-out-str (pprint request)))
+    (handler request respond raise)))
+
 (defn make-router [{:keys [store vertx]}]
   (->
    (fn [req respond raise]
@@ -157,7 +162,10 @@
    ;; Dev only, removed on production
    (wrap-url-rewrite
     {:canonical {:scheme :https :host-header "juxt.pro"}
-     :actual {:scheme :http :host-header "localhost:8000"}})))
+     :actual {:scheme :http :host-header "localhost:8000"}})
+
+   wrap-log
+   ))
 
 (defmethod ig/init-key ::router [_ opts]
   (make-router opts))

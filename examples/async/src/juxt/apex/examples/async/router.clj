@@ -7,6 +7,7 @@
    [juxt.apex.examples.async.upload :as upload]
    [juxt.apex.examples.async.rs :as rs]
    [juxt.apex.examples.async.sse :as sse]
+   [juxt.apex.examples.async.dav :as dav]
    [integrant.core :as ig]))
 
 (defn make-router [cms-router]
@@ -29,6 +30,9 @@
       #"/sse" (sse/sse-example req respond raise)
 
       #"/ticker" (flowables/ticker-example req respond raise)
+
+      #"/dav/(.*)"
+      (dav/router req respond raise)
 
       (cms-router req respond raise))))
 
