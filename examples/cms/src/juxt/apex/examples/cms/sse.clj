@@ -2,7 +2,7 @@
 
 (ns juxt.apex.examples.cms.sse
   (:require
-   [juxt.apex.examples.cms.flowable :as f]))
+   [juxt.apex.alpha.async.flowable :as f]))
 
 (defn sse-example [_ respond _]
   (respond

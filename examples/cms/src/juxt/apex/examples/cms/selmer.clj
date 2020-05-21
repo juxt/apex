@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.cms.core
+(ns juxt.apex.examples.cms.selmer
   (:require
    [selmer.parser :as selmer]
    [integrant.core :as ig]))

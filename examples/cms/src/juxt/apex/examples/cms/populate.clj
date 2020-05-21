@@ -4,7 +4,7 @@
   (:require
    [crux.api :as crux]
    [integrant.core :as ig]
-   [juxt.site.content :as content]))
+   [juxt.apex.examples.cms.content :as content]))
 
 (defmethod ig/init-key ::seeder [_ {:keys [node]}]
   (println "Seeding database")

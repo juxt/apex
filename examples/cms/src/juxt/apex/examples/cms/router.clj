@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.examples.cms
+(ns juxt.apex.examples.cms.router
   (:require
    [juxt.apex.examples.cms.cache :as cache]
    [juxt.apex.examples.cms.flowables :as flowables]
@@ -31,8 +31,8 @@
 
         #"/ticker" (flowables/ticker-example req respond raise)
 
-        #"/dav/(.*)"
-        (webdav-router req respond raise)
+        #_#"/dav/(.*)"
+        #_(webdav-router req respond raise)
 
         (cms-router req respond raise)))))
 

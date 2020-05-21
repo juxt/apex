@@ -35,16 +35,16 @@
   :juxt.apex.examples.cms.crux-content-store/content-store
   {:node #ig/ref :juxt.apex.examples.cms.db/node}
 
-  [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
+  [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
   {
-   :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
+   :vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
    :topic "JUXT"
    :freq 500
    }
 
-  [:juxt.apex.examples.async.events/stock-feed-publisher :stock/crux]
+  [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/crux]
   {
-   :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
+   :vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
    :topic "CRUX"
    :freq 1200
    }
@@ -52,13 +52,13 @@
   :juxt.apex.examples.cms.populate/seeder
   {:node #ig/ref :juxt.apex.examples.cms.db/node}
 
-  :juxt.site.db/node
+  :juxt.apex.examples.cms.db/node
   {}
 
-  :crux.cms.selmer/tags
+  :juxt.apex.examples.cms.selmer/tags
   {}
 
-  :crux.cms.selmer/cache
+  :juxt.apex.examples.cms.selmer/cache
   {:cache? false}
 
   }}

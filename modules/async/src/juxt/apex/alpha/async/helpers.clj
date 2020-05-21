@@ -22,6 +22,21 @@
   (fn [cause]
     (on-failure (wrapper cause))))
 
+(defn wrap-request-body-as-input-stream
+  "Ring middleware. Take a vertx request and add a :body input-stream"
+  [handler]
+  (fn
+    ([req]
+     (handler req))
+    ([req respond raise]
+     (.bodyHandler
+      (:apex.vertx/request req)
+      (h (fn [buffer]
+           (handler
+            (assoc req :body (new java.io.ByteArrayInputStream (.getBytes buffer)))
+            respond
+            raise)))))))
+
 (defn execute-blocking-code [vertx f {:keys [on-success on-failure]}]
   (.executeBlocking
    vertx

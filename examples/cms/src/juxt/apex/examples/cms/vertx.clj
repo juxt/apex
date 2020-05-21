@@ -1,12 +1,10 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.examples.async.vertx
+(ns juxt.apex.examples.cms.vertx
   (:require
    [integrant.core :as ig]
-   reitit.middleware
    [juxt.apex.alpha.async.helpers :refer [h]]
    [clojure.string :as string]
-   reitit.ring.middleware.dev
    [org.reactivestreams.flow :as rs])
   (:import
    (io.vertx.core MultiMap)
@@ -56,11 +54,11 @@
   clojure.lang.Seqable
   (seq [this] (seq (into {} (for [n (.names mm)] [(string/lower-case n) (.valAt this n)])))))
 
-(deftype RingRequestMap [p m]
+#_(deftype RingRequestMap [p m]
   clojure.lang.ILookup
   (valAt [_ k]
     (case k
-      :body p
+      :body (p)
       (get m k)))
   ;; TODO: Revisit semantics here
   (valAt [this k not-found]

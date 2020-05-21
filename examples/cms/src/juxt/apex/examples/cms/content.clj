@@ -16,7 +16,7 @@
                  'crux.cms/include (fn [path] (slurp (io/file WEBSITE_REPO_DIR path)))
                  'crux.cms/file (fn [path]
                                   (.getAbsolutePath (io/file WEBSITE_REPO_DIR path)))}}
-      (slurp "src/juxt/site/content.edn")))
+      (slurp "src/juxt/apex/examples/cms/content.edn")))
 
     ;; Selmer template sources
     (let [dir (io/file WEBSITE_REPO_DIR "juxt.website/resources/templates")]

@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.examples.async.flowables
+(ns juxt.apex.examples.cms.flowables
   (:require
    [juxt.apex.alpha.async.flowable :as f])
   (:import
@@ -16,24 +16,25 @@
 ;; Aleph, Async, HTTP, Clojure - https://gist.github.com/kachayev/9911710758b56477e7423b5bd8dad144
 ;; https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/#nurseries-a-structured-replacement-for-go-statements
 
-(defn flow-example [_ respond _]
-  (respond
-   {:status 200
-    ;; The body is a subscriber
-    ;; "The recommended way of creating custom Flowables is by using the create(FlowableOnSubscribe, BackpressureStrategy) factory method:" -- http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Flowable.html
-    ;;  Flowables support backpressure and require Subscribers to signal demand via Subscription.request(long).
+(defn flow-example [opts]
+  (fn [_ respond _]
+    (respond
+     {:status 200
+      ;; The body is a subscriber
+      ;; "The recommended way of creating custom Flowables is by using the create(FlowableOnSubscribe, BackpressureStrategy) factory method:" -- http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Flowable.html
+      ;;  Flowables support backpressure and require Subscribers to signal demand via Subscription.request(long).
 
-    :body
-    (Flowable/create
-     (reify io.reactivex.FlowableOnSubscribe
-       (subscribe [_ e]
-         (.onNext e (Buffer/buffer "Hello\n\n"))
-         (.onNext e (Buffer/buffer "Hello\n\n"))
-         (.onNext e (Buffer/buffer "Hello\n\n"))
-         (Thread/sleep 200)
-         (.onNext e (Buffer/buffer "Goodbye\n\n"))
-         (.onComplete e)))
-     BackpressureStrategy/BUFFER)}))
+      :body
+      (Flowable/create
+       (reify io.reactivex.FlowableOnSubscribe
+         (subscribe [_ e]
+           (.onNext e (Buffer/buffer "Hello\n\n"))
+           (.onNext e (Buffer/buffer "Hello\n\n"))
+           (.onNext e (Buffer/buffer "Hello\n\n"))
+           (Thread/sleep 200)
+           (.onNext e (Buffer/buffer "Goodbye\n\n"))
+           (.onComplete e)))
+       BackpressureStrategy/BUFFER)})))
 
 
 ;; Possibly outdated by rs example - should consider re-implementing

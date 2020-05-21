@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.cms.adoc
+(ns juxt.apex.examples.cms.adoc
   (:import (org.asciidoctor Asciidoctor$Factory)))
 
 (defn engine []

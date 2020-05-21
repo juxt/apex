@@ -44,6 +44,21 @@
   (when-let [status (:crux.web/status ent)]
     (and (>= status 300) (< status 400))))
 
+(defn rfc1123-date [inst]
+  (.
+   (java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME)
+   format
+   inst))
+
+(defmulti method (fn [req respond raise opts] (:request-method req)))
+
+(defmethod method :options [req respond raise opts]
+  ;; TODO: Check path?
+  (respond
+   {:status 200
+    :headers {"DAV" "1,2"}}))
+
+
 (defn respond-entity-response [ent vertx req respond raise]
   (try
     (cond
@@ -130,25 +145,44 @@
       raise))))
 
 (defn wrap-log [handler]
-  (fn [request respond raise]
-    (println "Incoming CMS request:\n" (with-out-str (pprint request)))
-    (handler request respond raise)))
+  (fn
+    ([request]
+     (println "Incoming sync CMS request:\n" (with-out-str (pprint request)))
+     (let [response (handler request)]
+       (println "Outgoing CMS response:" (with-out-str (pprint response)))
+       response))
+    ([request respond raise]
+     (println "Incoming async CMS request:\n" (with-out-str (pprint request)))
+     (handler
+      request
+      (fn [response]
+        (println "Outgoing CMS response:" (with-out-str (pprint response)))
+        (respond response))
+      (fn [t]
+        (println "Error raised:" t)
+        (raise t))))))
 
-(defn make-router [{:keys [store vertx]}]
+(defmethod method :get [req respond raise {:keys [vertx store]}]
+  (let [debug (get-in req [:query-params "debug"])]
+
+    (if-let [ent (find-entity
+                  store
+                  (java.net.URI. (uri req)))]
+      (if debug
+        (respond-entity ent req respond raise)
+        (respond-entity-response ent vertx req respond raise))
+
+      (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
+
+(defn make-router [{:keys [store vertx] :as opts}]
+  (assert store)
+  (assert vertx)
   (->
-   (fn [req respond raise]
-
-     (println "CMS: handler" (uri req))
-     (let [debug (get-in req [:query-params "debug"])]
-
-       (if-let [ent (find-entity
-                     store
-                     (java.net.URI. (uri req)))]
-         (if debug
-           (respond-entity ent req respond raise)
-           (respond-entity-response ent vertx req respond raise))
-
-         (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
+   (fn this
+     ([req]
+      (this req identity (fn [t] (throw t))))
+     ([req respond raise]
+      (method req respond raise opts)))
 
    ;; To get the debug query parameter.  Arguably we could use Apex's
    ;; OpenAPI-compatible replacement.
@@ -164,4 +198,6 @@
      :actual {:scheme :http :host-header "localhost:8000"}})
 
    wrap-log
+
+   a/wrap-request-body-as-input-stream
    ))

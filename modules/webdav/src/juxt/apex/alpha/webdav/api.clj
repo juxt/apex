@@ -55,15 +55,6 @@
 
     (printf "PROPFIND on path %s, depth is %s\n" (:path opts) (get-in req [:headers "depth"]))
 
-    ;; Original vertx version
-    #_(.bodyHandler
-       vreq
-       (a/h
-        (fn [buffer]
-          (println "Request body")
-          #_(println (String. (.getBytes buffer)))
-          (pprint (xml/parse (new java.io.ByteArrayInputStream (.getBytes buffer)))))))
-
     (pprint (xml/parse (new java.io.ByteArrayInputStream (.getBytes (:body req)))))
 
     (respond
@@ -103,7 +94,7 @@
             "\n"
             )]
 
-       {:status 207                     ; mult-istatus
+       {:status 207                     ; multi-status
         :headers {"content-type" "application/xml;charset=utf-8"
                   "content-length" (str (.length body))}
         :body body}))))
