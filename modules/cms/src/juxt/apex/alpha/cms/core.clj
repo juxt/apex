@@ -52,6 +52,10 @@
 
 (defmulti method (fn [req respond raise opts] (:request-method req)))
 
+(defmethod method :default [req respond raise opts]
+  (respond
+   {:status 501}))
+
 (defmethod method :options [req respond raise opts]
   ;; TODO: Check path?
   (respond
