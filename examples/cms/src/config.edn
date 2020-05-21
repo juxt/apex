@@ -1,0 +1,64 @@
+{
+
+ :ig/system
+ {:juxt.apex.examples.cms.vertx/vertx
+  {}
+
+  :juxt.apex.examples.cms.vertx/http-server
+  {
+   :port 8000
+
+   :vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
+   :vertx/log-activity #profile {:dev true :prod false}
+
+   :juxt-feed #ig/ref [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
+   :crux-feed #ig/ref [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/crux]
+   :router #ig/ref :juxt.apex.examples.cms.router/router}
+
+  :juxt.apex.examples.cms.router/router
+  {:cms-router #ig/ref :juxt.apex.examples.cms.cms/router
+   :webdav-router #ig/ref :juxt.apex.examples.cms.webdav/router}
+
+  :juxt.apex.examples.cms.cms/router
+  {:vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
+   :store #ig/ref :juxt.apex.examples.cms.crux-content-store/content-store
+   }
+
+  :juxt.apex.examples.cms.webdav/router
+  {:vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
+   :node #ig/ref :juxt.apex.examples.cms.db/node
+   }
+
+  #_:juxt.site.local/content-store
+  #_{}
+
+  :juxt.apex.examples.cms.crux-content-store/content-store
+  {:node #ig/ref :juxt.apex.examples.cms.db/node}
+
+  [:juxt.apex.examples.async.events/stock-feed-publisher :stock/juxt]
+  {
+   :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
+   :topic "JUXT"
+   :freq 500
+   }
+
+  [:juxt.apex.examples.async.events/stock-feed-publisher :stock/crux]
+  {
+   :vertx #ig/ref :juxt.apex.examples.async.vertx/vertx
+   :topic "CRUX"
+   :freq 1200
+   }
+
+  :juxt.apex.examples.cms.populate/seeder
+  {:node #ig/ref :juxt.apex.examples.cms.db/node}
+
+  :juxt.site.db/node
+  {}
+
+  :crux.cms.selmer/tags
+  {}
+
+  :crux.cms.selmer/cache
+  {:cache? false}
+
+  }}

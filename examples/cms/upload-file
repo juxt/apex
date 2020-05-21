@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Why does http2 not work?
+# curl -i --http2 -F 'data=@TheUriIsTheThing.pdf' http://localhost:8000/upload-file
+
+curl -i -F "data=@$1" http://localhost:8000/upload-file
