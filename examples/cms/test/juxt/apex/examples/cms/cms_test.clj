@@ -3,7 +3,8 @@
 (ns juxt.apex.examples.cms.cms-test
   (:require
    [juxt.apex.alpha.cms.core :as cms]
-   [clojure.test :refer [deftest is are testing]])
+   [clojure.test :refer [deftest is are testing]]
+   [clojure.string :as str])
   (:import
    (io.vertx.reactivex.core Vertx)))
 
@@ -22,15 +23,27 @@
 (defrecord TestContentStore []
   cms/ContentStore
   (find-entity [_ id]
-    (println "find entity" id)
-    (get entities id)))
+    (get entities id))
+  (propfind [this uri depth]
+    (into {}
+          (for [id
+                (cms/find-members uri depth (keys entities))]
+            [id (cms/find-entity this id)]))))
+
+
+(let [store (->TestContentStore)]
+  (cms/propfind store (java.net.URI. "https://juxt.pro/A/") "infinity")
+    )
+
+
 
 (deftest get-test
   (let [req
-        {:scheme :https
+        {:request-method :get
+         :scheme :https
+         :uri "/A/a/1"
          :headers {"host" "juxt.pro"}
-         :request-method :get
-         :uri "/A/a/1"}]
+         }]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
             (cms/make-router
@@ -43,9 +56,11 @@
 (deftest propfind-test
   (let [req
         {:request-method :propfind
-         :uri "/dav/"
+         :scheme :https
+         :uri "/A/"
          :headers
-         {"depth" "1",
+         {"host" "juxt.pro"
+          "depth" "1"
           "content-type" "application/xml"}
          :body
          (new java.io.ByteArrayInputStream
@@ -66,5 +81,6 @@
             response (handler req)]
         (is (= 207 (:status response)))
         (is (string? (:body response)))
-        ;; TODO: Check xml structure of response body
+
+        ;; TODO: Check that it returns
         ))))

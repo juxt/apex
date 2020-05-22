@@ -1,5 +1,8 @@
 (ns juxt.apex.alpha.cms.core
   (:require
+   [clojure.xml :as xml]
+   [hiccup.core :refer [html]]
+   [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.async.helpers :as a]
    [clojure.pprint :refer [pprint]]
    [ring.middleware.params :refer [wrap-params]]
@@ -16,7 +19,8 @@
           (-> req :uri)))
 
 (defprotocol ContentStore
-  (find-entity [_ id] "Find the entity with the given id"))
+  (find-entity [_ id] "Find the entity with the given id")
+  (propfind [_ uri depth] "Find the properties of members of uri"))
 
 (defn entity-as-html [ent]
   (str "<pre>"
@@ -61,7 +65,6 @@
   (respond
    {:status 200
     :headers {"DAV" "1,2"}}))
-
 
 (defn respond-entity-response [ent vertx req respond raise]
   (try
@@ -127,6 +130,88 @@
       (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t))
       )))
 
+(defmethod method :get [req respond raise {:keys [vertx store]}]
+  (let [debug (get-in req [:query-params "debug"])]
+
+    (if-let [ent (find-entity
+                  store
+                  (java.net.URI. (uri req)))]
+      (if debug
+        (respond-entity ent req respond raise)
+        (respond-entity-response ent vertx req respond raise))
+
+      (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
+
+;; PROPFIND method
+
+(defn find-members [uri depth candidates]
+  (reduce
+   (fn [acc candidate]
+     (if (.startsWith (str candidate) (str uri))
+       (let [segments (str/split (subs (str candidate) (.length (str uri))) #"/")]
+         (case depth
+           "0" (conj acc uri)
+           "1" (conj acc uri (java.net.URI. (str uri (first segments) (if (next segments) "/" ""))))
+           "infinity"
+           (loop [path ""
+                  segments segments
+                  acc acc]
+             (if-let [segment (first segments)]
+               (let [path (str path segment (if (next segments) "/" ""))]
+                 (recur
+                  path
+                  (next segments)
+                  (conj acc (java.net.URI. (str uri path)))))
+               acc
+               ))))
+       acc))
+   #{}
+   candidates))
+
+(defmethod method :propfind [req respond raise {:keys [vertx store]}]
+  (let [
+        ;; "Servers SHOULD treat a request without a Depth header as if a
+        ;; "Depth: infinity" header was included." -- RFC 4918
+        depth (get-in req [:headers "depth"] "infinity")
+        ]
+
+    (let [members (propfind store (java.net.URI. (uri req)) depth)]
+
+      ;; Find which properties are being asked for:
+      ;;(pprint (xml/parse (:body req)))
+
+      (respond
+       (let [body
+             (html
+              {:mode :xml}
+              (xml-declaration "utf-8")
+              [:multistatus {"xmlns" "DAV:"}
+               (for [[uri props] members]
+                 [:response
+                  [:href (str uri)]
+                  [:propstat
+                   [:prop
+                    #_[:displayname "Example collection"]
+                    (if (.endsWith (str uri) "/")
+                      [:resourcetype
+                       [:collection]]
+                      [:resourcetype])
+                    [:getetag (str (java.util.UUID/randomUUID))]
+                    (when (string? (:crux.cms/content props))
+                      [:getcontentlength (.length (:crux.cms/content props))])
+                    (when (:crux.cms/file props)
+                      [:getcontentlength (.length (io/file (:crux.cms/file props)))]
+                      )
+                    [:getlastmodified (rfc1123-date (java.time.ZonedDateTime/now))]]]])]
+              "\n")]
+
+         {:status 207                   ; multi-status
+          :headers {"content-type" "application/xml;charset=utf-8"
+                    "content-length" (str (.length body))}
+          :body body})))))
+
+;; Middleware
+
 (defn url-rewrite-request [request {:keys [canonical _]}]
   (-> request
       (assoc-in [:headers "host"] (:host-header canonical))
@@ -166,18 +251,6 @@
         (println "Error raised:" t)
         (raise t))))))
 
-(defmethod method :get [req respond raise {:keys [vertx store]}]
-  (let [debug (get-in req [:query-params "debug"])]
-
-    (if-let [ent (find-entity
-                  store
-                  (java.net.URI. (uri req)))]
-      (if debug
-        (respond-entity ent req respond raise)
-        (respond-entity-response ent vertx req respond raise))
-
-      (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
-
 (defn make-router [{:keys [store vertx] :as opts}]
   (assert store)
   (assert vertx)
@@ -201,7 +274,7 @@
     {:canonical {:scheme :https :host-header "juxt.pro"}
      :actual {:scheme :http :host-header "localhost:8000"}})
 
-   wrap-log
+;;   wrap-log
 
    a/wrap-request-body-as-input-stream
    ))
