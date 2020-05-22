@@ -8,6 +8,7 @@
    [org.reactivestreams.flow :as rs])
   (:import
    (io.vertx.core MultiMap)
+   (io.vertx.reactivex.core.buffer Buffer)
    (io.vertx.core.http HttpServerOptions)
    (io.vertx.reactivex.core Vertx)
    (io.vertx.reactivex.core.http HttpServer)))
@@ -153,6 +154,9 @@
 
                   (satisfies? rs/Publisher body)
                   (rs/subscribe body (.toSubscriber response))
+
+                  (= (Class/forName "[B") (.getClass body))
+                  (.. response (write (Buffer/buffer body)) end)
 
                   :else
                   (cond-> response

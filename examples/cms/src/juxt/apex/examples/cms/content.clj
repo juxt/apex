@@ -4,6 +4,12 @@
    [clojure.java.io :as io]))
 
 (def WEBSITE_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/website"))
+(def PLAN_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/plan"))
+
+
+
+
+
 
 (defn content-txes []
   (->>
@@ -28,11 +34,35 @@
          :crux.web/content-language "en"
          :crux.cms/content (slurp f)}))
 
-    [{:crux.db/id (java.net.URI. "https://juxt.pro/_sources/adoc/index.adoc")
-      :crux.web/content-type "text/plain;charset=utf-8"
-      :crux.web/content-language "en"
-      :crux.cms/content-origin "file:///home/malcolm/src/github.com/juxt/plan/site/index.adoc"
-      :crux.cms/content (slurp (io/file "/home/malcolm/src/github.com/juxt/plan/site/index.adoc"))}]
+
+    ;; Plan repo site sources
+    (let [dir (io/file PLAN_REPO_DIR "site")]
+      (for [f (file-seq dir)
+            :when (.isFile f)
+            :let [p (str (.relativize (.toPath dir) (.toPath f)))]
+            :when (not (.startsWith p "."))]
+
+        (merge
+         {:crux.cms/content-origin (.toURI f)
+          }
+
+         (condp re-matches p
+           #".*\.adoc"
+           {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/plan/site/" p))
+            :crux.web/content-type "text/plain;charset=utf-8"
+            :crux.web/content-language "en"
+            :crux.cms/content (slurp f)}
+           #".*\.svg"
+           {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
+            :crux.web/content-type "image/svg+xml"
+            :crux.web/content-language "en"
+            :crux.cms/content (slurp f)}
+           #".*\.png"
+           {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
+            :crux.web/content-type "image/png"
+            :crux.web/content-coding :base64
+            :crux.cms/content (.encodeToString (java.util.Base64/getEncoder) (.readAllBytes (new java.io.FileInputStream f)))
+            }))))
 
     ;; TODO: This should be the place where dependencies are detected
     ;; and placed into the graph along with the document as
@@ -48,7 +78,4 @@
         {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/sass/" path))
          :crux.web/content-type "text/plain;charset=utf-8"
          :crux.web/content-language "en"
-         :crux.cms/content (slurp (io/file dir path))})))
-
-
-   ))
+         :crux.cms/content (slurp (io/file dir path))})))))

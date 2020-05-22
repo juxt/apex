@@ -16,9 +16,8 @@
   :crux.web/content-type "text/html;charset=utf-8"
   :crux.web/content-language "en"
   :crux.cms.selmer/template #crux/uri "index2.html"
-  :crux.cms/source "https://juxt.pro/_sources/adoc/index.adoc"
-  :title "JUXT"
-  }
+  :crux.cms/source "https://juxt.pro/_sources/plan/site/index.adoc"
+  :title "JUXT"}
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"

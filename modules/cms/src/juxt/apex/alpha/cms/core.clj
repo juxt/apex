@@ -101,7 +101,10 @@
           (:crux.web/content-language ent)
           ;; TODO: Support vectors for multiple languages
           (conj ["content-language" (:crux.web/content-language ent)]))
-        :body (:crux.cms/content ent)})
+        :body (case (:crux.web/content-coding ent)
+                :base64
+                (.decode (java.util.Base64/getDecoder) (:crux.cms/content ent))
+                (:crux.cms/content ent))})
 
       (:crux.cms.selmer/template ent)
       (a/execute-blocking-code
@@ -324,7 +327,7 @@
     {:canonical {:scheme :https :host-header "juxt.pro"}
      :actual {:scheme :http :host-header "localhost:8000"}})
 
-   wrap-log
+;;   wrap-log
 
    a/wrap-request-body-as-input-stream
    ))

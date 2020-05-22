@@ -59,8 +59,7 @@
    content
    {"header_footer" false
     "to_file" false
-    "backend" "html5"
-    "template_dirs" [(.getAbsolutePath (io/file "resources/adoc_backend/html5"))]
+    "backend" "html"
     "attributes" {"sectanchors" true
                   "figure-caption" false
                   "icons" "font"}}))
@@ -87,9 +86,14 @@
                          {"content" (.getContent block)})}))))))
 
 
-(template-model
-  (engine)
+#_(def engine (engine))
+
+#_(get-in
+ (template-model
+  engine
   (slurp (io/file "/home/malcolm/src/github.com/juxt/plan/site/index.adoc")))
+ ["banner-title" "content"])
+
 
 (defmethod ig/init-key ::engine [_ _]
   (engine))
