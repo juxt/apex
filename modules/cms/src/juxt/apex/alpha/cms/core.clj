@@ -219,7 +219,12 @@
                     (when (:crux.cms/file ent)
                       [:getcontentlength (.length (io/file (:crux.cms/file ent)))]
                       )
-                    [:getlastmodified (rfc1123-date (java.time.ZonedDateTime/now))]]
+                    (when-let [last-modified (:crux.web/last-modified ent)]
+                      [:getlastmodified
+                       (rfc1123-date
+                        (java.time.ZonedDateTime/ofInstant
+                         (.toInstant last-modified)
+                         (java.time.ZoneId/systemDefault)))])]
                    ]])]
               "\n")]
 
@@ -334,7 +339,7 @@
     {:canonical {:scheme :https :host-header "juxt.pro"}
      :actual {:scheme :http :host-header "localhost:8000"}})
 
-   wrap-log
+;;   wrap-log
 
    a/wrap-request-body-as-input-stream
    ))

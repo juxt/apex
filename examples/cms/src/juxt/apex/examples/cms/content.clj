@@ -6,11 +6,6 @@
 (def WEBSITE_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/website"))
 (def PLAN_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/plan"))
 
-
-
-
-
-
 (defn content-txes []
   (->>
    (concat
@@ -32,8 +27,8 @@
         {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/templates/" p))
          :crux.web/content-type "text/plain;charset=utf-8"
          :crux.web/content-language "en"
+         :crux.web/last-modified (java.util.Date. (.lastModified f))
          :crux.cms/content (slurp f)}))
-
 
     ;; Plan repo site sources
     (let [dir (io/file PLAN_REPO_DIR "site")]
@@ -41,11 +36,9 @@
             :when (.isFile f)
             :let [p (str (.relativize (.toPath dir) (.toPath f)))]
             :when (not (.startsWith p "."))]
-
         (merge
          {:crux.cms/content-origin (.toURI f)
-          }
-
+          :crux.web/last-modified (java.util.Date. (.lastModified f))}
          (condp re-matches p
            #".*\.adoc"
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/plan/site/" p))
@@ -74,8 +67,10 @@
             [[(io/file dir "src") "frontpage.scss"]
              [dir "assets/css/variables.scss"]
              ]]
+        (let [f (io/file dir path)]
 
-        {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/sass/" path))
-         :crux.web/content-type "text/plain;charset=utf-8"
-         :crux.web/content-language "en"
-         :crux.cms/content (slurp (io/file dir path))})))))
+          {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/sass/" path))
+           :crux.web/content-type "text/plain;charset=utf-8"
+           :crux.web/content-language "en"
+           :crux.web/last-modified (java.util.Date. (.lastModified f))
+           :crux.cms/content (slurp f)}))))))
