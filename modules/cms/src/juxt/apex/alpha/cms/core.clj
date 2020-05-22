@@ -184,9 +184,15 @@
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
         depth (get-in req [:headers "depth"] "infinity")
+        uri (java.net.URI. (uri req))
+        ent (find-entity store uri)
         ]
 
-    (let [members (propfind store (java.net.URI. (uri req)) depth)]
+    ;; Unless public, we need to know who is accessing this resource (TODO)
+
+    ;; Do we have an Authorization header?
+
+    (let [members (propfind store uri depth)]
 
       ;; Find which properties are being asked for:
       (pprint (xml/parse (:body req)))
@@ -197,7 +203,7 @@
               {:mode :xml}
               (xml-declaration "utf-8")
               [:multistatus {"xmlns" "DAV:"}
-               (for [[uri props] members]
+               (for [[uri ent] members]
                  [:response
                   [:href (str uri)]
                   [:propstat
@@ -208,12 +214,13 @@
                        [:collection]]
                       [:resourcetype])
                     [:getetag (str (java.util.UUID/randomUUID))]
-                    (when (string? (:crux.cms/content props))
-                      [:getcontentlength (.length (:crux.cms/content props))])
-                    (when (:crux.cms/file props)
-                      [:getcontentlength (.length (io/file (:crux.cms/file props)))]
+                    (when (string? (:crux.cms/content ent))
+                      [:getcontentlength (.length (:crux.cms/content ent))])
+                    (when (:crux.cms/file ent)
+                      [:getcontentlength (.length (io/file (:crux.cms/file ent)))]
                       )
-                    [:getlastmodified (rfc1123-date (java.time.ZonedDateTime/now))]]]])]
+                    [:getlastmodified (rfc1123-date (java.time.ZonedDateTime/now))]]
+                   ]])]
               "\n")]
 
          {:status 207                   ; multi-status
