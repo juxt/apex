@@ -9,7 +9,7 @@
    [juxt.apex.examples.cms.sse :as sse]
    [integrant.core :as ig]))
 
-(defn make-router [cms-router webdav-router]
+(defn make-router [cms-router]
   (let [flowables-example-handler (flowables/flow-example {})]
     (fn [req respond raise]
       (condp re-matches (:uri req)
@@ -31,12 +31,8 @@
 
         #"/ticker" (flowables/ticker-example req respond raise)
 
-        #_#"/dav/(.*)"
-        #_(webdav-router req respond raise)
-
         (cms-router req respond raise)))))
 
-(defmethod ig/init-key ::router [_ {:keys [cms-router webdav-router]}]
+(defmethod ig/init-key ::router [_ {:keys [cms-router]}]
   (assert cms-router)
-  (assert webdav-router)
-  (make-router cms-router webdav-router))
+  (make-router cms-router))

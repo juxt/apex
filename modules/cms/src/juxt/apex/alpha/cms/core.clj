@@ -1,6 +1,7 @@
 (ns juxt.apex.alpha.cms.core
   (:require
    [clojure.xml :as xml]
+   [juxt.apex.examples.cms.adoc :as adoc]
    [hiccup.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.async.helpers :as a]
@@ -37,11 +38,21 @@
 
 (def templates-source-uri (java.net.URI. "http://localhost:8000/_sources/templates/"))
 
-(defn render-entity-with-selmer-template [ent]
+(defn render-entity-with-selmer-template [ent store engine]
   (binding [*custom-resource-path*
             (. templates-source-uri toURL)]
     (selmer/render-file
-     (java.net.URL. (str templates-source-uri (:crux.cms.selmer/template ent))) (dissoc ent :template)
+     (java.net.URL. (str templates-source-uri (:crux.cms.selmer/template ent)))
+
+     ;; TODO: Does the entity have a crux.cms/source attribute?
+     ;; If so, do the adoc dance and extract all the bookmarks are pop them into this entity
+     (cond-> ent
+       (:template ent) (dissoc :template)
+
+       ;; Merge all the bookmarked content of the adoc source into the template model
+       (:crux.cms/source ent)
+       (merge (adoc/template-model engine (:crux.cms/content (find-entity store (:crux.cms/source ent))))))
+
      :custom-resource-path (. templates-source-uri toURL))))
 
 (defn redirect? [ent]
@@ -66,7 +77,7 @@
    {:status 200
     :headers {"DAV" "1,2"}}))
 
-(defn respond-entity-response [ent vertx req respond raise]
+(defn respond-entity-response [ent req respond raise {:keys [vertx store engine]}]
   (try
     (cond
       (redirect? ent)
@@ -95,7 +106,7 @@
       (:crux.cms.selmer/template ent)
       (a/execute-blocking-code
        vertx
-       (fn [] (render-entity-with-selmer-template ent))
+       (fn [] (render-entity-with-selmer-template ent store engine))
        {:on-success
         (fn [body]
           (respond
@@ -130,15 +141,13 @@
       (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t))
       )))
 
-(defmethod method :get [req respond raise {:keys [vertx store]}]
+(defmethod method :get [req respond raise {:keys [store] :as opts}]
   (let [debug (get-in req [:query-params "debug"])]
 
-    (if-let [ent (find-entity
-                  store
-                  (java.net.URI. (uri req)))]
+    (if-let [ent (find-entity store (java.net.URI. (uri req)))]
       (if debug
         (respond-entity ent req respond raise)
-        (respond-entity-response ent vertx req respond raise))
+        (respond-entity-response ent req respond raise opts))
 
       (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
 
@@ -162,8 +171,7 @@
                   path
                   (next segments)
                   (conj acc (java.net.URI. (str uri path)))))
-               acc
-               ))))
+               acc))))
        acc))
    #{}
    candidates))
@@ -210,6 +218,48 @@
                     "content-length" (str (.length body))}
           :body body})))))
 
+(defmethod method :lock [req respond raise {:keys [vertx store]}]
+  (let [
+        ;; "Servers SHOULD treat a request without a Depth header as if a
+        ;; "Depth: infinity" header was included." -- RFC 4918
+        depth (get-in req [:headers "depth"] "infinity")
+        ]
+
+    (pprint (xml/parse (:body req)))
+
+    (respond
+     {:status 200}
+     #_(let [body
+           (html
+            {:mode :xml}
+            (xml-declaration "utf-8")
+            [:multistatus {"xmlns" "DAV:"}
+             (for [[uri props] members]
+               [:response
+                [:href (str uri)]
+                [:propstat
+                 [:prop
+                  #_[:displayname "Example collection"]
+                  (if (.endsWith (str uri) "/")
+                    [:resourcetype
+                     [:collection]]
+                    [:resourcetype])
+                  [:getetag (str (java.util.UUID/randomUUID))]
+                  (when (string? (:crux.cms/content props))
+                    [:getcontentlength (.length (:crux.cms/content props))])
+                  (when (:crux.cms/file props)
+                    [:getcontentlength (.length (io/file (:crux.cms/file props)))]
+                    )
+                  [:getlastmodified (rfc1123-date (java.time.ZonedDateTime/now))]]]])]
+            "\n")]
+
+       {:status 200                   ; multi-status
+        :headers {"content-type" "application/xml;charset=utf-8"
+                  "content-length" (str (.length body))}
+        :body body}))))
+
+
+
 ;; Middleware
 
 (defn url-rewrite-request [request {:keys [canonical _]}]
@@ -251,7 +301,7 @@
         (println "Error raised:" t)
         (raise t))))))
 
-(defn make-router [{:keys [store vertx] :as opts}]
+(defn make-router [{:keys [store vertx engine] :as opts}]
   (assert store)
   (assert vertx)
   (->
@@ -274,7 +324,7 @@
     {:canonical {:scheme :https :host-header "juxt.pro"}
      :actual {:scheme :http :host-header "localhost:8000"}})
 
-;;   wrap-log
+   wrap-log
 
    a/wrap-request-body-as-input-stream
    ))

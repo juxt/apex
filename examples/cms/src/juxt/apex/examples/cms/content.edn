@@ -16,26 +16,9 @@
   :crux.web/content-type "text/html;charset=utf-8"
   :crux.web/content-language "en"
   :crux.cms.selmer/template #crux/uri "index2.html"
+  :crux.cms/source "https://juxt.pro/_sources/adoc/index.adoc"
   :title "JUXT"
-  :background "rocks.jpg"
-  :slogan "SCALING SIMPLICITY"
-  :banner
-  {:title "Complexity limits potential. Let's kill it."
-   :text "JUXT is a unique software engineering firm, building untangled systems to meet the most challenging of business objectives."}
-  :topics
-  [{:title "TIME & DATA"
-    :text (parse "resources/documents/frontpage/time-and-data.adoc")}
-   {:title "SYSTEMS AT SCALE"
-    :text (parse "resources/documents/frontpage/systems-at-scale.adoc")}
-   {:title "SECURE BY DESIGN"
-    :text (parse "resources/documents/frontpage/secure-by-design.adoc")}]
-  :sectors
-  [{:title "MEDIA"
-    :image "media.jpg"}
-   {:title "FINANCE"
-    :image "finance.jpg"}
-   {:title "PUBLIC SECTOR"
-    :image "public-sector.jpg"}]}
+  }
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"

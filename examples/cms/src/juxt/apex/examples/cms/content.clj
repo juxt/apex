@@ -28,6 +28,12 @@
          :crux.web/content-language "en"
          :crux.cms/content (slurp f)}))
 
+    [{:crux.db/id (java.net.URI. "https://juxt.pro/_sources/adoc/index.adoc")
+      :crux.web/content-type "text/plain;charset=utf-8"
+      :crux.web/content-language "en"
+      :crux.cms/content-origin "file:///home/malcolm/src/github.com/juxt/plan/site/index.adoc"
+      :crux.cms/content (slurp (io/file "/home/malcolm/src/github.com/juxt/plan/site/index.adoc"))}]
+
     ;; TODO: This should be the place where dependencies are detected
     ;; and placed into the graph along with the document as
     ;; references.

@@ -31,7 +31,7 @@
             [id (cms/find-entity this id)]))))
 
 
-(let [store (->TestContentStore)]
+#_(let [store (->TestContentStore)]
   (cms/propfind store (java.net.URI. "https://juxt.pro/A/") "infinity")
     )
 
