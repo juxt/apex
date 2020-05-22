@@ -155,7 +155,7 @@
                   (satisfies? rs/Publisher body)
                   (rs/subscribe body (.toSubscriber response))
 
-                  (= (Class/forName "[B") (.getClass body))
+                  (and body (= (Class/forName "[B") (.getClass body)))
                   (.. response (write (Buffer/buffer body)) end)
 
                   :else

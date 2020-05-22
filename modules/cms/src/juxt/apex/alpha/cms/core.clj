@@ -75,7 +75,7 @@
   ;; TODO: Check path?
   (respond
    {:status 200
-    :headers {"DAV" "1,2"}}))
+    :headers {"DAV" "1"}}))
 
 (defn respond-entity-response [ent req respond raise {:keys [vertx store engine]}]
   (try
@@ -189,7 +189,7 @@
     (let [members (propfind store (java.net.URI. (uri req)) depth)]
 
       ;; Find which properties are being asked for:
-      ;;(pprint (xml/parse (:body req)))
+      (pprint (xml/parse (:body req)))
 
       (respond
        (let [body
@@ -221,7 +221,7 @@
                     "content-length" (str (.length body))}
           :body body})))))
 
-(defmethod method :lock [req respond raise {:keys [vertx store]}]
+#_(defmethod method :lock [req respond raise {:keys [vertx store]}]
   (let [
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
@@ -327,7 +327,7 @@
     {:canonical {:scheme :https :host-header "juxt.pro"}
      :actual {:scheme :http :host-header "localhost:8000"}})
 
-;;   wrap-log
+   wrap-log
 
    a/wrap-request-body-as-input-stream
    ))

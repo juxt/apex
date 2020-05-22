@@ -21,7 +21,7 @@
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  :crux.cms/content #crux.cms/include "juxt.website/target/dev/frontpage.css"}
+  :crux.cms/content #crux.cms/include "mocksite/frontpage.css"}
 
  {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
   :crux.web/content-type "text/css;charset=utf-8"

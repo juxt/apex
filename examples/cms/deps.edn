@@ -30,7 +30,7 @@
 
     ;; Crux CMS
     juxt/crux-core {:mvn/version "20.05-1.8.3-alpha"}
-    org.asciidoctor/asciidoctorj {:mvn/version "1.6.0-alpha.6"}
+    org.asciidoctor/asciidoctorj {:mvn/version "2.2.0"}
 
     spyscope/spyscope {:mvn/version "0.1.6"
                        :exclusions [fipp/fipp]}
