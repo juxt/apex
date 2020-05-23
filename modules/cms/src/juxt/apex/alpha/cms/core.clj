@@ -209,41 +209,49 @@
               {:mode :xml}
               (xml-declaration "utf-8")
               [:multistatus {"xmlns" "DAV:"}
-               (for [[uri ent] members]
-                 [:response
-                  [:href (str uri)]
-                  [:propstat
-                   [:prop
-                    #_[:displayname "Example collection"]
-                    (for [[prop-name prop-content] props]
-                      (case prop-name
-                        :resourcetype
-                        (if (.endsWith (str uri) "/")
-                          [:resourcetype
-                           [:collection]]
-                          [:resourcetype])
+               (for [[uri ent] members
+                     :let [authorized? (= (:crux.ac/classification ent) :public)]]
+                 (when authorized?
+                   [:response
+                    [:href (str uri)]
+                    [:propstat
+                     (when authorized?
+                       [:prop
+                        #_[:displayname "Example collection"]
+                        (for [[prop-name prop-content] props]
+                          (case prop-name
+                            :resourcetype
+                            (if (.endsWith (str uri) "/")
+                              [:resourcetype
+                               [:collection]]
+                              [:resourcetype])
 
-                        :getetag
-                        [:getetag (str (java.util.UUID/randomUUID))]
+                            :getetag
+                            [:getetag (str (java.util.UUID/randomUUID))]
 
-                        :getcontentlength
-                        (cond
-                          (string? (:crux.cms/content ent))
-                          [:getcontentlength (.length (:crux.cms/content ent))]
+                            :getcontentlength
+                            (cond
+                              (string? (:crux.cms/content ent))
+                              [:getcontentlength (.length (:crux.cms/content ent))]
 
-                          (:crux.cms/file ent)
-                          [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
+                              (:crux.cms/file ent)
+                              [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
 
-                        :getlastmodified
-                        (when-let [last-modified (:crux.web/last-modified ent)]
-                          [:getlastmodified
-                           (rfc1123-date
-                            (java.time.ZonedDateTime/ofInstant
-                             (.toInstant last-modified)
-                             (java.time.ZoneId/systemDefault)))])
+                            :getlastmodified
+                            (when-let [last-modified (:crux.web/last-modified ent)]
+                              [:getlastmodified
+                               (rfc1123-date
+                                (java.time.ZonedDateTime/ofInstant
+                                 (.toInstant last-modified)
+                                 (java.time.ZoneId/systemDefault)))])
 
-                        ;; Anything else, ignore
-                        nil))]]])]
+                            ;; Anything else, ignore
+                            nil))])
+                     [:status
+                      (if authorized?
+                        "HTTP/1.1 200 OK"
+                        "HTTP/1.1 401 Unauthorized")
+                      ]]]))]
               "\n")]
 
          {:status 207                   ; multi-status
@@ -334,30 +342,41 @@
         (println "Error raised:" t)
         (raise t))))))
 
+(defn make-handler [opts]
+  (fn handler
+    ([req]
+     (handler req identity (fn [t] (throw t))))
+    ([req respond raise]
+     (method req respond raise opts))))
+
 (defn make-router [{:keys [store vertx engine] :as opts}]
   (assert store)
   (assert vertx)
+  (assert engine)
   (->
-   (fn this
-     ([req]
-      (this req identity (fn [t] (throw t))))
-     ([req respond raise]
-      (method req respond raise opts)))
+   (make-handler opts)
 
    ;; To get the debug query parameter.  Arguably we could use Apex's
-   ;; OpenAPI-compatible replacement.
+   ;; OpenAPI-compatible replacement. Also, this is arguably 'core'
+   ;; and not something to do in middleware. How we interpret is up to
+   ;; each method. <- TODO
    wrap-params
 
    ;; This is for strict semantics, but handlers should still check
    ;; the request-method prior to generating expensive bodies.
+   ;; TODO: Arguably, this should be a 'method' not midddlware.
    wrap-head
 
-   ;; Dev only, removed on production
+   ;; Dev only, removed on production. Definitely a good example of
+   ;; middleware.
    (wrap-url-rewrite
     {:canonical {:scheme :https :host-header "juxt.pro"}
      :actual {:scheme :http :host-header "localhost:8000"}})
 
-;;   wrap-log
+   ;; Log requests, often optional and sensitive to the logging
+   ;; implementation. Definitely middleware.
+   wrap-log
 
-   a/wrap-request-body-as-input-stream
+   ;; Prime the Ring request with a blocking stream
+   a/wrap-read-all-request-body
    ))

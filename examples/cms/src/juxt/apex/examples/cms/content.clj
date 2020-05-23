@@ -49,12 +49,14 @@
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
             :crux.web/content-type "image/svg+xml"
             :crux.web/content-language "en"
-            :crux.cms/content (slurp f)}
+            :crux.cms/content (slurp f)
+            :crux.ac/classification :public}
            #".*\.png"
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
             :crux.web/content-type "image/png"
             :crux.web/content-coding :base64
             :crux.cms/content (.encodeToString (java.util.Base64/getEncoder) (.readAllBytes (new java.io.FileInputStream f)))
+            :crux.ac/classification :public
             }))))
 
     ;; TODO: This should be the place where dependencies are detected
@@ -73,4 +75,5 @@
            :crux.web/content-type "text/plain;charset=utf-8"
            :crux.web/content-language "en"
            :crux.web/last-modified (java.util.Date. (.lastModified f))
-           :crux.cms/content (slurp f)}))))))
+           :crux.cms/content (slurp f)
+           :crux.ac/classification :public}))))))

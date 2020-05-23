@@ -17,18 +17,12 @@
 
   :juxt.apex.examples.cms.router/router
   {:cms-router #ig/ref :juxt.apex.examples.cms.cms/router
-   ;;:webdav-router #ig/ref :juxt.apex.examples.cms.webdav/router
    }
 
   :juxt.apex.examples.cms.cms/router
   {:vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
    :store #ig/ref :juxt.apex.examples.cms.crux-content-store/content-store
    :engine #ig/ref :juxt.apex.examples.cms.adoc/engine
-   }
-
-  #_:juxt.apex.examples.cms.webdav/router
-  #_{:vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
-   :node #ig/ref :juxt.apex.examples.cms.db/node
    }
 
   #_:juxt.site.local/content-store
