@@ -12,20 +12,19 @@
    (.readAllBytes (new java.io.FileInputStream f))))
 
 (defn ingest-content [tx]
-  ;; TODO: See if there is a content,
-  (cond
+  (when (:crux.cms/file tx)
+    (throw (ex-info ":crux.cms/file is no longer supported" {:tx tx})))
+  (cond-> tx
     (and
      (not (:crux.cms/content tx))
      (:crux.cms/content-source tx))
-
-    (case (:crux.web/content-coding tx)
-      :base64
-      (assoc tx :crux.cms/content
-             (slurp-file-as-b64encoded-string
-              (io/file (:crux.cms/content-source tx))))
-      (throw (ex-info "Crux does not yet support byte-arrays and there is no :crux.web/content-coding specified in the entity")))
-
-    :else tx))
+    (assoc
+     :crux.cms/content
+     (case (:crux.web/content-coding tx)
+       :base64
+       (slurp-file-as-b64encoded-string
+        (io/file (:crux.cms/content-source tx)))
+       (slurp (io/file (:crux.cms/content-source tx)))))))
 
 (defn content-txes []
   (map
@@ -36,7 +35,6 @@
     (->>
      (edn/read-string
       {:readers {'crux/uri (fn [x] (java.net.URI. x))
-                 ;; TODO: Deprecate this
                  'crux.cms/slurp (fn [path] (slurp (io/file WEBSITE_REPO_DIR path)))
                  'crux.cms/file (fn [path]
                                   (.getAbsolutePath (io/file WEBSITE_REPO_DIR path)))}}

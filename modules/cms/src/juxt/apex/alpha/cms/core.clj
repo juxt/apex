@@ -93,7 +93,8 @@
         :headers {"location" (str (:crux.web/location ent))}})
 
       (:crux.cms/file ent)
-      (respond
+      (raise (ex-info "Direct files no longer supported" {:file (:crux.cms/file ent)}))
+      #_(respond
        {:status 200
         :body
         (io/file (:crux.cms/file ent))})
