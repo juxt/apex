@@ -81,7 +81,9 @@ have been a number of external developments:
   `java.util.concurrent.Flow`). While
   https://github.com/ztellman/manifold[manifold], used by yada, was
   years ahead of its time, there are now other well-established
-  alternatives for asynchronous processing with back-pressure.
+  alternatives for asynchronous processing with
+  back-pressure. https://www.asyncapi.com/[AsyncAPI] is also emerging
+  as an asynchronous complement to OpenAPI.
 
 === OpenAPI: the missing piece of the web jigsaw
 
