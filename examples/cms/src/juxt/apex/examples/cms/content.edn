@@ -33,8 +33,7 @@
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  ;; TODO: replace #slurp and :crux.cms/content with :crux.cms/content-source and a #file, and optional content-coding
-  :crux.web/content #crux.cms/slurp "mocksite/frontpage.css"
+  :crux.cms/content-source #crux.cms/file "mocksite/frontpage.css"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
