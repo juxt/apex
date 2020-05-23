@@ -1,6 +1,10 @@
+;; Copyright © 2020, JUXT LTD.
+
 (ns juxt.apex.alpha.cms.core
   (:require
    [clojure.xml :as xml]
+   [clojure.zip :as zip]
+   [juxt.apex.alpha.cms.xml :as x]
    [juxt.apex.examples.cms.adoc :as adoc]
    [hiccup.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
@@ -192,10 +196,19 @@
 
     ;; Do we have an Authorization header?
 
-    (let [members (propfind store uri depth)]
+    (let [members (propfind store uri depth)
+          props (->>
+                 (x/->*
+                  {:content [(xml/parse
+                              (:body req)
+                              )]}
+                  :propfind :prop x/content )
+                 (map (juxt :tag :content)))]
 
       ;; Find which properties are being asked for:
-      (pprint (xml/parse (:body req)))
+
+      (println "props: " props)
+      ;;(get-in (xml/parse (:body req)) [:tag :content])
 
       (respond
        (let [body
@@ -209,23 +222,35 @@
                   [:propstat
                    [:prop
                     #_[:displayname "Example collection"]
-                    (if (.endsWith (str uri) "/")
-                      [:resourcetype
-                       [:collection]]
-                      [:resourcetype])
-                    [:getetag (str (java.util.UUID/randomUUID))]
-                    (when (string? (:crux.cms/content ent))
-                      [:getcontentlength (.length (:crux.cms/content ent))])
-                    (when (:crux.cms/file ent)
-                      [:getcontentlength (.length (io/file (:crux.cms/file ent)))]
-                      )
-                    (when-let [last-modified (:crux.web/last-modified ent)]
-                      [:getlastmodified
-                       (rfc1123-date
-                        (java.time.ZonedDateTime/ofInstant
-                         (.toInstant last-modified)
-                         (java.time.ZoneId/systemDefault)))])]
-                   ]])]
+                    (for [[prop-name prop-content] props]
+                      (case prop-name
+                        :resourcetype
+                        (if (.endsWith (str uri) "/")
+                          [:resourcetype
+                           [:collection]]
+                          [:resourcetype])
+
+                        :getetag
+                        [:getetag (str (java.util.UUID/randomUUID))]
+
+                        :getcontentlength
+                        (cond
+                          (string? (:crux.cms/content ent))
+                          [:getcontentlength (.length (:crux.cms/content ent))]
+
+                          (:crux.cms/file ent)
+                          [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
+
+                        :getlastmodified
+                        (when-let [last-modified (:crux.web/last-modified ent)]
+                          [:getlastmodified
+                           (rfc1123-date
+                            (java.time.ZonedDateTime/ofInstant
+                             (.toInstant last-modified)
+                             (java.time.ZoneId/systemDefault)))])
+
+                        ;; Anything else, ignore
+                        nil))]]])]
               "\n")]
 
          {:status 207                   ; multi-status
@@ -343,3 +368,11 @@
 
    a/wrap-request-body-as-input-stream
    ))
+
+
+
+
+
+(clojure.xml/parse
+  "/tmp/foo.xml"
+  )

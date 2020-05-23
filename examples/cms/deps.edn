@@ -1,3 +1,5 @@
+;; Copyright © 2020, JUXT LTD.
+
 {:paths ["src"]
  :deps
  {juxt.apex/params {:local/root "../../modules/params"}
