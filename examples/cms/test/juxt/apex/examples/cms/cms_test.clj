@@ -12,7 +12,7 @@
 (def entities
   (->>
    [{:crux.db/id (java.net.URI. "https://juxt.pro/A/a/1")
-     :crux.cms/content "123"}
+     :crux.web/content "123"}
     {:crux.db/id (java.net.URI. "https://juxt.pro/A/a/2/i")}
     {:crux.db/id (java.net.URI. "https://juxt.pro/A/b/3")}
     {:crux.db/id (java.net.URI. "https://juxt.pro/B")}

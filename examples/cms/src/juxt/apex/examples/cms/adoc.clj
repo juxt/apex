@@ -35,7 +35,7 @@
      (into {} attributes)
      {:crux.db/id (java.net.URI. (format "https://juxt.pro/_sources/site/index.adoc#%s" (get attributes "id" (str (java.util.UUID/randomUUID)))))
       :asciidoctor/type :section}
-     (when (get attributes "id") {:crux.cms/content (.getContent section)
+     (when (get attributes "id") {:crux.web/content (.getContent section)
                                   :crux.cms/bookmark? true}))))
 
 (defmethod ->crux-entity org.asciidoctor.ast.Block [block]
@@ -44,7 +44,7 @@
      (into {} attributes)
      {:crux.db/id (java.net.URI. (format "https://juxt.pro/_sources/site/index.adoc#%s" (get attributes "id" (str (java.util.UUID/randomUUID)))))
       :asciidoctor/type :block}
-     (when (get attributes "id") {:crux.cms/content (.getContent block)
+     (when (get attributes "id") {:crux.web/content (.getContent block)
                                   :crux.cms/bookmark? true}))))
 
 (defmethod ->crux-entity :default [node]

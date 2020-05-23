@@ -14,20 +14,20 @@
 (defn ingest-content [tx]
   (cond-> tx
     (and
-     (not (:crux.cms/content tx))
-     (:crux.cms/content-source tx))
+     (not (:crux.web/content tx))
+     (:crux.web/content-source tx))
     (assoc
-     :crux.cms/content
+     :crux.web/content
      (case (:crux.web/content-coding tx)
        :base64
        (slurp-file-as-b64encoded-string
-        (io/file (:crux.cms/content-source tx)))
-       (slurp (io/file (:crux.cms/content-source tx)))))))
+        (io/file (:crux.web/content-source tx)))
+       (slurp (io/file (:crux.web/content-source tx)))))))
 
 (defn compute-etag [tx]
   (cond-> tx
-    (:crux.cms/content tx)
-    (assoc :crux.web/entity-tag (hash (:crux.cms/content tx)))))
+    (:crux.web/content tx)
+    (assoc :crux.web/entity-tag (hash (:crux.web/content tx)))))
 
 (defn content-txes []
   (map
@@ -52,7 +52,7 @@
          :crux.web/content-type "text/plain;charset=utf-8"
          :crux.web/content-language "en"
          :crux.web/last-modified (java.util.Date. (.lastModified f))
-         :crux.cms/content (slurp f)}))
+         :crux.web/content (slurp f)}))
 
     ;; Plan repo site sources
     (let [dir (io/file PLAN_REPO_DIR "site")]
@@ -61,25 +61,25 @@
             :let [p (str (.relativize (.toPath dir) (.toPath f)))]
             :when (not (.startsWith p "."))]
         (merge
-         {:crux.cms/content-source (.toURI f)
+         {:crux.web/content-source (.toURI f)
           :crux.web/last-modified (java.util.Date. (.lastModified f))}
          (condp re-matches p
            #".*\.adoc"
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/plan/site/" p))
             :crux.web/content-type "text/plain;charset=utf-8"
             :crux.web/content-language "en"
-            :crux.cms/content (slurp f)}
+            :crux.web/content (slurp f)}
            #".*\.svg"
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
             :crux.web/content-type "image/svg+xml"
             :crux.web/content-language "en"
-            :crux.cms/content (slurp f)
+            :crux.web/content (slurp f)
             :crux.ac/classification :public}
            #".*\.png"
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
             :crux.web/content-type "image/png"
             :crux.web/content-coding :base64
-            :crux.cms/content (slurp-file-as-b64encoded-string f)
+            :crux.web/content (slurp-file-as-b64encoded-string f)
             :crux.ac/classification :public
             }))))
 
@@ -99,5 +99,5 @@
            :crux.web/content-type "text/plain;charset=utf-8"
            :crux.web/content-language "en"
            :crux.web/last-modified (java.util.Date. (.lastModified f))
-           :crux.cms/content (slurp f)
+           :crux.web/content (slurp f)
            :crux.ac/classification :public}))))))

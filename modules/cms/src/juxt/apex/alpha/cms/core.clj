@@ -58,7 +58,7 @@
 
        ;; Merge all the bookmarked content of the adoc source into the template model
        (:crux.cms/source ent)
-       (merge (adoc/template-model engine (:crux.cms/content (find-entity store (:crux.cms/source ent))))))
+       (merge (adoc/template-model engine (:crux.web/content (find-entity store (:crux.cms/source ent))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
@@ -104,7 +104,7 @@
         :headers {"location" (str (:crux.web/location ent))}})
 
       ;; We are a static representation
-      (and (string? (:crux.cms/content ent))
+      (and (string? (:crux.web/content ent))
            (:crux.web/entity-tag ent))
       ;; So our etag is easy to compute
       (let [etag (:crux.web/entity-tag ent)]
@@ -124,8 +124,8 @@
 
           :body (case (:crux.web/content-coding ent)
                   :base64
-                  (.decode (java.util.Base64/getDecoder) (:crux.cms/content ent))
-                  (:crux.cms/content ent))}))
+                  (.decode (java.util.Base64/getDecoder) (:crux.web/content ent))
+                  (:crux.web/content ent))}))
 
       (:crux.cms.selmer/template ent)
       (a/execute-blocking-code
@@ -249,12 +249,9 @@
                              [:getetag (str \" etag \")])
 
                            :getcontentlength
-                           (cond
-                             (string? (:crux.cms/content ent))
-                             [:getcontentlength (.length (:crux.cms/content ent))]
-
-                             (:crux.cms/file ent)
-                             [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
+                           (when
+                               (:crux.web/content ent)
+                               [:getcontentlength (.length (:crux.web/content ent))])
 
                            :getlastmodified
                            (when-let [last-modified (:crux.web/last-modified ent)]
@@ -279,48 +276,6 @@
           :headers {"content-type" "application/xml;charset=utf-8"
                     "content-length" (str (.length body))}
           :body body})))))
-
-#_(defmethod http-method :lock [req respond raise {:keys [vertx store]}]
-  (let [
-        ;; "Servers SHOULD treat a request without a Depth header as if a
-        ;; "Depth: infinity" header was included." -- RFC 4918
-        depth (get-in req [:headers "depth"] "infinity")
-        ]
-
-    (pprint (xml/parse (:body req)))
-
-    (respond
-     {:status 200}
-     #_(let [body
-           (html
-            {:mode :xml}
-            (xml-declaration "utf-8")
-            [:multistatus {"xmlns" "DAV:"}
-             (for [[uri props] members]
-               [:response
-                [:href (str uri)]
-                [:propstat
-                 [:prop
-                  #_[:displayname "Example collection"]
-                  (if (.endsWith (str uri) "/")
-                    [:resourcetype
-                     [:collection]]
-                    [:resourcetype])
-                  [:getetag (str (java.util.UUID/randomUUID))]
-                  (when (string? (:crux.cms/content props))
-                    [:getcontentlength (.length (:crux.cms/content props))])
-                  (when (:crux.cms/file props)
-                    [:getcontentlength (.length (io/file (:crux.cms/file props)))]
-                    )
-                  [:getlastmodified (rfc1123-date (java.time.ZonedDateTime/now))]]]])]
-            "\n")]
-
-       {:status 200                   ; multi-status
-        :headers {"content-type" "application/xml;charset=utf-8"
-                  "content-length" (str (.length body))}
-        :body body}))))
-
-
 
 ;; Middleware
 
