@@ -199,16 +199,9 @@
     (let [members (propfind store uri depth)
           props (->>
                  (x/->*
-                  {:content [(xml/parse
-                              (:body req)
-                              )]}
-                  :propfind :prop x/content )
+                  {:content [(xml/parse (:body req))]}
+                  :propfind :prop x/content)
                  (map (juxt :tag :content)))]
-
-      ;; Find which properties are being asked for:
-
-      (println "props: " props)
-      ;;(get-in (xml/parse (:body req)) [:tag :content])
 
       (respond
        (let [body
@@ -368,11 +361,3 @@
 
    a/wrap-request-body-as-input-stream
    ))
-
-
-
-
-
-(clojure.xml/parse
-  "/tmp/foo.xml"
-  )
