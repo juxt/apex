@@ -70,8 +70,18 @@ have been a number of external developments:
   it so much we've even written our own Clojure library,
   https://github.com/juxt/jinx[jinx])
 
-* Metosin has developed a very nice content negotiation and coercion
-  library called https://github.com/metosin/muuntaja[Muuntaja]
+* https://vertx.io/[Vert.x], an asynchronous networking library on the
+  JVM has emerged and stabilised. It is well maintained, with an
+  active community. It is also based on Netty, providing a suitable
+  and comprehensive replacement for
+  https://github.com/ztellman/aleph[Aleph], adopted by yada.
+
+* http://www.reactive-streams.org/[Reactive Streams] has matured and
+  found its way into the core JDK (as
+  `java.util.concurrent.Flow`). While
+  https://github.com/ztellman/manifold[manifold], used by yada, was
+  years ahead of its time, there are now other well-established
+  alternatives for asynchronous processing with back-pressure.
 
 === OpenAPI: the missing piece of the web jigsaw
 
