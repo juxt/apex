@@ -1,12 +1,7 @@
 = Apex
 
-Apex stands for **AP**I **Ex**ecution.
-
-Apex is a Clojure library that produces Ring handlers from OpenAPI
-descriptions.
-
-Apex is a Clojure web library that takes an Open API 3.0 description,
-some attachments, and returns a Ring handler.
+Apex is a compendium of libraries for implementing web backends in
+Clojure.
 
 == Status
 
@@ -59,7 +54,8 @@ the web looked a little different than today:
 * Prismatic Schema was firmly established as the way to specify
   constraints on data.
 
-In the past five years we've seen a number of developments:
+In the years since yada was conceived, designed and developed, there
+have been a number of external developments:
 
 * Ring now has a
   https://github.com/ring-clojure/ring/blob/master/SPEC[well thought
@@ -101,12 +97,23 @@ shame, as it degrades the web for everyone. Web libraries like Apex
 should encourage compliance due to the multiplier effect of multiple
 applications built on them.
 
-
-
 == References
 
-https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests
-https://apisyouwonthate.com/blog/
+* https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests
+* https://apisyouwonthate.com/blog/
+* https://developer.mozilla.org/en-US/docs/Web/HTTP/Content_negotiation
+* http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
+* https://tools.ietf.org/html/rfc4918
+* https://tools.ietf.org/html/rfc7230
+* https://tools.ietf.org/html/rfc7231
+* https://tools.ietf.org/html/rfc7232
+* https://tools.ietf.org/html/rfc7233
+* https://tools.ietf.org/html/rfc7234
+* https://tools.ietf.org/html/rfc7235
+* https://tools.ietf.org/html/rfc7237
+* https://tools.ietf.org/html/rfc7617
+* https://tools.ietf.org/html/rfc7616
+
 
 == License
 
