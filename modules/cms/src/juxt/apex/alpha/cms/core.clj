@@ -6,7 +6,7 @@
    [clojure.pprint :refer [pprint]]
    [clojure.string :as str]
    [clojure.xml :as xml]
-   [hiccup.core :refer [html]]
+   [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.async.helpers :as a]
    [juxt.apex.alpha.auth-digest.core :refer [wrap-auth-digest]]
@@ -208,54 +208,55 @@
 
       (respond
        (let [body
-             (html
-              {:mode :xml}
-              (xml-declaration "utf-8")
-              [:multistatus {"xmlns" "DAV:"}
-               (for [[uri ent] members
-                     :let [authorized? (= (:crux.ac/classification ent) :public)]]
-                 (when authorized?
-                   [:response
-                    [:href (str uri)]
-                    [:propstat
-                     (when authorized?
-                       [:prop
-                        #_[:displayname "Example collection"]
-                        (for [[prop-name prop-content] props]
-                          (case prop-name
-                            :resourcetype
-                            (if (.endsWith (str uri) "/")
-                              [:resourcetype
-                               [:collection]]
-                              [:resourcetype])
+             (.toString
+              (html
+               {:mode :xml}
+               (xml-declaration "utf-8")
+               [:multistatus {"xmlns" "DAV:"}
+                (for [[uri ent] members
+                      :let [authorized? (= (:crux.ac/classification ent) :public)]]
+                  (when authorized?
+                    [:response
+                     [:href (str uri)]
+                     [:propstat
+                      (when authorized?
+                        [:prop
+                         #_[:displayname "Example collection"]
+                         (for [[prop-name prop-content] props]
+                           (case prop-name
+                             :resourcetype
+                             (if (.endsWith (str uri) "/")
+                               [:resourcetype
+                                [:collection]]
+                               [:resourcetype])
 
-                            :getetag
-                            [:getetag (str (java.util.UUID/randomUUID))]
+                             :getetag
+                             [:getetag (str (java.util.UUID/randomUUID))]
 
-                            :getcontentlength
-                            (cond
-                              (string? (:crux.cms/content ent))
-                              [:getcontentlength (.length (:crux.cms/content ent))]
+                             :getcontentlength
+                             (cond
+                               (string? (:crux.cms/content ent))
+                               [:getcontentlength (.length (:crux.cms/content ent))]
 
-                              (:crux.cms/file ent)
-                              [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
+                               (:crux.cms/file ent)
+                               [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
 
-                            :getlastmodified
-                            (when-let [last-modified (:crux.web/last-modified ent)]
-                              [:getlastmodified
-                               (rfc1123-date
-                                (java.time.ZonedDateTime/ofInstant
-                                 (.toInstant last-modified)
-                                 (java.time.ZoneId/systemDefault)))])
+                             :getlastmodified
+                             (when-let [last-modified (:crux.web/last-modified ent)]
+                               [:getlastmodified
+                                (rfc1123-date
+                                 (java.time.ZonedDateTime/ofInstant
+                                  (.toInstant last-modified)
+                                  (java.time.ZoneId/systemDefault)))])
 
-                            ;; Anything else, ignore
-                            nil))])
-                     [:status
-                      (if authorized?
-                        "HTTP/1.1 200 OK"
-                        "HTTP/1.1 401 Unauthorized")
-                      ]]]))]
-              "\n")]
+                             ;; Anything else, ignore
+                             nil))])
+                      [:status
+                       (if authorized?
+                         "HTTP/1.1 200 OK"
+                         "HTTP/1.1 401 Unauthorized")
+                       ]]]))]
+               "\n"))]
 
          {:status 207                   ; multi-status
           :headers {"content-type" "application/xml;charset=utf-8"
