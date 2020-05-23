@@ -24,7 +24,6 @@ params:: An implementation of OpenAPI parameter parsing.
 
 oauth2:: An implementation of OpenID Connect upon OAuth2 driven by OpenID Connect Discovery configuration.
 
-
 == Objective
 
 Apex will be considered a success if it meets the following acceptance
@@ -74,7 +73,9 @@ have been a number of external developments:
   JVM has emerged and stabilised. It is well maintained, with an
   active community. It is also based on Netty, providing a suitable
   and comprehensive replacement for
-  https://github.com/ztellman/aleph[Aleph], adopted by yada.
+  https://github.com/ztellman/aleph[Aleph], adopted by yada. In
+  addition, it provides robust support for asynchronous
+  `multipart/formdata` requests.
 
 * http://www.reactive-streams.org/[Reactive Streams] has matured and
   found its way into the core JDK (as
