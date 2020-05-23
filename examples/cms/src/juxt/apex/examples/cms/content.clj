@@ -12,8 +12,6 @@
    (.readAllBytes (new java.io.FileInputStream f))))
 
 (defn ingest-content [tx]
-  (when (:crux.cms/file tx)
-    (throw (ex-info ":crux.cms/file is no longer supported" {:tx tx})))
   (cond-> tx
     (and
      (not (:crux.cms/content tx))
