@@ -378,5 +378,4 @@
    wrap-log
 
    ;; Prime the Ring request with a blocking stream
-   a/wrap-read-all-request-body
-   ))
+   a/wrap-read-all-request-body))
