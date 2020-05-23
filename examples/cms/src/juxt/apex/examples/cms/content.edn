@@ -20,6 +20,12 @@
   :crux.ac/classification :public
   :title "JUXT"}
 
+ {:crux.db/id #crux/uri "https://juxt.pro/test.html"
+  :crux.web/content-type "text/html;charset=utf-8"
+  :crux.web/content-language "en"
+  :crux.cms/content "<h1>Hello World!</h1>\n"
+  :crux.ac/classification :public}
+
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"
   :crux.cms/content #crux.cms/include "mocksite/frontpage.css"

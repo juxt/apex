@@ -37,7 +37,7 @@
             :let [p (str (.relativize (.toPath dir) (.toPath f)))]
             :when (not (.startsWith p "."))]
         (merge
-         {:crux.cms/content-origin (.toURI f)
+         {:crux.cms/content-source (.toURI f)
           :crux.web/last-modified (java.util.Date. (.lastModified f))}
          (condp re-matches p
            #".*\.adoc"
