@@ -1,0 +1,3 @@
+= HTTP Digest Access Authentication
+
+An implementation of https://tools.ietf.org/html/rfc7616
