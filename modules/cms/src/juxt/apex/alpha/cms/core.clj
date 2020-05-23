@@ -69,13 +69,13 @@
    format
    inst))
 
-(defmulti method (fn [req respond raise opts] (:request-method req)))
+(defmulti http-method (fn [req respond raise opts] (:request-method req)))
 
-(defmethod method :default [req respond raise opts]
+(defmethod http-method :default [req respond raise opts]
   (respond
    {:status 501}))
 
-(defmethod method :options [req respond raise opts]
+(defmethod http-method :options [req respond raise opts]
   ;; TODO: Check path?
   (respond
    {:status 200
@@ -148,7 +148,7 @@
       (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t))
       )))
 
-(defmethod method :get [req respond raise {:keys [store] :as opts}]
+(defmethod http-method :get [req respond raise {:keys [store] :as opts}]
   (let [debug (get-in req [:query-params "debug"])]
 
     (if-let [ent (find-entity store (java.net.URI. (uri req)))]
@@ -183,7 +183,7 @@
    #{}
    candidates))
 
-(defmethod method :propfind [req respond raise {:keys [vertx store]}]
+(defmethod http-method :propfind [req respond raise {:keys [vertx store]}]
   (let [
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
@@ -259,7 +259,7 @@
                     "content-length" (str (.length body))}
           :body body})))))
 
-#_(defmethod method :lock [req respond raise {:keys [vertx store]}]
+#_(defmethod http-method :lock [req respond raise {:keys [vertx store]}]
   (let [
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
@@ -347,7 +347,7 @@
     ([req]
      (handler req identity (fn [t] (throw t))))
     ([req respond raise]
-     (method req respond raise opts))))
+     (http-method req respond raise opts))))
 
 (defn make-router [{:keys [store vertx engine] :as opts}]
   (assert store)
