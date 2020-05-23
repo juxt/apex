@@ -24,9 +24,14 @@
         (io/file (:crux.cms/content-source tx)))
        (slurp (io/file (:crux.cms/content-source tx)))))))
 
+(defn compute-etag [tx]
+  (cond-> tx
+    (:crux.cms/content tx)
+    (assoc :crux.web/entity-tag (hash (:crux.cms/content tx)))))
+
 (defn content-txes []
   (map
-   ingest-content
+   (comp compute-etag ingest-content)
    (concat
 
     ;; Content

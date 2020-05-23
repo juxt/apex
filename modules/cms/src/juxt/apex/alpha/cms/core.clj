@@ -84,7 +84,18 @@
    {:status 200
     :headers {"DAV" "1"}}))
 
-(defn respond-entity-response [ent req respond raise {:keys [vertx store engine]}]
+(defn respond-entity-response
+  "Return the response for a GET request targetting a resource backed by
+  a CMS entity."
+  [ent req respond raise {:keys [vertx store engine]}]
+
+  ;; Determine status
+  ;; Negotiate content representation
+  ;; Compute entity-tag for representation
+  ;; Check condition (If-Not-Match)
+  ;; Generate response with new entity-tag
+  ;; Handle errors (by responding with error response, with appropriate re-negotiation)
+
   (try
     (cond
       (redirect? ent)
@@ -92,20 +103,29 @@
        {:status (:crux.web/status ent)
         :headers {"location" (str (:crux.web/location ent))}})
 
-      (string? (:crux.cms/content ent))
-      (respond
-       {:status 200
-        :headers
-        (cond-> {}
-          (:crux.web/content-type ent)
-          (conj ["content-type" (:crux.web/content-type ent)])
-          (:crux.web/content-language ent)
-          ;; TODO: Support vectors for multiple languages
-          (conj ["content-language" (:crux.web/content-language ent)]))
-        :body (case (:crux.web/content-coding ent)
-                :base64
-                (.decode (java.util.Base64/getDecoder) (:crux.cms/content ent))
-                (:crux.cms/content ent))})
+      ;; We are a static representation
+      (and (string? (:crux.cms/content ent))
+           (:crux.web/entity-tag ent))
+      ;; So our etag is easy to compute
+      (let [etag (:crux.web/entity-tag ent)]
+        (respond
+         {:status 200
+          :headers
+          (cond-> {}
+            (:crux.web/content-type ent)
+            (conj ["content-type" (:crux.web/content-type ent)])
+
+            (:crux.web/content-language ent)
+            ;; TODO: Support vectors for multiple languages
+            (conj ["content-language" (:crux.web/content-language ent)])
+
+            (:crux.web/entity-tag ent)
+            (conj ["etag" (str \" etag \")]))
+
+          :body (case (:crux.web/content-coding ent)
+                  :base64
+                  (.decode (java.util.Base64/getDecoder) (:crux.cms/content ent))
+                  (:crux.cms/content ent))}))
 
       (:crux.cms.selmer/template ent)
       (a/execute-blocking-code
@@ -225,7 +245,8 @@
                              [:resourcetype])
 
                            :getetag
-                           [:getetag (str (java.util.UUID/randomUUID))]
+                           (when-let [etag (:crux.web/entity-tag ent)]
+                             [:getetag (str \" etag \")])
 
                            :getcontentlength
                            (cond
@@ -247,8 +268,8 @@
                            nil))]
                       [:status
                        (if true #_authorized?
-                         "HTTP/1.1 200 OK"
-                         "HTTP/1.1 401 Unauthorized")
+                           "HTTP/1.1 200 OK"
+                           "HTTP/1.1 401 Unauthorized")
                        ]]]))]
                "\n"))]
 
