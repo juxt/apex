@@ -15,14 +15,14 @@
   (cond-> tx
     (and
      (not (:crux.web/content tx))
-     (:crux.web/content-source tx))
+     (:crux.cms/content-source tx))
     (assoc
      :crux.web/content
      (case (:crux.web/content-coding tx)
        :base64
        (slurp-file-as-b64encoded-string
-        (io/file (:crux.web/content-source tx)))
-       (slurp (io/file (:crux.web/content-source tx)))))))
+        (io/file (:crux.cms/content-source tx)))
+       (slurp (io/file (:crux.cms/content-source tx)))))))
 
 (defn compute-etag [tx]
   (cond-> tx

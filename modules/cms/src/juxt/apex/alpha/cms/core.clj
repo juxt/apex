@@ -219,7 +219,8 @@
                  (x/->*
                   {:content [(xml/parse (:body req))]}
                   :propfind :prop x/content)
-                 (map (juxt :tag :content)))]
+                 (map (juxt :tag :content)))
+          _ (println "props are" (map first props))]
 
       (respond
        (let [body
@@ -246,12 +247,12 @@
 
                            :getetag
                            (when-let [etag (:crux.web/entity-tag ent)]
-                             [:getetag (str \" etag \")])
+                             [:getetag etag])
 
                            :getcontentlength
                            (when
                                (:crux.web/content ent)
-                               [:getcontentlength (.length (:crux.web/content ent))])
+                             [:getcontentlength (.length (:crux.web/content ent))])
 
                            :getlastmodified
                            (when-let [last-modified (:crux.web/last-modified ent)]
