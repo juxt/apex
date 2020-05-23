@@ -194,6 +194,7 @@
     ;; Do we have an Authorization header?
 
     (let [members (propfind store uri depth)
+          _ (println "members are" (with-out-str (pprint (map first members))))
           props (->>
                  (x/->*
                   {:content [(xml/parse (:body req))]}
@@ -209,48 +210,49 @@
                [:multistatus {"xmlns" "DAV:"}
                 (for [[uri ent] members
                       :let [authorized? (= (:crux.ac/classification ent) :public)]]
-                  (when authorized?
+                  (when true
                     [:response
                      [:href (str uri)]
                      [:propstat
-                      (when authorized?
-                        [:prop
-                         #_[:displayname "Example collection"]
-                         (for [[prop-name prop-content] props]
-                           (case prop-name
-                             :resourcetype
-                             (if (.endsWith (str uri) "/")
-                               [:resourcetype
-                                [:collection]]
-                               [:resourcetype])
+                      [:prop
+                       #_[:displayname "Example collection"]
+                       (for [[prop-name prop-content] props]
+                         (case prop-name
+                           :resourcetype
+                           (if (.endsWith (str uri) "/")
+                             [:resourcetype
+                              [:collection]]
+                             [:resourcetype])
 
-                             :getetag
-                             [:getetag (str (java.util.UUID/randomUUID))]
+                           :getetag
+                           [:getetag (str (java.util.UUID/randomUUID))]
 
-                             :getcontentlength
-                             (cond
-                               (string? (:crux.cms/content ent))
-                               [:getcontentlength (.length (:crux.cms/content ent))]
+                           :getcontentlength
+                           (cond
+                             (string? (:crux.cms/content ent))
+                             [:getcontentlength (.length (:crux.cms/content ent))]
 
-                               (:crux.cms/file ent)
-                               [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
+                             (:crux.cms/file ent)
+                             [:getcontentlength (.length (io/file (:crux.cms/file ent)))])
 
-                             :getlastmodified
-                             (when-let [last-modified (:crux.web/last-modified ent)]
-                               [:getlastmodified
-                                (rfc1123-date
-                                 (java.time.ZonedDateTime/ofInstant
-                                  (.toInstant last-modified)
-                                  (java.time.ZoneId/systemDefault)))])
+                           :getlastmodified
+                           (when-let [last-modified (:crux.web/last-modified ent)]
+                             [:getlastmodified
+                              (rfc1123-date
+                               (java.time.ZonedDateTime/ofInstant
+                                (.toInstant last-modified)
+                                (java.time.ZoneId/systemDefault)))])
 
-                             ;; Anything else, ignore
-                             nil))])
+                           ;; Anything else, ignore
+                           nil))]
                       [:status
-                       (if authorized?
+                       (if true #_authorized?
                          "HTTP/1.1 200 OK"
                          "HTTP/1.1 401 Unauthorized")
                        ]]]))]
                "\n"))]
+
+         (println "body is" body)
 
          {:status 207                   ; multi-status
           :headers {"content-type" "application/xml;charset=utf-8"
