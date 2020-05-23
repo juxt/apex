@@ -2,20 +2,21 @@
 
 (ns juxt.apex.alpha.cms.core
   (:require
+   [clojure.java.io :as io]
+   [clojure.pprint :refer [pprint]]
+   [clojure.string :as str]
    [clojure.xml :as xml]
-   [clojure.zip :as zip]
-   [juxt.apex.alpha.cms.xml :as x]
-   [juxt.apex.examples.cms.adoc :as adoc]
    [hiccup.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.async.helpers :as a]
-   [clojure.pprint :refer [pprint]]
-   [ring.middleware.params :refer [wrap-params]]
+   [juxt.apex.alpha.auth-digest.core :refer [wrap-auth-digest]]
+   [juxt.apex.alpha.cms.xml :as x]
+   [juxt.apex.examples.cms.adoc :as adoc]
    [ring.middleware.head :refer [wrap-head]]
-   [clojure.java.io :as io]
+   [ring.middleware.params :refer [wrap-params]]
    [selmer.parser :as selmer]
    [selmer.util :refer [*custom-resource-path*]]
-   [clojure.string :as str]))
+   ))
 
 (defn uri [req]
   (format "%s://%s%s"
@@ -35,6 +36,8 @@
        "</pre>"))
 
 (defn respond-entity [ent req respond raise]
+  ;; TODO: Might need authorization to see resource metadata
+  ;; (for protected resources)
   (respond
    {:status 200
     :headers {"content-type" "text/html"}
@@ -366,6 +369,10 @@
    ;; the request-method prior to generating expensive bodies.
    ;; TODO: Arguably, this should be a 'method' not midddlware.
    wrap-head
+
+   ;; Digest authentication. Clients are not allowed to use basic auth
+   ;; over insecure http.
+   wrap-auth-digest
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.

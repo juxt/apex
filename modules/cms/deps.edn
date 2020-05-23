@@ -2,15 +2,24 @@
 
 {:paths ["src"]
  :deps
- {selmer {:mvn/version "1.12.2"}
+ {
+  ;; Core
   juxt.apex/async {:local/root "../async"}
-  ring/ring-core {:mvn/version "1.8.0"}}
+  juxt.apex/auth-digest {:local/root "../auth-digest"}
+  ring/ring-core {:mvn/version "1.8.0"}
+  ;; Needed for xml production
+  hiccup {:mvn/version "2.0.0-alpha2"}
+
+  ;; Not core
+  selmer {:mvn/version "1.12.2"}}
 
  :aliases
  {:dev
   {}
   :test
   {:extra-paths ["test"]
-   :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                           :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
+   :extra-deps
+   {com.cognitect/test-runner
+    {:git/url "https://github.com/cognitect-labs/test-runner.git"
+     :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
    :main-opts ["-m" "cognitect.test-runner"]}}}

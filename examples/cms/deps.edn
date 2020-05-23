@@ -5,12 +5,7 @@
  {juxt.apex/params {:local/root "../../modules/params"}
   juxt.apex/html {:local/root "../../modules/html"}
   juxt.apex/async {:local/root "../../modules/async"}
-  juxt.apex/webdav {:local/root "../../modules/webdav"}
-  juxt.apex/cms {:local/root "../../modules/cms"}
-
-;;  metosin/reitit-ring {:mvn/version "0.3.10"}
-;;  metosin/reitit-middleware {:mvn/version "0.4.2"}
-  }
+  juxt.apex/cms {:local/root "../../modules/cms"}}
 
  :aliases
  {:dev
