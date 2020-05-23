@@ -1,7 +1,7 @@
 = Apex
 
-Apex is a compendium of libraries for implementing web backends in
-Clojure.
+Apex is a compendium of libraries for implementing web backends in the
+https://clojure.org/[Clojure] programming language.
 
 == Status
 
