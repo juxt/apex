@@ -103,6 +103,7 @@ applications built on them.
 * https://apisyouwonthate.com/blog/
 * https://developer.mozilla.org/en-US/docs/Web/HTTP/Content_negotiation
 * http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
+* https://tools.ietf.org/html/rfc3253
 * https://tools.ietf.org/html/rfc4918
 * https://tools.ietf.org/html/rfc7230
 * https://tools.ietf.org/html/rfc7231
