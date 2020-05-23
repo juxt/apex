@@ -14,7 +14,7 @@
     (->>
      (edn/read-string
       {:readers {'crux/uri (fn [x] (java.net.URI. x))
-                 'crux.cms/include (fn [path] (slurp (io/file WEBSITE_REPO_DIR path)))
+                 'crux.cms/ingest (fn [path] (slurp (io/file WEBSITE_REPO_DIR path)))
                  'crux.cms/file (fn [path]
                                   (.getAbsolutePath (io/file WEBSITE_REPO_DIR path)))}}
       (slurp "src/juxt/apex/examples/cms/content.edn")))
