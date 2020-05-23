@@ -6,15 +6,38 @@
 (def WEBSITE_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/website"))
 (def PLAN_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/plan"))
 
+(defn slurp-file-as-b64encoded-string [f]
+  (.encodeToString
+   (java.util.Base64/getEncoder)
+   (.readAllBytes (new java.io.FileInputStream f))))
+
+(defn ingest-content [tx]
+  ;; TODO: See if there is a content,
+  (cond
+    (and
+     (not (:crux.cms/content tx))
+     (:crux.cms/content-source tx))
+
+    (case (:crux.web/content-coding tx)
+      :base64
+      (assoc tx :crux.cms/content
+             (slurp-file-as-b64encoded-string
+              (io/file (:crux.cms/content-source tx))))
+      (throw (ex-info "Crux does not yet support byte-arrays and there is no :crux.web/content-coding specified in the entity")))
+
+    :else tx))
+
 (defn content-txes []
-  (->>
+  (map
+   ingest-content
    (concat
 
     ;; Content
     (->>
      (edn/read-string
       {:readers {'crux/uri (fn [x] (java.net.URI. x))
-                 'crux.cms/ingest (fn [path] (slurp (io/file WEBSITE_REPO_DIR path)))
+                 ;; TODO: Deprecate this
+                 'crux.cms/slurp (fn [path] (slurp (io/file WEBSITE_REPO_DIR path)))
                  'crux.cms/file (fn [path]
                                   (.getAbsolutePath (io/file WEBSITE_REPO_DIR path)))}}
       (slurp "src/juxt/apex/examples/cms/content.edn")))
@@ -55,7 +78,7 @@
            {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
             :crux.web/content-type "image/png"
             :crux.web/content-coding :base64
-            :crux.cms/content (.encodeToString (java.util.Base64/getEncoder) (.readAllBytes (new java.io.FileInputStream f)))
+            :crux.cms/content (slurp-file-as-b64encoded-string f)
             :crux.ac/classification :public
             }))))
 

@@ -12,6 +12,11 @@
   :crux.web/status 302
   :crux.web/location #crux/uri "/index.html"}
 
+ {:crux.db/id #crux/uri "https://juxt.pro/favicon.ico"
+  :crux.web/content-type "image/x-icon"
+  :crux.cms/file #crux.cms/file "juxt.website/assets/img/favicon.ico"
+  :crux.ac/classification :public}
+
  {:crux.db/id #crux/uri "https://juxt.pro/index.html"
   :crux.web/content-type "text/html;charset=utf-8"
   :crux.web/content-language "en"
@@ -28,7 +33,7 @@
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  :crux.cms/content #crux.cms/ingest "mocksite/frontpage.css"
+  :crux.cms/content #crux.cms/slurp "mocksite/frontpage.css"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
@@ -48,12 +53,16 @@
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/lq/rocks.jpg"
   :crux.web/content-type "image/jpeg"
-  :crux.cms/file #crux.cms/file "juxt.website/assets/img/lq/rocks.jpg"
-  :crux.ac/classification :public}
+  :crux.ac/classification :public
+  :crux.cms/file #crux.cms/file "juxt.website/assets/img/lq/rocks.jpg"}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/rocks.jpg"
   :crux.web/content-type "image/jpeg"
-  :crux.cms/file #crux.cms/file "juxt.website/assets/img/rocks.jpg"
+  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/rocks.jpg"
+  :crux.web/content-coding :base64
+
+  ;;:crux.cms/file #crux.cms/file "juxt.website/assets/img/rocks.jpg"
+  ;;:crux.cms/file #crux.cms/file "juxt.website/assets/img/rocks.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/arrow.svg"
