@@ -7,11 +7,13 @@ https://clojure.org/[Clojure] programming language.
 
 PRE-ALPHA:
 
-Apex consists of a set of Ring-compatible middleware, configured with
-OpenAPI. Some of this middleware will be marked as ready for use prior
-to others. For now, this project is being developed in the open for
-the purposes of soliticing feedback from the community and not
-recommended for actual use in systems.
+Apex libraries are broadly applied as
+https://github.com/ring-clojure/ring[Ring] middleware, where possible.
+
+Some of these libraries will be marked as ready for use prior to
+others. For now, this project is being developed in the open for the
+purposes sharing ideas and code and *not recommended* for use in
+production systems.
 
 == Getting started
 
