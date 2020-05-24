@@ -96,6 +96,7 @@
   ;; Generate response with new entity-tag
   ;; Handle errors (by responding with error response, with appropriate re-negotiation)
 
+  (println "respond-entity-response:" (:uri req) (with-out-str (pprint (dissoc ent :crux.web/content))))
   (try
     (cond
       (redirect? ent)
@@ -104,28 +105,29 @@
         :headers {"location" (str (:crux.web/location ent))}})
 
       ;; We are a static representation
-      (and (string? (:crux.web/content ent))
-           (:crux.web/entity-tag ent))
+      (and (string? (:crux.web/content ent)))
       ;; So our etag is easy to compute
-      (let [etag (:crux.web/entity-tag ent)]
-        (respond
-         {:status 200
-          :headers
-          (cond-> {}
-            (:crux.web/content-type ent)
-            (conj ["content-type" (:crux.web/content-type ent)])
+      (respond
+       {:status 200
+        :headers
+        (cond-> {}
+          (:crux.web/content-type ent)
+          (conj ["content-type" (:crux.web/content-type ent)])
 
-            (:crux.web/content-language ent)
-            ;; TODO: Support vectors for multiple languages
-            (conj ["content-language" (:crux.web/content-language ent)])
+          (:crux.web/content-language ent)
+          ;; TODO: Support vectors for multiple languages
+          (conj ["content-language" (:crux.web/content-language ent)])
 
-            (:crux.web/entity-tag ent)
-            (conj ["etag" (str \" etag \")]))
+          (:crux.web/content-length ent)
+          (conj ["content-length" (str (:crux.web/content-length ent))])
 
-          :body (case (:crux.web/content-coding ent)
-                  :base64
-                  (.decode (java.util.Base64/getDecoder) (:crux.web/content ent))
-                  (:crux.web/content ent))}))
+          (:crux.web/entity-tag ent)
+          (conj ["etag" (str \" (:crux.web/entity-tag ent) \")]))
+
+        :body (case (:crux.web/content-coding ent)
+                :base64
+                (.decode (java.util.Base64/getDecoder) (:crux.web/content ent))
+                (:crux.web/content ent))})
 
       (:crux.cms.selmer/template ent)
       (a/execute-blocking-code
