@@ -30,8 +30,7 @@
        (case (:crux.web/content-coding tx)
          :base64
          (slurp-file-as-b64encoded-string f)
-         {:crux.web/content (slurp f)
-          :crux.web/content-length (.length f)})))))
+         (slurp-file-as-string f))))))
 
 (defn compute-content-length
   "Where no content-length already exists, add it."
