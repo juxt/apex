@@ -216,13 +216,12 @@
     ;; Do we have an Authorization header?
 
     (let [members (propfind store uri depth)
-          _ (println "members are" (with-out-str (pprint (map first members))))
+          body-str (slurp (:body req))
           props (->>
                  (x/->*
-                  {:content [(xml/parse (:body req))]}
+                  {:content [(xml/parse (java.io.ByteArrayInputStream. (.getBytes body-str)))]}
                   :propfind :prop x/content)
-                 (map (juxt :tag :content)))
-          _ (println "props are" (map first props))]
+                 (map (juxt :tag :content)))]
 
       (respond
        (let [body
@@ -254,7 +253,7 @@
                            :getcontentlength
                            (when
                                (:crux.web/content ent)
-                             [:getcontentlength (.length (:crux.web/content ent))])
+                               [:getcontentlength (.length (:crux.web/content ent))])
 
                            :getlastmodified
                            (when-let [last-modified (:crux.web/last-modified ent)]
@@ -326,7 +325,18 @@
     ([req]
      (handler req identity (fn [t] (throw t))))
     ([req respond raise]
-     (http-method req respond raise opts))))
+     (try
+       (http-method req respond raise opts)
+       (catch Throwable t
+         (raise
+          (ex-info
+           (format
+            "Error on %s on %s"
+            (str/upper-case (name (:request-method req)))
+            (:uri req)
+            )
+           {:request req}
+           t)))))))
 
 (defn make-router [{:keys [store vertx engine] :as opts}]
   (assert store)
