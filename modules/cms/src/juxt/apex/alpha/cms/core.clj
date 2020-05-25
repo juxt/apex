@@ -12,7 +12,7 @@
    [juxt.apex.alpha.auth-digest.core :refer [wrap-auth-digest]]
    [juxt.apex.alpha.cms.xml :as x]
    [juxt.apex.examples.cms.adoc :as adoc]
-   [ring.middleware.head :refer [wrap-head]]
+   [ring.middleware.head :refer [head-response]]
    [ring.middleware.params :refer [wrap-params]]
    [selmer.parser :as selmer]
    [selmer.util :refer [*custom-resource-path*]]
@@ -99,7 +99,8 @@
 (defn respond-entity-response
   "Return the response for a GET request targetting a resource backed by
   a CMS entity."
-  [ent req respond raise {:keys [vertx store engine]}]
+  [ent req respond raise {:keys [vertx store engine]
+                          ::keys [head?]}]
 
   ;; Determine status
   ;; Negotiate content representation
@@ -120,26 +121,30 @@
       (and (string? (:crux.web/content ent)))
       ;; So our etag is easy to compute
       (respond
-       {:status 200
-        :headers
-        (cond-> {}
-          (:crux.web/content-type ent)
-          (conj ["content-type" (:crux.web/content-type ent)])
+       (cond->
+           {:status 200
+            :headers
+            (cond-> {}
+              (:crux.web/content-type ent)
+              (conj ["content-type" (:crux.web/content-type ent)])
 
-          (:crux.web/content-language ent)
-          ;; TODO: Support vectors for multiple languages
-          (conj ["content-language" (:crux.web/content-language ent)])
+              (:crux.web/content-language ent)
+              ;; TODO: Support vectors for multiple languages
+              (conj ["content-language" (:crux.web/content-language ent)])
 
-          (:crux.web/content-length ent)
-          (conj ["content-length" (str (:crux.web/content-length ent))])
+              (:crux.web/content-length ent)
+              (conj ["content-length" (str (:crux.web/content-length ent))])
 
-          (:crux.web/entity-tag ent)
-          (conj ["etag" (str \" (:crux.web/entity-tag ent) \")]))
+              (:crux.web/entity-tag ent)
+              (conj ["etag" (str \" (:crux.web/entity-tag ent) \")]))}
 
-        :body (case (:crux.web/content-coding ent)
-                :base64
-                (.decode (java.util.Base64/getDecoder) (:crux.web/content ent))
-                (:crux.web/content ent))})
+           (not head?)
+           (assoc
+            :body
+            (case (:crux.web/content-coding ent)
+              :base64
+              (.decode (java.util.Base64/getDecoder) (:crux.web/content ent))
+              (:crux.web/content ent)))))
 
       (:crux.cms.selmer/template ent)
       (a/execute-blocking-code
@@ -148,17 +153,23 @@
        {:on-success
         (fn [body]
           (respond
-           {:status 200
-            :headers
-            (cond-> {}
-              (:crux.web/content-type ent)
-              (conj ["content-type" (:crux.web/content-type ent)])
-              (:crux.web/content-language ent)
-              ;; TODO: Support vectors for multiple languages (see
-              ;; identical TODO above)
-              (conj ["content-language" (:crux.web/content-language ent)]))
+           (cond->
+               {:status 200
+                :headers
+                (cond-> {}
+                  (:crux.web/content-type ent)
+                  (conj ["content-type" (:crux.web/content-type ent)])
+                  (:crux.web/content-language ent)
+                  ;; TODO: Support vectors for multiple languages (see
+                  ;; identical TODO above)
+                  (conj ["content-language" (:crux.web/content-language ent)])
 
-            :body body}))
+                  ;; No content-length, this will be chunked
+                  )}
+
+               (not head?)
+               (assoc :body body))))
+
         :on-failure
         (fn [t]
           (raise
@@ -168,16 +179,16 @@
 
       :else
       (respond
-       {:status 500
-        :body
-        (str
-         "<body><h2>ERROR - Not handled</h2>"
-         (entity-as-html ent)
-         "</body>")}))
+       (cond-> {:status 500}
+         (not head?)
+         (assoc :body
+                (str
+                 "<body><h2>ERROR - Not handled</h2>"
+                 (entity-as-html ent)
+                 "</body>")))))
 
     (catch Throwable t
-      (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t))
-      )))
+      (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t)))))
 
 (defmethod http-method :get [req respond raise {:keys [store] :as opts}]
   (let [debug (get-in req [:query-params "debug"])]
@@ -188,6 +199,12 @@
         (respond-entity-response ent req respond raise opts))
 
       (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"}))))
+
+(defmethod http-method :head [req respond raise {:keys [store] :as opts}]
+  (if-let [ent (find-entity store (java.net.URI. (uri req)))]
+    (respond-entity-response ent req respond raise (assoc opts ::head? true))
+
+    (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"})))
 
 ;; PROPFIND method
 
@@ -350,6 +367,18 @@
            {:request req}
            t)))))))
 
+(defn wrap-head
+  "Middleware that sets the response body to nil."
+  {:added "1.1"}
+  [handler]
+  (fn
+    ([request]
+     (head-response (handler request)))
+    ([request respond raise]
+     (handler request
+              (fn [response] (respond (head-response response request)))
+              raise))))
+
 (defn make-router [{:keys [store vertx engine] :as opts}]
   (assert store)
   (assert vertx)
@@ -365,7 +394,6 @@
 
    ;; This is for strict semantics, but handlers should still check
    ;; the request-method prior to generating expensive bodies.
-   ;; TODO: Arguably, this should be a 'method' not midddlware.
    wrap-head
 
    ;; Digest authentication. Clients are not allowed to use basic auth
