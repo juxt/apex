@@ -109,7 +109,6 @@
   ;; Generate response with new entity-tag
   ;; Handle errors (by responding with error response, with appropriate re-negotiation)
 
-  (println "respond-entity-response:" (:uri req) (with-out-str (pprint (dissoc ent :crux.web/content))))
   (try
     (cond
       (redirect? ent)
@@ -300,8 +299,6 @@
                            "HTTP/1.1 401 Unauthorized")
                        ]]]))]
                "\n"))]
-
-         (println "body is" body)
 
          {:status 207                   ; multi-status
           :headers {"content-type" "application/xml;charset=utf-8"
