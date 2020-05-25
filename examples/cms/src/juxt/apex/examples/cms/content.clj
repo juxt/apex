@@ -42,10 +42,8 @@
      (not (:crux.web/content-coding tx)))
     (assoc :crux.web/content-length (.length (:crux.web/content tx)))))
 
-#_(defn compute-etag [tx]
-  (cond-> tx
-    (:crux.web/content tx)
-    (assoc :crux.web/entity-tag (hash (:crux.web/content tx)))))
+(defn compute-etag [tx]
+  (assoc tx :crux.web/entity-tag (hash tx)))
 
 (defn content-txes []
   (concat
@@ -53,7 +51,7 @@
    ;; Content
    (->>
     (map
-     (comp compute-content-length ingest-content)
+     (comp compute-etag compute-content-length ingest-content)
      (edn/read-string
       {:readers {'crux/uri (fn [x] (java.net.URI. x))
                  'crux.cms/file (fn [path]

@@ -28,12 +28,24 @@
   (find-entity [_ id] "Find the entity with the given id")
   (propfind [_ uri depth] "Find the properties of members of uri"))
 
+(defn binary? [content]
+  true
+  ;; TODO: check every byte of .getBytes or use regex
+  )
+
 (defn entity-as-html [ent]
-  (str "<pre>"
-       (->
-        (with-out-str (pprint ent))
-        (str/replace "<" "&lt;"))
-       "</pre>"))
+  (let [ent
+        (cond-> ent
+          (or
+           (> (count (:crux.web/content ent)) 200)
+           (binary? (:crux.web/content ent)))
+          (assoc :crux.web/content (format "<%s bytes of content>" (count (.getBytes (:crux.web/content ent)))))
+          )]
+    (str "<pre>\n"
+         (->
+          (with-out-str (pprint ent))
+          (str/replace "<" "&lt;"))
+         "</pre>\n")))
 
 (defn respond-entity [ent req respond raise]
   ;; TODO: Might need authorization to see resource metadata
