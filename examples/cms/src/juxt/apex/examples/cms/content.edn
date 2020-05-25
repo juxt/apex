@@ -14,13 +14,13 @@
 
  {:crux.db/id #crux/uri "https://juxt.pro/favicon.ico"
   :crux.web/content-type "image/x-icon"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/favicon.ico"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/favicon.ico"
   :crux.web/content-coding :base64
   :crux.ac/classification :public}
 
   {:crux.db/id #crux/uri "https://juxt.pro/favicon.png"
   :crux.web/content-type "image/png"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/favicon-16x16.png"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/favicon-16x16.png"
   :crux.web/content-coding :base64
   :crux.ac/classification :public}
 
@@ -40,146 +40,146 @@
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "mocksite/frontpage.css"
+  :crux.web/content-source #crux.cms/file "mocksite/frontpage.css"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/font-awesome-4.5.0/css/font-awesome.min.css"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/font-awesome-4.5.0/css/font-awesome.min.css"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/scripts/lazysizes.min.js"
   :crux.web/content-type "text/javascript;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/scripts/lazysizes.min.js"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/scripts/lazysizes.min.js"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/logo.svg"
   :crux.web/content-type "image/svg+xml;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/logo.svg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/logo.svg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/lq/rocks.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/lq/rocks.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/lq/rocks.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/rocks.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/rocks.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/rocks.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/arrow.svg"
   :crux.web/content-type "image/svg+xml;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/arrow.svg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/arrow.svg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/scripts/smoothscroll.js"
   :crux.web/content-type "text/javascript;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/scripts/smoothscroll.js"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/scripts/smoothscroll.js"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/scripts/frontpage.js"
   :crux.web/content-type "text/javascript;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/scripts/frontpage.js"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/scripts/frontpage.js"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/scripts/background.js"
   :crux.web/content-type "text/javascript;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/scripts/background.js"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/scripts/background.js"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/lq/media.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/lq/media.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/lq/media.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/media.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/media.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/media.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/lq/finance.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/lq/finance.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/lq/finance.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/finance.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/finance.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/finance.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/lq/public-sector.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/lq/public-sector.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/lq/public-sector.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/public-sector.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/public-sector.jpg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/public-sector.jpg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/github.svg"
   :crux.web/content-type "image/svg+xml;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/github.svg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/github.svg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/linkedin.svg"
   :crux.web/content-type "image/svg+xml;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/linkedin.svg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/linkedin.svg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/twitter.svg"
   :crux.web/content-type "image/svg+xml;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/twitter.svg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/twitter.svg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/user-footer.svg"
   :crux.web/content-type "image/svg+xml;charset=utf-8"
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/img/user-footer.svg"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/user-footer.svg"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-medium.woff"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-medium.woff"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-medium.woff"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-thin.woff"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-thin.woff"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-thin.woff"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-bold.woff"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-bold.woff"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-bold.woff"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-light.woff"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-light.woff"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-light.woff"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-heavy.woff"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-heavy.woff"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-heavy.woff"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-semibold.woff"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.cms/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-semibold.woff"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-semibold.woff"
   :crux.ac/classification :public}
 
 

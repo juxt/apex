@@ -28,7 +28,7 @@
              (crux/db node)
              {:find ['id]
               :where [['e :crux.db/id 'id]
-                      ['e :crux.cms/content-source]]})))]
+                      ['e :crux.web/content-source]]})))]
       (into
        {}
        (for [id

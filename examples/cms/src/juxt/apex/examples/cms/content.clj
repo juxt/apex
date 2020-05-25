@@ -12,21 +12,21 @@
      :crux.web/content-length (count bytes)
      :crux.web/content-coding :base64
      :crux.web/last-modified (java.util.Date. (.lastModified f))
-     :crux.cms/content-source (.toURI f)}))
+     :crux.web/content-source (.toURI f)}))
 
 (defn slurp-file-as-string [f]
   {:crux.web/content (slurp f)
    :crux.web/content-length (.length f)
    :crux.web/last-modified (java.util.Date. (.lastModified f))
-   :crux.cms/content-source (.toURI f)})
+   :crux.web/content-source (.toURI f)})
 
 (defn ingest-content [tx]
   (cond-> tx
     (and
      (not (:crux.web/content tx))
-     (:crux.cms/content-source tx))
+     (:crux.web/content-source tx))
     (merge
-     (let [f (io/file (:crux.cms/content-source tx))]
+     (let [f (io/file (:crux.web/content-source tx))]
        (case (:crux.web/content-coding tx)
          :base64
          (slurp-file-as-b64encoded-string f)
