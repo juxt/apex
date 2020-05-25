@@ -296,8 +296,7 @@
                       [:status
                        (if true #_authorized?
                            "HTTP/1.1 200 OK"
-                           "HTTP/1.1 401 Unauthorized")
-                       ]]]))]
+                           "HTTP/1.1 401 Unauthorized")]]]))]
                "\n"))]
 
          {:status 207                   ; multi-status
