@@ -13,6 +13,7 @@
     (crux/entity (crux/db node) id))
   (propfind [this uri depth]
     (let [uris
+          ;; TODO: Replace with an or query
           (set/union
            (map
             first
