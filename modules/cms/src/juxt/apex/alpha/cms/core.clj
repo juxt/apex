@@ -105,7 +105,7 @@
   ;; Determine status
   ;; Negotiate content representation
   ;; Compute entity-tag for representation
-  ;; Check condition (If-Not-Match)
+  ;; Check condition (Last-Modified, If-None-Match)
   ;; Generate response with new entity-tag
   ;; Handle errors (by responding with error response, with appropriate re-negotiation)
 
@@ -133,6 +133,13 @@
 
               (:crux.web/content-length ent)
               (conj ["content-length" (str (:crux.web/content-length ent))])
+
+              (:crux.web/last-modified ent)
+              (conj ["last-modified"
+                     (rfc1123-date
+                      (java.time.ZonedDateTime/ofInstant
+                       (.toInstant (:crux.web/last-modified ent))
+                       (java.time.ZoneId/systemDefault)))])
 
               (:crux.web/entity-tag ent)
               (conj ["etag" (str \" (:crux.web/entity-tag ent) \")]))}

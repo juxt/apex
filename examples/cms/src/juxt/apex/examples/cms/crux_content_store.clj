@@ -13,22 +13,12 @@
     (crux/entity (crux/db node) id))
   (propfind [this uri depth]
     (let [uris
-          ;; TODO: Replace with an or query
-          (set/union
-           (map
-            first
-            (crux/q
-             (crux/db node)
-             {:find ['id]
-              :where [['e :crux.db/id 'id]
-                      ['e :crux.web/content]]}))
-           (map
-            first
-            (crux/q
-             (crux/db node)
-             {:find ['id]
-              :where [['e :crux.db/id 'id]
-                      ['e :crux.web/content-source]]})))]
+          (map
+           first
+           (crux/q
+            (crux/db node)
+            '{:find [e]
+              :where [(or-join [e] [e :crux.web/content-source] [e :crux.web/content])]}))]
       (into
        {}
        (for [id
