@@ -4,8 +4,7 @@
   (:require
    [juxt.apex.alpha.cms.core :as cms]
    [crux.api :as crux]
-   [integrant.core :as ig]
-   [clojure.set :as set]))
+   [integrant.core :as ig]))
 
 (defrecord CruxContentStore [node]
   cms/ContentStore
