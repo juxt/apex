@@ -200,5 +200,17 @@
   :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Bold.woff2"
   :crux.ac/classification :public}
 
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Thin.woff2"
+  :crux.web/content-type "font/woff"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Thin.woff2"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Light.woff2"
+  :crux.web/content-type "font/woff"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Light.woff2"
+  :crux.ac/classification :public}
+
 
  ]
