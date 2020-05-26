@@ -29,9 +29,7 @@
   (propfind [_ uri depth] "Find the properties of members of uri"))
 
 (defn binary? [content]
-  true
-  ;; TODO: check every byte of .getBytes or use regex
-  )
+  (re-matches #"\P{Cntrl}*" content))
 
 (defn entity-as-html [ent]
   (let [ent
