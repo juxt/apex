@@ -33,7 +33,9 @@
       (:apex.vertx/request req)
       (h (fn [buffer]
            (handler
-            (assoc req :body (new java.io.ByteArrayInputStream (.getBytes buffer)))
+            (assoc
+             req
+             :body (new java.io.ByteArrayInputStream (.getBytes buffer)))
             respond
             raise)))))))
 

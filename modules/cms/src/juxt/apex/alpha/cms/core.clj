@@ -212,6 +212,10 @@
 
     (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"})))
 
+;; POST method
+(defmethod http-method :post [req respond raise {:keys [callback]}]
+  (callback req respond raise))
+
 ;; PROPFIND method
 
 (defn find-members [uri depth candidates]
@@ -365,8 +369,7 @@
            (format
             "Error on %s on %s"
             (str/upper-case (name (:request-method req)))
-            (:uri req)
-            )
+            (:uri req))
            {:request req}
            t)))))))
 
@@ -393,7 +396,14 @@
    ;; OpenAPI-compatible replacement. Also, this is arguably 'core'
    ;; and not something to do in middleware. How we interpret is up to
    ;; each method. <- TODO
-   wrap-params
+
+   ;; Can't use on POST!
+   ((fn [handler]
+       (let [wrapped (-> handler wrap-params)]
+         (fn ([req respond raise]
+              (if (= (:request-method req) :get)
+                (wrapped req respond raise)
+                (handler req respond raise)))))))
 
    ;; This is for strict semantics, but handlers should still check
    ;; the request-method prior to generating expensive bodies.
@@ -411,7 +421,7 @@
 
    ;; Log requests, often optional and sensitive to the logging
    ;; implementation. Definitely middleware.
-;;   wrap-log
+   ;; wrap-log
 
    ;; Prime the Ring request with a blocking stream
    a/wrap-read-all-request-body))
