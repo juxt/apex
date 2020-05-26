@@ -182,5 +182,17 @@
   :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-semibold.woff"
   :crux.ac/classification :public}
 
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Regular.woff2"
+  :crux.web/content-type "font/woff"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Regular.woff2"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Italic.woff2"
+  :crux.web/content-type "font/woff"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Italic.woff2"
+  :crux.ac/classification :public}
+
 
  ]
