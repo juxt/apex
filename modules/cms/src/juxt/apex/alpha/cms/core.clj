@@ -13,7 +13,7 @@
    [juxt.apex.alpha.cms.xml :as x]
    [juxt.apex.examples.cms.adoc :as adoc]
    [ring.middleware.head :refer [head-response]]
-   [ring.middleware.params :refer [wrap-params]]
+   [ring.middleware.params :refer [params-request]]
    [selmer.parser :as selmer]
    [selmer.util :refer [*custom-resource-path*]]
    ))
@@ -36,9 +36,10 @@
 (defn entity-as-html [ent]
   (let [ent
         (cond-> ent
-          (or
-           (> (count (:crux.web/content ent)) 200)
-           (binary? (:crux.web/content ent)))
+          (and (:crux.web/content ent)
+               (or
+                (> (count (:crux.web/content ent)) 200)
+                (binary? (:crux.web/content ent))))
           (assoc :crux.web/content (format "<%s bytes of content>" (count (.getBytes (:crux.web/content ent)))))
           )]
     (str "<pre>\n"
@@ -197,7 +198,10 @@
       (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t)))))
 
 (defmethod http-method :get [req respond raise {:keys [store] :as opts}]
-  (let [debug (get-in req [:query-params "debug"])]
+  ;; To get the debug query parameter.  Arguably we could use Apex's
+  ;; OpenAPI-compatible replacement.
+  (let [req (params-request req)
+        debug (get-in req [:query-params "debug"])]
 
     (if-let [ent (find-entity store (java.net.URI. (uri req)))]
       (if debug
@@ -381,9 +385,11 @@
     ([request]
      (head-response (handler request)))
     ([request respond raise]
-     (handler request
-              (fn [response] (respond (head-response response request)))
-              raise))))
+     (handler
+      request
+      (fn [response]
+        (respond (head-response response request)))
+      raise))))
 
 (defn make-router [{:keys [store vertx engine] :as opts}]
   (assert store)
@@ -391,19 +397,6 @@
   (assert engine)
   (->
    (make-handler opts)
-
-   ;; To get the debug query parameter.  Arguably we could use Apex's
-   ;; OpenAPI-compatible replacement. Also, this is arguably 'core'
-   ;; and not something to do in middleware. How we interpret is up to
-   ;; each method. <- TODO
-
-   ;; Can't use on POST!
-   ((fn [handler]
-       (let [wrapped (-> handler wrap-params)]
-         (fn ([req respond raise]
-              (if (= (:request-method req) :get)
-                (wrapped req respond raise)
-                (handler req respond raise)))))))
 
    ;; This is for strict semantics, but handlers should still check
    ;; the request-method prior to generating expensive bodies.
