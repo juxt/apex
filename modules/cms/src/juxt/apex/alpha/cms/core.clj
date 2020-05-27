@@ -9,6 +9,7 @@
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.async.helpers :as a]
+   [juxt.apex.alpha.cms.images :as images]
    [juxt.apex.alpha.auth-digest.core :refer [wrap-auth-digest]]
    [juxt.apex.alpha.cms.xml :as x]
    [juxt.apex.examples.cms.adoc :as adoc]
@@ -201,6 +202,34 @@
                (ex-info
                 "Failed to render template"
                 {:template (:crux.cms.selmer/template ent)} t)))})))
+
+      ;; TODO: Refactor me!
+      (and (:crux.web/source-image ent) (find-entity store (:crux.web/source-image ent)))
+      (let [source-ent (find-entity store (:crux.web/source-image ent))]
+        (case (:crux.web/content-coding source-ent)
+          :base64
+          (let [baos (new java.io.ByteArrayOutputStream)]
+            (images/resize-image
+             (new java.io.ByteArrayInputStream (.decode (java.util.Base64/getDecoder) (:crux.web/content source-ent)))
+             200
+             baos)
+            (respond
+             {:status 200
+              :headers (cond->
+                           {}
+
+                           (:crux.web/last-modified source-ent)
+                           (assoc
+                            "last-modified"
+                            (rfc1123-date
+                             (java.time.ZonedDateTime/ofInstant
+                              (.toInstant (:crux.web/last-modified source-ent))
+                              (java.time.ZoneId/systemDefault))))
+
+                           (:crux.web/entity-tag source-ent)
+                           (assoc "etag" (str \" (:crux.web/entity-tag source-ent) \")))
+              ;; Not Ring complaint, but awaiting an adapter from InputStream in my Ring/vertx adapter.
+              :body (.toByteArray baos)}))))
 
       :else
       (respond

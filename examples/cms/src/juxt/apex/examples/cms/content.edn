@@ -18,7 +18,7 @@
   :crux.web/content-coding :base64
   :crux.ac/classification :public}
 
-  {:crux.db/id #crux/uri "https://juxt.pro/favicon.png"
+ {:crux.db/id #crux/uri "https://juxt.pro/favicon.png"
   :crux.web/content-type "image/png"
   :crux.web/content-source #crux.cms/file "juxt.website/assets/img/favicon-16x16.png"
   :crux.web/content-coding :base64
@@ -124,6 +124,48 @@
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
   :crux.web/content-source #crux.cms/file "juxt.website/assets/img/public-sector.jpg"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/leaders-one.jpg"
+  :crux.web/content-type "image/jpeg"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/leaders-one.jpg"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/leaders-one.jpg"
+  :crux.web/content-type "image/jpeg"
+  :crux.web/content-coding :base64
+  :crux.web/source-image #crux/uri "https://juxt.pro/img/leaders-one.jpg"
+  :crux.web/transform :resize
+  :crux.web/width 200
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/leaders-two.jpg"
+  :crux.web/content-type "image/jpeg"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/leaders-two.jpg"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/leaders-two.jpg"
+  :crux.web/content-type "image/jpeg"
+  :crux.web/content-coding :base64
+  :crux.web/source-image #crux/uri "https://juxt.pro/img/leaders-two.jpg"
+  :crux.web/transform :resize
+  :crux.web/width 200
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/leaders-three.jpg"
+  :crux.web/content-type "image/jpeg"
+  :crux.web/content-coding :base64
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/leaders-three.jpg"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/leaders-three.jpg"
+  :crux.web/content-type "image/jpeg"
+  :crux.web/content-coding :base64
+  :crux.web/source-image #crux/uri "https://juxt.pro/img/leaders-three.jpg"
+  :crux.web/transform :resize
+  :crux.web/width 200
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/github.svg"

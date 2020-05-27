@@ -158,6 +158,8 @@
                   (and body (= (Class/forName "[B") (.getClass body)))
                   (.. response (write (Buffer/buffer body)) end)
 
+                  ;; TODO: Support java.io.InputStream
+
                   :else
                   (cond-> response
                     body (.write body)
