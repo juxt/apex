@@ -83,7 +83,8 @@
                  (get attributes "id")
                  {(get attributes "id")
                   (merge attributes
-                         {"content" (.getContent block)})}))))))
+                         {"title" (.getTitle block)
+                          "content" (.getContent block)})}))))))
 
 
 #_(def engine (engine))
