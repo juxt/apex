@@ -43,7 +43,21 @@
     (assoc :crux.web/content-length (.length (:crux.web/content tx)))))
 
 (defn compute-etag [tx]
-  (assoc tx :crux.web/entity-tag (hash tx)))
+  ;; If there _is_ content,
+  (cond-> tx
+    (and
+     (not (:crux.web/entity-tag tx))         ; no pre-existing entity-tag
+     (:crux.web/content tx)             ; but some content
+     )
+    (assoc
+     :crux.web/entity-tag
+     (hash
+      (select-keys
+       tx
+       [:crux.web/content ; if the content changed, the etag would too
+        :crux.web/content-encoding
+        :crux.web/content-language
+        :crux.web/content-type])))))
 
 (defn content-txes []
   (map compute-etag
