@@ -61,7 +61,9 @@
  {:crux.db/id #crux/uri "https://juxt.pro/img/lq/rocks.jpg"
   :crux.web/content-type "image/jpeg"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/lq/rocks.jpg"
+  :crux.web/source-image #crux/uri "https://juxt.pro/img/rocks.jpg"
+  :crux.web/transform :resize
+  :crux.web/width 400
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/img/rocks.jpg"

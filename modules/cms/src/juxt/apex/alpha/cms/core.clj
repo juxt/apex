@@ -211,12 +211,14 @@
           (let [baos (new java.io.ByteArrayOutputStream)]
             (images/resize-image
              (new java.io.ByteArrayInputStream (.decode (java.util.Base64/getDecoder) (:crux.web/content source-ent)))
-             200
+             (get ent :crux.web/width 200)
              baos)
-            (respond
-             {:status 200
-              :headers (cond->
-                           {}
+            (let [body (.toByteArray baos)]
+
+              (respond
+               {:status 200
+                :headers (cond->
+                             {"content-length" (str (count body))}
 
                            (:crux.web/last-modified source-ent)
                            (assoc
@@ -228,8 +230,8 @@
 
                            (:crux.web/entity-tag source-ent)
                            (assoc "etag" (str \" (:crux.web/entity-tag source-ent) \")))
-              ;; Not Ring complaint, but awaiting an adapter from InputStream in my Ring/vertx adapter.
-              :body (.toByteArray baos)}))))
+                ;; Not Ring complaint, but awaiting an adapter from InputStream in my Ring/vertx adapter.
+                :body body})))))
 
       :else
       (respond
