@@ -152,35 +152,55 @@
               (:crux.web/content ent)))))
 
       (:crux.cms.selmer/template ent)
-      (a/execute-blocking-code
-       vertx
-       (fn [] (render-entity-with-selmer-template ent store engine))
-       {:on-success
-        (fn [body]
+      (let [source-ent (find-entity store (:crux.cms/source ent))
+            headers
+            (cond-> {}
+              (:crux.web/content-type ent)
+              (conj ["content-type" (:crux.web/content-type ent)])
+
+              (:crux.web/content-language ent)
+              ;; TODO: Support vectors for multiple languages (see
+              ;; identical TODO above)
+              (conj ["content-language" (:crux.web/content-language ent)])
+
+              ;; Calc last-modified and/or etag - computed on-the-fly
+              ;; in order to prevent stale responses being generated.
+              ;;
+              ;; TODO: This should return the 'most recent' of the following:
+              ;; 1. source data (source-ent) (done!)
+              ;; 2. (any dependencies, includes of the source-ent)
+              ;; 3. template source
+              ;; 4. (any selmer partials included)
+              source-ent
+              (conj ["last-modified"
+                     (rfc1123-date
+                      (java.time.ZonedDateTime/ofInstant
+                       (.toInstant (:crux.web/last-modified source-ent))
+                       (java.time.ZoneId/systemDefault)))])
+
+              ;; No content-length, this will be chunked
+              )]
+        (if head?
           (respond
-           (cond->
+           {:status 200
+            :headers headers})
+
+          (a/execute-blocking-code
+           vertx
+           (fn [] (render-entity-with-selmer-template ent store engine))
+           {:on-success
+            (fn [body]
+              (respond
                {:status 200
-                :headers
-                (cond-> {}
-                  (:crux.web/content-type ent)
-                  (conj ["content-type" (:crux.web/content-type ent)])
-                  (:crux.web/content-language ent)
-                  ;; TODO: Support vectors for multiple languages (see
-                  ;; identical TODO above)
-                  (conj ["content-language" (:crux.web/content-language ent)])
+                :headers headers
+                :body body}))
 
-                  ;; No content-length, this will be chunked
-                  )}
-
-               (not head?)
-               (assoc :body body))))
-
-        :on-failure
-        (fn [t]
-          (raise
-           (ex-info
-            "Failed to render template"
-            {:template (:crux.cms.selmer/template ent)} t)))})
+            :on-failure
+            (fn [t]
+              (raise
+               (ex-info
+                "Failed to render template"
+                {:template (:crux.cms.selmer/template ent)} t)))})))
 
       :else
       (respond
