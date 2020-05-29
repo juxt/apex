@@ -13,7 +13,7 @@
 
 (defrecord LocalContentStore [entities]
   cms/ContentStore
-  (find-entity [_ id]
+  (lookup-resource [_ id]
     (get entities id)))
 
 (defmethod ig/init-key ::content-store [_ _]

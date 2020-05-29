@@ -22,13 +22,13 @@
 
 (defrecord TestContentStore []
   cms/ContentStore
-  (find-entity [_ id]
+  (lookup-resource [_ id]
     (get entities id))
   (propfind [this uri depth]
     (into {}
           (for [id
                 (cms/find-members uri depth (keys entities))]
-            [id (cms/find-entity this id)]))))
+            [id (cms/lookup-resource this id)]))))
 
 
 #_(let [store (->TestContentStore)]

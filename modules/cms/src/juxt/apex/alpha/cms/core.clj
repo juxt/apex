@@ -18,7 +18,7 @@
           (-> req :uri)))
 
 (defprotocol ContentStore
-  (find-entity [_ id] "Find the entity with the given id")
+  (lookup-resource [_ id] "Find the entity with the given id")
   (propfind [_ uri depth] "Find the properties of members of uri"))
 
 ;; TODO: Belongs in Apex 'core'
@@ -45,13 +45,13 @@
     :headers {"DAV" "1"}}))
 
 (defmethod http-method :get [backend {:keys [store] :as ctx} req respond raise]
-  (if-let [entity (find-entity store (java.net.URI. (uri req)))]
+  (if-let [entity (lookup-resource store (java.net.URI. (uri req)))]
     ;; TODO: Revisit use of 'crux' ns here
     (generate-representation backend (assoc ctx :crux/entity entity) req respond raise)
     (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"})))
 
 (defmethod http-method :head [backend {:keys [store] :as ctx} req respond raise]
-  (if-let [entity (find-entity store (java.net.URI. (uri req)))]
+  (if-let [entity (lookup-resource store (java.net.URI. (uri req)))]
     (generate-representation
      backend
      (assoc
@@ -100,7 +100,7 @@
         ;; "Depth: infinity" header was included." -- RFC 4918
         depth (get-in req [:headers "depth"] "infinity")
         uri (java.net.URI. (uri req))
-        ent (find-entity store uri)
+        ent (lookup-resource store uri)
         ]
 
     ;; Unless public, we need to know who is accessing this resource (TODO)

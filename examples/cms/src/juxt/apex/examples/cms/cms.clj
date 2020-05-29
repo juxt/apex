@@ -68,7 +68,7 @@
 
        ;; Merge all the bookmarked content of the adoc source into the template model
        (:crux.cms/source entity)
-       (merge (adoc/template-model engine (:crux.web/content (cms/find-entity store (:crux.cms/source entity))))))
+       (merge (adoc/template-model engine (:crux.web/content (cms/lookup-resource store (:crux.cms/source entity))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
@@ -130,7 +130,7 @@
               (:crux.web/content entity)))))
 
       (:crux.cms.selmer/template entity)
-      (let [source-ent (cms/find-entity store (:crux.cms/source entity))
+      (let [source-ent (cms/lookup-resource store (:crux.cms/source entity))
             _ (when-not source-ent
                 (throw (ex-info "Expected source entity not found" {:source-entity (:crux.cms/source entity)})))
             headers
@@ -184,8 +184,8 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:crux.web/source-image entity) (cms/find-entity store (:crux.web/source-image entity)))
-      (let [source-ent (cms/find-entity store (:crux.web/source-image entity))]
+      (and (:crux.web/source-image entity) (cms/lookup-resource store (:crux.web/source-image entity)))
+      (let [source-ent (cms/lookup-resource store (:crux.web/source-image entity))]
         (case (:crux.web/content-coding source-ent)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]

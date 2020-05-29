@@ -8,7 +8,7 @@
 
 (defrecord CruxContentStore [node]
   cms/ContentStore
-  (find-entity [_ id]
+  (lookup-resource [_ id]
     (crux/entity (crux/db node) id))
   (propfind [this uri depth]
     (let [uris
@@ -22,7 +22,7 @@
        {}
        (for [id
              (cms/find-members uri depth uris)]
-         [id (cms/find-entity this id)])))))
+         [id (cms/lookup-resource this id)])))))
 
 
 (defmethod ig/init-key ::content-store [_ {:keys [node]}]
