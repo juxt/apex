@@ -17,12 +17,10 @@
           (-> req :headers (get "host"))
           (-> req :uri)))
 
-(defprotocol ContentStore
-  (lookup-resource [_ uri] "Find the resource with the given uri")
-  (propfind [_ uri depth] "Find the properties of members of uri"))
-
 ;; TODO: Belongs in Apex 'core'
 (defprotocol ApexBackend
+  (lookup-resource [_ uri] "Find the resource with the given uri")
+  (propfind [_ uri depth] "Find the properties of members of uri")
   (post-resource [_ ctx req respond raise])
   (generate-representation [_ ctx req respond raise]))
 
@@ -44,14 +42,14 @@
    {:status 200
     :headers {"DAV" "1"}}))
 
-(defmethod http-method :get [backend {:keys [store] :as ctx} req respond raise]
-  (if-let [entity (lookup-resource store (java.net.URI. (uri req)))]
+(defmethod http-method :get [backend ctx req respond raise]
+  (if-let [entity (lookup-resource backend (java.net.URI. (uri req)))]
     ;; TODO: Revisit use of 'crux' ns here
     (generate-representation backend (assoc ctx :crux/entity entity) req respond raise)
     (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"})))
 
-(defmethod http-method :head [backend {:keys [store] :as ctx} req respond raise]
-  (if-let [entity (lookup-resource store (java.net.URI. (uri req)))]
+(defmethod http-method :head [backend ctx req respond raise]
+  (if-let [entity (lookup-resource backend (java.net.URI. (uri req)))]
     (generate-representation
      backend
      (assoc
@@ -66,7 +64,7 @@
     (respond {:status 404})))
 
 ;; POST method
-(defmethod http-method :post [backend {:keys [callback] :as ctx} req respond raise]
+(defmethod http-method :post [backend ctx req respond raise]
   (post-resource backend ctx req respond raise))
 
 ;; PROPFIND method
@@ -94,20 +92,19 @@
    #{}
    candidates))
 
-(defmethod http-method :propfind [{:keys [vertx store]} req respond raise]
+(defmethod http-method :propfind [backend {:keys [vertx]} req respond raise]
   (let [
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
         depth (get-in req [:headers "depth"] "infinity")
         uri (java.net.URI. (uri req))
-        ent (lookup-resource store uri)
-        ]
+        entity (lookup-resource backend uri)]
 
     ;; Unless public, we need to know who is accessing this resource (TODO)
 
     ;; Do we have an Authorization header?
 
-    (let [members (propfind store uri depth)
+    (let [members (propfind backend uri depth)
           body-str (slurp (:body req))
           props (->>
                  (x/->*
@@ -123,7 +120,7 @@
                (xml-declaration "utf-8")
                [:multistatus {"xmlns" "DAV:"}
                 (for [[uri ent] members
-                      :let [authorized? (= (:crux.ac/classification ent) :public)]]
+                      :let [authorized? (= (:crux.ac/classification entity) :public)]]
                   (when true
                     [:response
                      [:href (str uri)]
@@ -139,16 +136,16 @@
                              [:resourcetype])
 
                            :getetag
-                           (when-let [etag (:crux.web/entity-tag ent)]
+                           (when-let [etag (:crux.web/entity-tag entity)]
                              [:getetag etag])
 
                            :getcontentlength
                            (when
-                               (:crux.web/content ent)
-                               [:getcontentlength (.length (:crux.web/content ent))])
+                               (:crux.web/content entity)
+                               [:getcontentlength (.length (:crux.web/content entity))])
 
                            :getlastmodified
-                           (when-let [last-modified (:crux.web/last-modified ent)]
+                           (when-let [last-modified (:crux.web/last-modified entity)]
                              [:getlastmodified
                               (rfc1123-date
                                (java.time.ZonedDateTime/ofInstant
@@ -226,8 +223,7 @@
            {:request req}
            t)))))))
 
-(defn make-router [backend {:keys [store vertx engine] :as init-ctx}]
-  (assert store)
+(defn make-router [backend {:keys [vertx engine] :as init-ctx}]
   (assert vertx)
   (assert engine)
   (->

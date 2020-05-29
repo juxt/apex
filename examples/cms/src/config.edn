@@ -16,21 +16,13 @@
    :router #ig/ref :juxt.apex.examples.cms.router/router}
 
   :juxt.apex.examples.cms.router/router
-  {:cms-router #ig/ref :juxt.apex.examples.cms.cms/router
-   }
+  {:cms-router #ig/ref :juxt.apex.examples.cms.cms/router}
 
   :juxt.apex.examples.cms.cms/router
   {:vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
-   :store #ig/ref :juxt.apex.examples.cms.crux-content-store/content-store
    :engine #ig/ref :juxt.apex.examples.cms.adoc/engine
    :crux-node #ig/ref :juxt.apex.examples.cms.db/node
    }
-
-  #_:juxt.site.local/content-store
-  #_{}
-
-  :juxt.apex.examples.cms.crux-content-store/content-store
-  {:node #ig/ref :juxt.apex.examples.cms.db/node}
 
   [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
   {

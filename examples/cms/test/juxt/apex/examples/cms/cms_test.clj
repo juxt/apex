@@ -18,8 +18,8 @@
    (map (juxt :crux.db/id identity))
    (into {})))
 
-(defrecord TestContentStore []
-  cms/ContentStore
+(defrecord TestBackend []
+  cms/ApexBackend
   (lookup-resource [_ uri]
     (get entities uri))
   (propfind [this uri depth]
@@ -27,13 +27,6 @@
           (for [uri
                 (cms/find-members uri depth (keys entities))]
             [uri (cms/lookup-resource this uri)]))))
-
-
-#_(let [store (->TestContentStore)]
-  (cms/propfind store (java.net.URI. "https://juxt.pro/A/") "infinity")
-    )
-
-
 
 (deftest get-test
   (let [req
@@ -45,7 +38,7 @@
     (with-open [vertx (Vertx/vertx)]
       (let [handler
             (cms/make-router
-             {:store (->TestContentStore)
+             {:store (->TestBackend)
               :vertx vertx})
             response (handler req)]
         (is (= 200 (:status response)))
@@ -74,7 +67,7 @@
     (with-open [vertx (Vertx/vertx)]
       (let [handler
             (cms/make-router
-             {:store (->TestContentStore)
+             {:store (->TestBackend)
               :vertx vertx})
             response (handler req)]
         (is (= 207 (:status response)))

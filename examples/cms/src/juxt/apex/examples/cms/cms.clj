@@ -43,7 +43,7 @@
           (str/replace "<" "&lt;"))
          "</pre>\n")))
 
-(defn respond-entity [{:keys [crux/entity] :as ctx} req respond raise]
+(defn respond-entity [backend {:keys [crux/entity] :as ctx} req respond raise]
   ;; TODO: Might need authorization to see resource metadata
   ;; (for protected resources)
   (respond
@@ -53,7 +53,7 @@
 
 (def templates-source-uri (java.net.URI. "http://localhost:8000/_sources/templates/"))
 
-(defn render-entity-with-selmer-template [entity store engine]
+(defn render-entity-with-selmer-template [backend entity engine]
   (assert entity)
 
   (binding [*custom-resource-path*
@@ -68,14 +68,14 @@
 
        ;; Merge all the bookmarked content of the adoc source into the template model
        (:crux.cms/source entity)
-       (merge (adoc/template-model engine (:crux.web/content (cms/lookup-resource store (:crux.cms/source entity))))))
+       (merge (adoc/template-model engine (:crux.web/content (cms/lookup-resource backend (:crux.cms/source entity))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
 (defn respond-entity-response
   "Return the response for a GET request targetting a resource backed by
   a CMS entity."
-  [{:keys [vertx store engine apex/head? crux/entity]} req respond raise]
+  [backend {:keys [vertx engine apex/head? crux/entity]} req respond raise]
 
   ;; Determine status
   ;; Negotiate content representation
@@ -130,7 +130,7 @@
               (:crux.web/content entity)))))
 
       (:crux.cms.selmer/template entity)
-      (let [source-ent (cms/lookup-resource store (:crux.cms/source entity))
+      (let [source-ent (cms/lookup-resource backend (:crux.cms/source entity))
             _ (when-not source-ent
                 (throw (ex-info "Expected source entity not found" {:source-entity (:crux.cms/source entity)})))
             headers
@@ -167,7 +167,7 @@
 
           (a/execute-blocking-code
            vertx
-           (fn [] (render-entity-with-selmer-template entity store engine))
+           (fn [] (render-entity-with-selmer-template backend entity engine))
            {:on-success
             (fn [body]
               (respond
@@ -184,8 +184,8 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:crux.web/source-image entity) (cms/lookup-resource store (:crux.web/source-image entity)))
-      (let [source-ent (cms/lookup-resource store (:crux.web/source-image entity))]
+      (and (:crux.web/source-image entity) (cms/lookup-resource backend (:crux.web/source-image entity)))
+      (let [source-ent (cms/lookup-resource backend (:crux.web/source-image entity))]
         (case (:crux.web/content-coding source-ent)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
@@ -226,11 +226,27 @@
     (catch Throwable t
       (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t)))))
 
-(defmethod ig/init-key ::router [_ {:keys [crux-node store] :as opts}]
-  (assert store)
+(defmethod ig/init-key ::router [_ {:keys [crux-node] :as opts}]
   (cms/make-router
    (reify
      cms/ApexBackend
+     (lookup-resource [_ uri]
+       (crux/entity (crux/db crux-node) uri))
+     (propfind [this uri depth]
+       (let [uris
+             (map
+              first
+              (crux/q
+               (crux/db crux-node)
+               '{:find [e]
+                 :where [(or-join [e] [e :crux.web/content-source] [e :crux.web/content])]}))]
+         (into
+          {}
+          (for [uri
+                (cms/find-members uri depth uris)]
+            [uri (cms/lookup-resource this uri)]))))
+
+
      (post-resource [_ ctx req respond raise]
        (let [body (slurp (:body req))]
          (crux/submit-tx
@@ -242,14 +258,12 @@
              :crux.ac/classification :public}]])
          (respond {:status 201 :body "Uploaded!\n"})))
 
-     (generate-representation [_ {:keys [crux/entity] :as ctx} req respond raise]
+     (generate-representation [this {:keys [crux/entity] :as ctx} req respond raise]
        ;; To get the debug query parameter.  Arguably we could use Apex's
        ;; OpenAPI-compatible replacement.
-       (assert store)
        (let [req (params-request req)
              debug (get-in req [:query-params "debug"])]
          (if debug
-           (respond-entity ctx req respond raise)
-           (respond-entity-response ctx req respond raise)))
-       ))
+           (respond-entity this ctx req respond raise)
+           (respond-entity-response this ctx req respond raise)))))
    opts))
