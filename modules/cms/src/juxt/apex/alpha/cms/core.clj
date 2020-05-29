@@ -43,18 +43,17 @@
     :headers {"DAV" "1"}}))
 
 (defmethod http-method :get [backend ctx req respond raise]
-  (if-let [entity (lookup-resource backend (java.net.URI. (uri req)))]
-    ;; TODO: Revisit use of 'crux' ns here
-    (generate-representation backend (assoc ctx :crux/entity entity) req respond raise)
-    (respond {:status 404 :body "Crux CMS: 404 (Not found)\n"})))
+  (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
+    (generate-representation backend (assoc ctx :apex/resource resource) req respond raise)
+    (respond {:status 404 :body "Apex: 404 (Not found)\n"})))
 
 (defmethod http-method :head [backend ctx req respond raise]
-  (if-let [entity (lookup-resource backend (java.net.URI. (uri req)))]
+  (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
     (generate-representation
      backend
      (assoc
       ctx
-      :crux/entity entity
+      :apex/resource resource
       :apex/head? true)
      req
      (fn [response]
@@ -98,7 +97,7 @@
         ;; "Depth: infinity" header was included." -- RFC 4918
         depth (get-in req [:headers "depth"] "infinity")
         uri (java.net.URI. (uri req))
-        entity (lookup-resource backend uri)]
+        resource (lookup-resource backend uri)]
 
     ;; Unless public, we need to know who is accessing this resource (TODO)
 
@@ -120,7 +119,7 @@
                (xml-declaration "utf-8")
                [:multistatus {"xmlns" "DAV:"}
                 (for [[uri ent] members
-                      :let [authorized? (= (:crux.ac/classification entity) :public)]]
+                      :let [authorized? (= (:apex/classification resource) :public)]]
                   (when true
                     [:response
                      [:href (str uri)]
@@ -136,16 +135,17 @@
                              [:resourcetype])
 
                            :getetag
-                           (when-let [etag (:crux.web/entity-tag entity)]
+                           (when-let [etag (:apex.web/entity-tag resource)]
                              [:getetag etag])
 
                            :getcontentlength
                            (when
-                               (:crux.web/content entity)
-                               [:getcontentlength (.length (:crux.web/content entity))])
+                               (:apex/content resource)
+                               [:getcontentlength (.length (:apex/content resource))])
 
                            :getlastmodified
-                           (when-let [last-modified (:crux.web/last-modified entity)]
+                           ;; Hmm, not sure it's resources that are 'last modified', more like representations
+                           (when-let [last-modified (:apex/last-modified resource)]
                              [:getlastmodified
                               (rfc1123-date
                                (java.time.ZonedDateTime/ofInstant

@@ -14,8 +14,8 @@
    [selmer.parser :as selmer]
    [selmer.util :refer [*custom-resource-path*]]))
 
-(defn redirect? [ent]
-  (when-let [status (:crux.web/status ent)]
+(defn redirect? [resource]
+  (when-let [status (:apex/status resource)]
     (and (>= status 300) (< status 400))))
 
 ;; Copied in this repo - TODO: dedupe!
@@ -28,14 +28,14 @@
 (defn binary? [content]
   (re-matches #"\P{Cntrl}*" content))
 
-(defn entity-as-html [ent]
+(defn resource-as-html [ent]
   (let [ent
         (cond-> ent
-          (and (:crux.web/content ent)
+          (and (:apex/content ent)
                (or
-                (> (count (:crux.web/content ent)) 200)
-                (binary? (:crux.web/content ent))))
-          (assoc :crux.web/content (format "<%s bytes of content>" (count (.getBytes (:crux.web/content ent)))))
+                (> (count (:apex/content ent)) 200)
+                (binary? (:apex/content ent))))
+          (assoc :apex/content (format "<%s bytes of content>" (count (.getBytes (:apex/content ent)))))
           )]
     (str "<pre>\n"
          (->
@@ -43,39 +43,43 @@
           (str/replace "<" "&lt;"))
          "</pre>\n")))
 
-(defn respond-entity [backend {:keys [crux/entity] :as ctx} req respond raise]
+(defn respond-resource [_ {:keys [apex/resource] :as ctx} req respond raise]
   ;; TODO: Might need authorization to see resource metadata
   ;; (for protected resources)
   (respond
    {:status 200
     :headers {"content-type" "text/html"}
-    :body (entity-as-html entity)}))
+    :body (resource-as-html resource)}))
 
 (def templates-source-uri (java.net.URI. "http://localhost:8000/_sources/templates/"))
 
-(defn render-entity-with-selmer-template [backend entity engine]
-  (assert entity)
+(defn generate-body-from-template [backend resource asciidoctor-engine]
+  (assert resource)
 
   (binding [*custom-resource-path*
             (. templates-source-uri toURL)]
     (selmer/render-file
-     (java.net.URL. (str templates-source-uri (:crux.cms.selmer/template entity)))
+     (java.net.URL. (str templates-source-uri (:apex.selmer/template resource)))
 
-     ;; TODO: Does the entity have a crux.cms/source attribute?
+     ;; TODO: Does the entity have a apex/source attribute?
      ;; If so, do the adoc dance and extract all the bookmarks are pop them into this entity
-     (cond-> entity
-       (:template entity) (dissoc :template)
+     (cond-> resource
+       (:apex.selmer/template resource) (dissoc :template)
 
        ;; Merge all the bookmarked content of the adoc source into the template model
-       (:crux.cms/source entity)
-       (merge (adoc/template-model engine (:crux.web/content (cms/lookup-resource backend (:crux.cms/source entity))))))
+       (:apex/source resource)
+       (merge
+        (adoc/template-model
+         asciidoctor-engine
+         (:apex/content
+          (cms/lookup-resource backend (:apex/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
-(defn respond-entity-response
+(defn respond-resource-response
   "Return the response for a GET request targetting a resource backed by
   a CMS entity."
-  [backend {:keys [vertx engine apex/head? crux/entity]} req respond raise]
+  [backend {:keys [vertx engine apex/head? apex/resource]} req respond raise]
 
   ;; Determine status
   ;; Negotiate content representation
@@ -84,64 +88,65 @@
   ;; Generate response with new entity-tag
   ;; Handle errors (by responding with error response, with appropriate re-negotiation)
 
-  (assert entity)
+  (assert resource)
 
   (try
     (cond
-      (redirect? entity)
+      (redirect? resource)
       (respond
-       {:status (:crux.web/status entity)
-        :headers {"location" (str (:crux.web/location entity))}})
+       {:status (:apex/status resource)
+        :headers {"location" (str (:apex/location resource))}})
 
       ;; We are a static representation
-      (and (string? (:crux.web/content entity)))
+      (and (string? (:apex/content resource)))
       ;; So our etag is easy to compute
       (respond
        (cond->
            {:status 200
             :headers
             (cond-> {}
-              (:crux.web/content-type entity)
-              (conj ["content-type" (:crux.web/content-type entity)])
+              (:apex/content-type resource)
+              (conj ["content-type" (:apex/content-type resource)])
 
-              (:crux.web/content-language entity)
+              (:apex/content-language resource)
               ;; TODO: Support vectors for multiple languages
-              (conj ["content-language" (:crux.web/content-language entity)])
+              (conj ["content-language" (:apex/content-language resource)])
 
-              (:crux.web/content-length entity)
-              (conj ["content-length" (str (:crux.web/content-length entity))])
+              (:apex/content-length resource)
+              (conj ["content-length" (str (:apex/content-length resource))])
 
-              (:crux.web/last-modified entity)
+              (:apex/last-modified resource)
               (conj ["last-modified"
                      (rfc1123-date
                       (java.time.ZonedDateTime/ofInstant
-                       (.toInstant (:crux.web/last-modified entity))
+                       ;; Hmm, representations are last-modified, not resources?
+                       (.toInstant (:apex/last-modified resource))
                        (java.time.ZoneId/systemDefault)))])
 
-              (:crux.web/entity-tag entity)
-              (conj ["etag" (str \" (:crux.web/entity-tag entity) \")]))}
+              (:apex/entity-tag resource)
+              (conj ["etag" (str \" (:apex/entity-tag resource) \")]))}
 
            (not head?)
            (assoc
             :body
-            (case (:crux.web/content-coding entity)
+            (case (:apex/content-coding resource)
               :base64
-              (.decode (java.util.Base64/getDecoder) (:crux.web/content entity))
-              (:crux.web/content entity)))))
+              (.decode (java.util.Base64/getDecoder) (:apex/content resource))
+              (:apex/content resource)))))
 
-      (:crux.cms.selmer/template entity)
-      (let [source-ent (cms/lookup-resource backend (:crux.cms/source entity))
+      (:apex.selmer/template resource)
+      (let [source-ent (cms/lookup-resource backend (:apex/source resource))
             _ (when-not source-ent
-                (throw (ex-info "Expected source entity not found" {:source-entity (:crux.cms/source entity)})))
+                (throw (ex-info "Expected source entity not found" {:source-entity (:apex/source resource)})))
             headers
             (cond-> {}
-              (:crux.web/content-type entity)
-              (conj ["content-type" (:crux.web/content-type entity)])
+              (:apex/content-type resource)
+              (conj ["content-type" (:apex/content-type resource)])
 
-              (:crux.web/content-language entity)
+              (:apex/content-language resource)
               ;; TODO: Support vectors for multiple languages (see
               ;; identical TODO above)
-              (conj ["content-language" (:crux.web/content-language entity)])
+              (conj ["content-language" (:apex/content-language resource)])
 
               ;; Calc last-modified and/or etag - computed on-the-fly
               ;; in order to prevent stale responses being generated.
@@ -155,7 +160,7 @@
               (conj ["last-modified"
                      (rfc1123-date
                       (java.time.ZonedDateTime/ofInstant
-                       (.toInstant (:crux.web/last-modified source-ent))
+                       (.toInstant (:apex/last-modified source-ent))
                        (java.time.ZoneId/systemDefault)))])
 
               ;; No content-length, this will be chunked
@@ -167,7 +172,7 @@
 
           (a/execute-blocking-code
            vertx
-           (fn [] (render-entity-with-selmer-template backend entity engine))
+           (fn [] (generate-body-from-template backend resource engine))
            {:on-success
             (fn [body]
               (respond
@@ -180,18 +185,18 @@
               (raise
                (ex-info
                 "Failed to render template"
-                {:template (:crux.cms.selmer/template entity)}
+                {:template (:apex.selmer/template resource)}
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:crux.web/source-image entity) (cms/lookup-resource backend (:crux.web/source-image entity)))
-      (let [source-ent (cms/lookup-resource backend (:crux.web/source-image entity))]
-        (case (:crux.web/content-coding source-ent)
+      (and (:apex/source-image resource) (cms/lookup-resource backend (:apex/source-image resource)))
+      (let [source-resource (cms/lookup-resource backend (:apex/source-image resource))]
+        (case (:apex/content-coding source-resource)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
             (images/resize-image
-             (new java.io.ByteArrayInputStream (.decode (java.util.Base64/getDecoder) (:crux.web/content source-ent)))
-             (get entity :crux.web/width 200)
+             (new java.io.ByteArrayInputStream (.decode (java.util.Base64/getDecoder) (:apex/content source-resource)))
+             (get resource :apex/width 200)
              baos)
             (let [body (.toByteArray baos)]
 
@@ -200,16 +205,16 @@
                 :headers (cond->
                              {"content-length" (str (count body))}
 
-                           (:crux.web/last-modified source-ent)
+                           (:apex/last-modified source-resource)
                            (assoc
                             "last-modified"
                             (rfc1123-date
                              (java.time.ZonedDateTime/ofInstant
-                              (.toInstant (:crux.web/last-modified source-ent))
+                              (.toInstant (:apex/last-modified source-resource))
                               (java.time.ZoneId/systemDefault))))
 
-                           (:crux.web/entity-tag source-ent)
-                           (assoc "etag" (str \" (:crux.web/entity-tag source-ent) \")))
+                           (:apex/entity-tag source-resource)
+                           (assoc "etag" (str \" (:apex/entity-tag source-resource) \")))
                 ;; Not Ring complaint, but awaiting an adapter from InputStream in my Ring/vertx adapter.
                 :body body})))))
 
@@ -220,7 +225,7 @@
          (assoc :body
                 (str
                  "<body><h2>ERROR - Not handled</h2>"
-                 (entity-as-html entity)
+                 (resource-as-html resource)
                  "</body>")))))
 
     (catch Throwable t
@@ -239,7 +244,7 @@
               (crux/q
                (crux/db crux-node)
                '{:find [e]
-                 :where [(or-join [e] [e :crux.web/content-source] [e :crux.web/content])]}))]
+                 :where [(or-join [e] [e :apex/content-source] [e :apex/content])]}))]
          (into
           {}
           (for [uri
@@ -253,17 +258,17 @@
           crux-node
           [[:crux.tx/put
             {:crux.db/id (java.net.URI. "https://juxt.pro/frontpage3.css")
-             :crux.web/content-type "text/css;charset=utf-8"
-             :crux.web/content body
-             :crux.ac/classification :public}]])
+             :apex/content-type "text/css;charset=utf-8"
+             :apex/content body
+             :apex/classification :public}]])
          (respond {:status 201 :body "Uploaded!\n"})))
 
-     (generate-representation [this {:keys [crux/entity] :as ctx} req respond raise]
+     (generate-representation [this {:keys [apex/resource] :as ctx} req respond raise]
        ;; To get the debug query parameter.  Arguably we could use Apex's
        ;; OpenAPI-compatible replacement.
        (let [req (params-request req)
              debug (get-in req [:query-params "debug"])]
          (if debug
-           (respond-entity this ctx req respond raise)
-           (respond-entity-response this ctx req respond raise)))))
+           (respond-resource this ctx req respond raise)
+           (respond-resource-response this ctx req respond raise)))))
    opts))

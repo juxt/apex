@@ -9,31 +9,31 @@
 (defn slurp-file-as-b64encoded-string [f]
   (try
     (let [bytes (.readAllBytes (new java.io.FileInputStream f))]
-      {:crux.web/content (.encodeToString (java.util.Base64/getEncoder) bytes)
-       :crux.web/content-length (count bytes)
-       :crux.web/content-coding :base64
-       :crux.web/last-modified (java.util.Date. (.lastModified f))
-       :crux.web/content-source (.toURI f)})
+      {:apex/content (.encodeToString (java.util.Base64/getEncoder) bytes)
+       :apex/content-length (count bytes)
+       :apex/content-coding :base64
+       :apex/last-modified (java.util.Date. (.lastModified f))
+       :apex/content-source (.toURI f)})
     (catch Throwable t
       (throw (ex-info "Failed to load file" {:file f} t)))))
 
 (defn slurp-file-as-string [f]
   (try
-    {:crux.web/content (slurp f)
-     :crux.web/content-length (.length f)
-     :crux.web/last-modified (java.util.Date. (.lastModified f))
-     :crux.web/content-source (.toURI f)}
+    {:apex/content (slurp f)
+     :apex/content-length (.length f)
+     :apex/last-modified (java.util.Date. (.lastModified f))
+     :apex/content-source (.toURI f)}
     (catch Throwable t
       (throw (ex-info "Failed to load file" {:file f} t)))))
 
 (defn ingest-content [tx]
   (cond-> tx
     (and
-     (not (:crux.web/content tx))
-     (:crux.web/content-source tx))
+     (not (:apex/content tx))
+     (:apex/content-source tx))
     (merge
-     (let [f (io/file (:crux.web/content-source tx))]
-       (case (:crux.web/content-coding tx)
+     (let [f (io/file (:apex/content-source tx))]
+       (case (:apex/content-coding tx)
          :base64
          (slurp-file-as-b64encoded-string f)
          (slurp-file-as-string f))))))
@@ -43,27 +43,27 @@
   [tx]
   (cond-> tx
     (and
-     (not (:crux.web/content-length tx))
-     (:crux.web/content tx)
-     (not (:crux.web/content-coding tx)))
-    (assoc :crux.web/content-length (.length (:crux.web/content tx)))))
+     (not (:apex/content-length tx))
+     (:apex/content tx)
+     (not (:apex/content-coding tx)))
+    (assoc :apex/content-length (.length (:apex/content tx)))))
 
 (defn compute-etag [tx]
   ;; If there _is_ content,
   (cond-> tx
     (and
-     (not (:crux.web/entity-tag tx))         ; no pre-existing entity-tag
-     (:crux.web/content tx)             ; but some content
+     (not (:apex/entity-tag tx))         ; no pre-existing entity-tag
+     (:apex/content tx)             ; but some content
      )
     (assoc
-     :crux.web/entity-tag
+     :apex/entity-tag
      (hash
       (select-keys
        tx
-       [:crux.web/content ; if the content changed, the etag would too
-        :crux.web/content-encoding
-        :crux.web/content-language
-        :crux.web/content-type])))))
+       [:apex/content ; if the content changed, the etag would too
+        :apex/content-encoding
+        :apex/content-language
+        :apex/content-type])))))
 
 (defn content-txes []
   (map compute-etag
@@ -87,8 +87,8 @@
                         :let [p (str (.relativize (.toPath dir) (.toPath f)))]]
                     (merge
                      {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/templates/" p))
-                      :crux.web/content-type "text/plain;charset=utf-8"
-                      :crux.web/content-language "en"}
+                      :apex/content-type "text/plain;charset=utf-8"
+                      :apex/content-language "en"}
                      (slurp-file-as-string f))))
 
                 ;; Plan repo site sources
@@ -101,23 +101,23 @@
                       #".*\.adoc"
                       (merge
                        {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/plan/site/" p))
-                        :crux.web/content-type "text/plain;charset=utf-8"
-                        :crux.web/content-language "en"}
+                        :apex/content-type "text/plain;charset=utf-8"
+                        :apex/content-language "en"}
                        (slurp-file-as-string f))
 
                       #".*\.svg"
                       (merge
                        {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
-                        :crux.web/content-type "image/svg+xml"
-                        :crux.web/content-language "en"
-                        :crux.ac/classification :public}
+                        :apex/content-type "image/svg+xml"
+                        :apex/content-language "en"
+                        :apex/classification :public}
                        (slurp-file-as-string f))
 
                       #".*\.png"
                       (merge
                        {:crux.db/id (java.net.URI. (str "https://juxt.pro/" p))
-                        :crux.web/content-type "image/png"
-                        :crux.ac/classification :public}
+                        :apex/content-type "image/png"
+                        :apex/classification :public}
                        (slurp-file-as-b64encoded-string f))
 
                       #"Makefile" nil
@@ -136,8 +136,8 @@
                       (let [f (io/file dir path)]
 
                         {:crux.db/id (java.net.URI. (str "https://juxt.pro/_sources/sass/" path))
-                         :crux.web/content-type "text/plain;charset=utf-8"
-                         :crux.web/content-language "en"
-                         :crux.web/last-modified (java.util.Date. (.lastModified f))
-                         :crux.web/content (slurp f)
-                         :crux.ac/classification :public})))))))
+                         :apex/content-type "text/plain;charset=utf-8"
+                         :apex/content-language "en"
+                         :apex/last-modified (java.util.Date. (.lastModified f))
+                         :apex/content (slurp f)
+                         :apex/classification :public})))))))

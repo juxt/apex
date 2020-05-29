@@ -14,7 +14,7 @@
 (defn entity [id]
   (dissoc
    (crux/entity (db) id)
-   :crux.web/content))
+   :apex/content))
 
 (defn web-resource [id]
   (entity
