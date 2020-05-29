@@ -38,9 +38,9 @@
   :crux.web/content "<h1>Hello World!</h1>\n"
   :crux.ac/classification :public}
 
- {:crux.db/id #crux/uri "https://juxt.pro/frontpage.css"
+ {:crux.db/id #crux/uri "https://juxt.pro/frontpage3.css"
   :crux.web/content-type "text/css;charset=utf-8"
-  :crux.web/content-source #crux.cms/file "scss/frontpage.css"
+  :crux.web/content-source #crux.cms/file "juxt.website/target/dev/frontpage3.css"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
@@ -190,76 +190,40 @@
   :crux.web/content-source #crux.cms/file "juxt.website/assets/img/user-footer.svg"
   :crux.ac/classification :public}
 
- {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-medium.woff"
-  :crux.web/content-type "font/woff"
-  :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-medium.woff"
-  :crux.ac/classification :public}
-
- {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-thin.woff"
-  :crux.web/content-type "font/woff"
-  :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-thin.woff"
-  :crux.ac/classification :public}
-
- {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-bold.woff"
-  :crux.web/content-type "font/woff"
-  :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-bold.woff"
-  :crux.ac/classification :public}
-
- {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-light.woff"
-  :crux.web/content-type "font/woff"
-  :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-light.woff"
-  :crux.ac/classification :public}
-
- {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-heavy.woff"
-  :crux.web/content-type "font/woff"
-  :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-heavy.woff"
-  :crux.ac/classification :public}
-
- {:crux.db/id #crux/uri "https://juxt.pro/fonts/sf-ui-display-semibold.woff"
-  :crux.web/content-type "font/woff"
-  :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/sf-ui-display-semibold.woff"
-  :crux.ac/classification :public}
-
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Regular.woff2"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Regular.woff2"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Regular.woff2"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Italic.woff2"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Italic.woff2"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Italic.woff2"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Bold.woff2"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Bold.woff2"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Bold.woff2"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Thin.woff2"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Thin.woff2"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Thin.woff2"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Light.woff2"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-Light.woff2"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Light.woff2"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-LightItalic.woff2"
   :crux.web/content-type "font/woff"
   :crux.web/content-coding :base64
-  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato2OFLWeb/Lato/fonts/Lato-LightItalic.woff2"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-LightItalic.woff2"
   :crux.ac/classification :public}
 
 

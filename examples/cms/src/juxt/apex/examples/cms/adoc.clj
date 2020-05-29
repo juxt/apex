@@ -82,19 +82,10 @@
 
                  (get attributes "id")
                  {(get attributes "id")
-                  (merge attributes
-                         {"title" (.getTitle block)
-                          "content" (.getContent block)})}))))))
-
-
-#_(def engine (engine))
-
-#_(get-in
- (template-model
-  engine
-  (slurp (io/file "/home/malcolm/src/github.com/juxt/plan/site/index.adoc")))
- ["banner-title" "content"])
-
+                  (merge
+                   attributes
+                   {"title" (.getTitle block)
+                    "content" (.getContent block)})}))))))
 
 (defmethod ig/init-key ::engine [_ _]
   (engine))

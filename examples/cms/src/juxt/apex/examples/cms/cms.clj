@@ -16,7 +16,7 @@
         (crux/submit-tx
          crux-node
          [[:crux.tx/put
-           {:crux.db/id (java.net.URI. "https://juxt.pro/frontpage.css")
+           {:crux.db/id (java.net.URI. "https://juxt.pro/frontpage3.css")
             :crux.web/content-type "text/css;charset=utf-8"
             :crux.web/content body
             :crux.ac/classification :public}]]))

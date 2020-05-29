@@ -7,18 +7,24 @@
 (def PLAN_REPO_DIR (io/file (System/getProperty "user.home") "src/github.com/juxt/plan"))
 
 (defn slurp-file-as-b64encoded-string [f]
-  (let [bytes (.readAllBytes (new java.io.FileInputStream f))]
-    {:crux.web/content (.encodeToString (java.util.Base64/getEncoder) bytes)
-     :crux.web/content-length (count bytes)
-     :crux.web/content-coding :base64
-     :crux.web/last-modified (java.util.Date. (.lastModified f))
-     :crux.web/content-source (.toURI f)}))
+  (try
+    (let [bytes (.readAllBytes (new java.io.FileInputStream f))]
+      {:crux.web/content (.encodeToString (java.util.Base64/getEncoder) bytes)
+       :crux.web/content-length (count bytes)
+       :crux.web/content-coding :base64
+       :crux.web/last-modified (java.util.Date. (.lastModified f))
+       :crux.web/content-source (.toURI f)})
+    (catch Throwable t
+      (throw (ex-info "Failed to load file" {:file f} t)))))
 
 (defn slurp-file-as-string [f]
-  {:crux.web/content (slurp f)
-   :crux.web/content-length (.length f)
-   :crux.web/last-modified (java.util.Date. (.lastModified f))
-   :crux.web/content-source (.toURI f)})
+  (try
+    {:crux.web/content (slurp f)
+     :crux.web/content-length (.length f)
+     :crux.web/last-modified (java.util.Date. (.lastModified f))
+     :crux.web/content-source (.toURI f)}
+    (catch Throwable t
+      (throw (ex-info "Failed to load file" {:file f} t)))))
 
 (defn ingest-content [tx]
   (cond-> tx
