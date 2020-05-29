@@ -11,7 +11,7 @@
   (cms/make-router
    (reify
      cms/ApexBackend
-     (handle-request [_ ctx req respond raise]
+     (post-resource [_ ctx req respond raise]
        (let [body (slurp (:body req))]
          (crux/submit-tx
           crux-node

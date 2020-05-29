@@ -31,7 +31,7 @@
 
 ;; TODO: Belongs in Apex 'core'
 (defprotocol ApexBackend
-  (handle-request [_ ctx req respond raise]))
+  (post-resource [_ ctx req respond raise]))
 
 (defn binary? [content]
   (re-matches #"\P{Cntrl}*" content))
@@ -284,7 +284,7 @@
 
 ;; POST method
 (defmethod http-method :post [backend {:keys [callback] :as ctx} req respond raise]
-  (handle-request backend ctx req respond raise))
+  (post-resource backend ctx req respond raise))
 
 ;; PROPFIND method
 
