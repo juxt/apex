@@ -92,7 +92,7 @@
                      (slurp-file-as-string f))))
 
                 ;; Plan repo site sources
-                (let [dir (io/file PLAN_REPO_DIR "site")]
+                #_(let [dir (io/file PLAN_REPO_DIR "site")]
                   (for [f (file-seq dir)
                         :when (.isFile f)
                         :let [p (str (.relativize (.toPath dir) (.toPath f)))]

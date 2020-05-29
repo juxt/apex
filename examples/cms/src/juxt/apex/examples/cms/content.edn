@@ -7,6 +7,12 @@
  ;; a specific URL.
 
 
+ {:crux.db/id #crux/uri "https://juxt.pro/test.html"
+  :crux.web/content-type "text/html;charset=utf-8"
+  :crux.web/content-language "en"
+  :crux.web/content "<h1>Hello World!</h1>\n"
+  :crux.ac/classification :public}
+
  {:crux.db/id #crux/uri "https://juxt.pro/"
   :crux.web/description "Redirects a / path to the index page"
   :crux.web/status 302
@@ -27,20 +33,50 @@
  {:crux.db/id #crux/uri "https://juxt.pro/index.html"
   :crux.web/content-type "text/html;charset=utf-8"
   :crux.web/content-language "en"
-  :crux.cms.selmer/template #crux/uri "index2.html"
-  :crux.cms/source "https://juxt.pro/_sources/plan/site/index.adoc"
+  :crux.cms.selmer/template #crux/uri "index3.html"
+  :crux.cms/source #crux/uri "https://juxt.pro/_sources/plan/site/index.adoc"
   :crux.ac/classification :public
   :title "JUXT"}
 
- {:crux.db/id #crux/uri "https://juxt.pro/test.html"
-  :crux.web/content-type "text/html;charset=utf-8"
+ {:crux.db/id #crux/uri "https://juxt.pro/_sources/plan/site/index.adoc"
+  ;; See https://github.com/asciidoctor/asciidoctor/issues/2502
+  :crux.web/content-type "text/asciidoc;charset=utf-8;variant=\"asciidoctor\""
   :crux.web/content-language "en"
-  :crux.web/content "<h1>Hello World!</h1>\n"
+  :crux.web/content-source #crux.cms/file "juxt.website/resources/documents/index.adoc"
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/frontpage3.css"
   :crux.web/content-type "text/css;charset=utf-8"
   :crux.web/content-source #crux.cms/file "juxt.website/target/dev/frontpage3.css"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/braids.svg"
+  :crux.web/content-type "image/svg+xml;charset=utf-8"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/index3/braids.svg"
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/time.png"
+  :crux.web/content-type "image/png"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/index3/time.png"
+  :crux.web/content-coding :base64
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/data.png"
+  :crux.web/content-type "image/png"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/index3/data.png"
+  :crux.web/content-coding :base64
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/form.png"
+  :crux.web/content-type "image/png"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/index3/form.png"
+  :crux.web/content-coding :base64
+  :crux.ac/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/code.png"
+  :crux.web/content-type "image/png"
+  :crux.web/content-source #crux.cms/file "juxt.website/assets/img/index3/code.png"
+  :crux.web/content-coding :base64
   :crux.ac/classification :public}
 
  {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
