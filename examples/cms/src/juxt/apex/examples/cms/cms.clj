@@ -54,7 +54,6 @@
 (def templates-source-uri (java.net.URI. "http://localhost:8000/_sources/templates/"))
 
 (defn render-entity-with-selmer-template [entity store engine]
-  (println "render-entity-with-selmer-template")
   (assert entity)
 
   (binding [*custom-resource-path*
