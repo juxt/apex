@@ -3,11 +3,9 @@
 (ns juxt.apex.examples.cms.cms-test
   (:require
    [juxt.apex.alpha.cms.core :as cms]
-   [clojure.test :refer [deftest is are testing]]
-   [clojure.string :as str])
+   [clojure.test :refer [deftest is]])
   (:import
    (io.vertx.reactivex.core Vertx)))
-
 
 (def entities
   (->>
@@ -22,13 +20,13 @@
 
 (defrecord TestContentStore []
   cms/ContentStore
-  (lookup-resource [_ id]
-    (get entities id))
+  (lookup-resource [_ uri]
+    (get entities uri))
   (propfind [this uri depth]
     (into {}
-          (for [id
+          (for [uri
                 (cms/find-members uri depth (keys entities))]
-            [id (cms/lookup-resource this id)]))))
+            [uri (cms/lookup-resource this uri)]))))
 
 
 #_(let [store (->TestContentStore)]

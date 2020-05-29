@@ -18,7 +18,7 @@
           (-> req :uri)))
 
 (defprotocol ContentStore
-  (lookup-resource [_ id] "Find the entity with the given id")
+  (lookup-resource [_ uri] "Find the resource with the given uri")
   (propfind [_ uri depth] "Find the properties of members of uri"))
 
 ;; TODO: Belongs in Apex 'core'
