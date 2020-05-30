@@ -312,9 +312,7 @@
            {}
            (for [uri
                  (cms/find-members uri depth uris)]
-             [uri (cms/lookup-resource this uri)])))))
-
-    {})
+             [uri (cms/lookup-resource this uri)]))))))
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.

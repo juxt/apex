@@ -3,7 +3,6 @@
 (ns juxt.apex.alpha.cms.core
   (:require
    [clojure.string :as str]
-   [clojure.pprint :refer [pprint]]
    [clojure.xml :as xml]
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
@@ -34,31 +33,29 @@
    format
    inst))
 
-(defmulti http-method (fn [backend ctx req respond raise] (:request-method req)))
+(defmulti http-method (fn [backend req respond raise] (:request-method req)))
 
-(defmethod http-method :default [backend ctx req respond raise]
+(defmethod http-method :default [backend req respond raise]
   (respond
    {:status 501}))
 
-(defmethod http-method :options [backend ctx req respond raise]
+(defmethod http-method :options [backend req respond raise]
   ;; TODO: Check path?
   (respond
    {:status 200
     :headers {"DAV" "1"}}))
 
-(defmethod http-method :get [backend ctx req respond raise]
+(defmethod http-method :get [backend req respond raise]
   (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
-    (generate-representation backend (assoc ctx :apex/resource resource) req respond raise)
+    (generate-representation backend {:apex/resource resource} req respond raise)
     (respond {:status 404 :body "Apex: 404 (Not found)\n"})))
 
-(defmethod http-method :head [backend ctx req respond raise]
+(defmethod http-method :head [backend req respond raise]
   (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
     (generate-representation
      backend
-     (assoc
-      ctx
-      :apex/resource resource
-      :apex/head? true)
+     {:apex/resource resource
+      :apex/head? true}
      req
      (fn [response]
        (respond (assoc response :body nil)))
@@ -67,8 +64,8 @@
     (respond {:status 404})))
 
 ;; POST method
-(defmethod http-method :post [backend ctx req respond raise]
-  (post-resource backend ctx req respond raise))
+(defmethod http-method :post [backend req respond raise]
+  (post-resource backend {} req respond raise))
 
 ;; PROPFIND method
 
@@ -95,7 +92,7 @@
    #{}
    candidates))
 
-(defmethod http-method :propfind [backend ctx req respond raise]
+(defmethod http-method :propfind [backend req respond raise]
   (let [
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
@@ -170,13 +167,13 @@
           :body body})))))
 
 
-(defn make-handler [backend init-ctx]
+(defn make-handler [backend]
   (fn handler
     ([req]
      (handler req identity (fn [t] (throw t))))
     ([req respond raise]
      (try
-       (http-method backend init-ctx req respond raise)
+       (http-method backend req respond raise)
        (catch Throwable t
          (raise
           (ex-info
@@ -187,9 +184,9 @@
            {:request req}
            t)))))))
 
-(defn make-router [backend init-ctx]
+(defn make-router [backend]
   (->
-   (make-handler backend init-ctx)
+   (make-handler backend)
 
    ;; Digest authentication. Clients are not allowed to use basic auth
    ;; over insecure http.
