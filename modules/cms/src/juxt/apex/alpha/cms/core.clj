@@ -169,46 +169,6 @@
                     "content-length" (str (.length body))}
           :body body})))))
 
-;; Middleware
-
-(defn url-rewrite-request [request {:keys [canonical _]}]
-  (-> request
-      (assoc-in [:headers "host"] (:host-header canonical))
-      (assoc :scheme (:scheme canonical))))
-
-(defn url-rewrite-response [response _]
-  response)
-
-(defn wrap-url-rewrite [handler opts]
-  (fn
-    ([request]
-     (-> request
-         (url-rewrite-request opts)
-         handler
-         (url-rewrite-response opts)))
-    ([request respond raise]
-     (handler
-      (url-rewrite-request request opts)
-      (fn [response] (respond (url-rewrite-response response opts)))
-      raise))))
-
-(defn wrap-log [handler]
-  (fn
-    ([request]
-     (println "Incoming sync CMS request:\n" (with-out-str (pprint request)))
-     (let [response (handler request)]
-       (println "Outgoing CMS response:" (with-out-str (pprint response)))
-       response))
-    ([request respond raise]
-     (println "Incoming async CMS request:\n" (with-out-str (pprint request)))
-     (handler
-      request
-      (fn [response]
-        (println "Outgoing CMS response:" (with-out-str (pprint response)))
-        (respond response))
-      (fn [t]
-        (println "Error raised:" t)
-        (raise t))))))
 
 (defn make-handler [backend init-ctx]
   (fn handler
@@ -235,15 +195,7 @@
    ;; over insecure http.
    wrap-auth-digest
 
-   ;; Dev only, removed on production. Definitely a good example of
-   ;; middleware.
-   (wrap-url-rewrite
-    {:canonical {:scheme :https :host-header "juxt.pro"}
-     :actual {:scheme :http :host-header "localhost:8000"}})
 
-   ;; Log requests, often optional and sensitive to the logging
-   ;; implementation. Definitely middleware.
-   ;; wrap-log
 
    ;; Prime the Ring request with a blocking stream
    a/wrap-read-all-request-body))
