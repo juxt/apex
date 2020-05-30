@@ -3,7 +3,7 @@
 (ns juxt.apex.examples.cms.vertx
   (:require
    [integrant.core :as ig]
-   [juxt.apex.alpha.async.helpers :refer [h]]
+   [juxt.apex.alpha.vertx.helpers :refer [h]]
    [clojure.string :as string]
    [org.reactivestreams.flow :as rs])
   (:import

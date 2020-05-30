@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.async.helpers
+(ns juxt.apex.alpha.vertx.helpers
   (:import
    (io.vertx.core Handler)))
 

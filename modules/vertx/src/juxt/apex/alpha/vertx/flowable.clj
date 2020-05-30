@@ -1,6 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.async.flowable
+(ns juxt.apex.alpha.vertx.flowable
   (:refer-clojure :exclude [map range])
   (:import
    (io.vertx.reactivex.core.buffer Buffer)

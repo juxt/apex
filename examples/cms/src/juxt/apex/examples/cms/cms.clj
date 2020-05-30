@@ -6,7 +6,7 @@
    [clojure.string :as str]
    [crux.api :as crux]
    [integrant.core :as ig]
-   [juxt.apex.alpha.async.helpers :as a]
+   [juxt.apex.alpha.vertx.helpers :as a]
    [juxt.apex.alpha.cms.core :as cms]
    [juxt.apex.examples.cms.images :as images]
    [juxt.apex.examples.cms.adoc :as adoc]

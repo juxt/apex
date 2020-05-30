@@ -2,7 +2,7 @@
 
 (ns juxt.apex.examples.cms.flowables
   (:require
-   [juxt.apex.alpha.async.flowable :as f])
+   [juxt.apex.alpha.vertx.flowable :as f])
   (:import
    (io.vertx.reactivex.core.buffer Buffer)
    (io.reactivex Flowable BackpressureStrategy)))

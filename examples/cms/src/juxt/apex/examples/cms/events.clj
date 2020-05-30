@@ -3,7 +3,7 @@
 (ns juxt.apex.examples.cms.events
   (:require
    [jsonista.core :as jsonista]
-   [juxt.apex.alpha.async.helpers :refer [h]]
+   [juxt.apex.alpha.vertx.helpers :refer [h]]
    [integrant.core :as ig])
   )
 

@@ -4,10 +4,11 @@
  :deps
  {juxt.apex/params {:local/root "../../modules/params"}
   juxt.apex/html {:local/root "../../modules/html"}
-  ;; TODO: Rename async to vertx
-  juxt.apex/async {:local/root "../../modules/async"}
+
   juxt.apex/cms {:local/root "../../modules/cms"}
 
+  ;; Use vertx adapter
+  juxt.apex/vertx {:local/root "../../modules/vertx"}
 }
 
  :aliases

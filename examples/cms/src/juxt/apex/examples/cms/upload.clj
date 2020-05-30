@@ -2,7 +2,7 @@
 
 (ns juxt.apex.examples.cms.upload
   (:require
-   [juxt.apex.alpha.async.helpers :refer [h pipe-to-file]]))
+   [juxt.apex.alpha.vertx.helpers :refer [h pipe-to-file]]))
 
 (defn upload-file-example [req respond raise]
   (let [vertx (:apex.vertx/vertx req)
