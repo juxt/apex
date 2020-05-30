@@ -12,6 +12,15 @@
 (defprotocol WebDav
   (propfind [_ uri depth] "Find the properties of members of uri"))
 
+;; TODO: Not yet properly implemented.
+(defn compliance-value
+  "Determine the compliance classes supported by the provider and return
+  as a string that can be used in the DAV header of an OPTIONS
+  response."
+  []
+  ;; Hard-code for now
+  "1")
+
 ;; PROPFIND method
 
 (defn find-members [uri depth candidates]

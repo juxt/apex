@@ -22,6 +22,12 @@
 (defprotocol ResourceUpdate
   (post-resource [_ ctx req respond raise]))
 
+(defprotocol ServerOptions
+  (server-options [_]))
+
+(defprotocol ResourceOptions
+  (resource-options-headers [_ resource]))
+
 (defprotocol ReactiveStreaming
   (request-body-as-stream [_ req callback]
     "Async streaming adapters only (e.g. Vert.x). Call the callback
@@ -41,11 +47,20 @@
   (respond
    {:status 501}))
 
-(defmethod http-method :options [backend req respond raise]
-  ;; TODO: Check path?
-  (respond
-   {:status 200
-    :headers {"DAV" "1"}}))
+(defmethod http-method :options [backend request respond raise]
+  (cond
+    ;; Test me with:
+    ;; curl -i --request-target "*" -X OPTIONS http://localhost:8000
+    (= (:uri request) "*")
+    (respond
+     {:status 200
+      :headers (server-options backend)})
+
+    :else
+    (let [resource (lookup-resource backend (java.net.URI. (uri request)))]
+      (respond
+       {:status 200
+        :headers (resource-options-headers backend resource)}))))
 
 (defmethod http-method :get [backend req respond raise]
   (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]

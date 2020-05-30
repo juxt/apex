@@ -296,6 +296,16 @@
               :apex/classification :public}]])
           (respond {:status 201 :body "Uploaded!\n"})))
 
+      apex/ResourceOptions
+      (resource-options-headers [_ resource]
+        ;; TODO: Not all resources are webdavable, e.g. index.html, so
+        ;; don't return a WebDav compliance header in this case.
+        {"DAV" (webdav/compliance-value)})
+
+      apex/ServerOptions
+      (server-options [_]
+        {"test" "ok!"})
+
       apex/ReactiveStreaming
       (request-body-as-stream [_ req callback]
         (.
