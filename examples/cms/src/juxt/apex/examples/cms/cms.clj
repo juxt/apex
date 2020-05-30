@@ -67,12 +67,12 @@
        (:apex.selmer/template resource) (dissoc :template)
 
        ;; Merge all the bookmarked content of the adoc source into the template model
-       (:apex/source resource)
+       (:apex.asciidoctor/source resource)
        (merge
         (adoc/template-model
          asciidoctor-engine
          (:apex/content
-          (cms/lookup-resource backend (:apex/source resource))))))
+          (cms/lookup-resource backend (:apex.asciidoctor/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
@@ -135,9 +135,9 @@
               (:apex/content resource)))))
 
       (:apex.selmer/template resource)
-      (let [source-ent (cms/lookup-resource backend (:apex/source resource))
+      (let [source-ent (cms/lookup-resource backend (:apex.asciidoctor/source resource))
             _ (when-not source-ent
-                (throw (ex-info "Expected source entity not found" {:source-entity (:apex/source resource)})))
+                (throw (ex-info "Expected source entity not found" {:source-entity (:apex.asciidoctor/source resource)})))
             headers
             (cond-> {}
               (:apex/content-type resource)

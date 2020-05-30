@@ -34,7 +34,7 @@
   :apex/content-type "text/html;charset=utf-8"
   :apex/content-language "en"
   :apex.selmer/template #crux/uri "index3.html"
-  :apex/source #crux/uri "https://juxt.pro/_sources/plan/site/index.adoc"
+  :apex.asciidoctor/source #crux/uri "https://juxt.pro/_sources/plan/site/index.adoc"
   :apex/classification :public
   :title "JUXT"}
 
