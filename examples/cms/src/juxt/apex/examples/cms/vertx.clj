@@ -5,6 +5,7 @@
    [integrant.core :as ig]
    [juxt.apex.alpha.vertx.helpers :refer [h]]
    [clojure.string :as string]
+   [juxt.apex.alpha.http.header-names :refer [header-canonical-case]]
    [org.reactivestreams.flow :as rs])
   (:import
    (io.vertx.core MultiMap)
@@ -12,6 +13,8 @@
    (io.vertx.core.http HttpServerOptions)
    (io.vertx.reactivex.core Vertx)
    (io.vertx.reactivex.core.http HttpServer)))
+
+
 
 ;; Adapt org.reactivestreams.Subscription to the Clojure protocol
 ;; See https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Subscription.html
@@ -133,7 +136,7 @@
 
                 (doseq [[k v] headers]
                   ;; v can be a String, or Iterable<String>
-                  (.putHeader response k (str v)))
+                  (.putHeader response (header-canonical-case k) (str v)))
 
                 ;; Now, make flowable
 
