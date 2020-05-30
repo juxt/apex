@@ -4,8 +4,11 @@
  :deps
  {juxt.apex/params {:local/root "../../modules/params"}
   juxt.apex/html {:local/root "../../modules/html"}
+  ;; TODO: Rename async to vertx
   juxt.apex/async {:local/root "../../modules/async"}
-  juxt.apex/cms {:local/root "../../modules/cms"}}
+  juxt.apex/cms {:local/root "../../modules/cms"}
+
+}
 
  :aliases
  {:dev
@@ -29,11 +32,6 @@
     juxt/crux-core {:mvn/version "20.05-1.8.3-alpha"}
     org.asciidoctor/asciidoctorj {:mvn/version "2.2.0"}
     selmer {:mvn/version "1.12.2"}
-
-    ;; Requires async
-    ;; TODO: Rename async to vertx
-    juxt.apex/async {:local/root "../async"}
-
 
     spyscope/spyscope {:mvn/version "0.1.6"
                        :exclusions [fipp/fipp]}

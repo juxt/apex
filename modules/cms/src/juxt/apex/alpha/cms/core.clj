@@ -6,8 +6,6 @@
    [clojure.xml :as xml]
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
-   [juxt.apex.alpha.async.helpers :as a]
-   [juxt.apex.alpha.auth-digest.core :refer [wrap-auth-digest]]
    [juxt.apex.alpha.cms.xml :as x]))
 
 (defn uri [req]
