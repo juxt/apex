@@ -10,6 +10,9 @@
           (-> req :headers (get "host"))
           (-> req :uri)))
 
+;; TODO: OpenAPI in Apex support should be written in terms of these
+;; interfaces.
+
 (defprotocol ResourceLookup
   (lookup-resource [_ uri] "Find the resource with the given uri"))
 
