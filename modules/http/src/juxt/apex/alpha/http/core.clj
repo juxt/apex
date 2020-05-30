@@ -10,16 +10,16 @@
           (-> req :headers (get "host"))
           (-> req :uri)))
 
-;; TODO: Belongs in Apex 'core'
-;; TODO: Break up into separate protocols
-(defprotocol ApexBackend
-  (lookup-resource [_ uri] "Find the resource with the given uri")
-  (generate-representation [_ ctx req respond raise])
+(defprotocol ResourceLookup
+  (lookup-resource [_ uri] "Find the resource with the given uri"))
 
-  ;; TODO: Should belong in a optional 'writeable' protocol
-  (post-resource [_ ctx req respond raise])
+(defprotocol RepresentationResponse
+  (generate-representation [_ ctx req respond raise]))
 
-  ;; TODO: Should belong to a separate protocol
+(defprotocol ResourceUpdate
+  (post-resource [_ ctx req respond raise]))
+
+(defprotocol ReactiveStreaming
   (request-body-as-stream [_ req callback]
     "Async streaming adapters only (e.g. Vert.x). Call the callback
     with a Ring-compatible request containing a :body

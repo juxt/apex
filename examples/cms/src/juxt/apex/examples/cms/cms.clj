@@ -270,10 +270,11 @@
   (->
    (apex/make-handler
     (reify
-      apex/ApexBackend
+      apex/ResourceLookup
       (lookup-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
+      apex/RepresentationResponse
       (generate-representation [this ctx req respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
@@ -283,6 +284,7 @@
             (respond-resource this ctx req respond raise)
             (respond-resource-response opts this ctx req respond raise))))
 
+      apex/ResourceUpdate
       (post-resource [_ ctx req respond raise]
         (let [body (slurp (:body req))]
           (crux/submit-tx
@@ -294,6 +296,7 @@
               :apex/classification :public}]])
           (respond {:status 201 :body "Uploaded!\n"})))
 
+      apex/ReactiveStreaming
       (request-body-as-stream [_ req callback]
         (.
          (:apex.vertx/request req)

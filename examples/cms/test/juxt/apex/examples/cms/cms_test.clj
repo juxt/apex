@@ -20,7 +20,7 @@
    (into {})))
 
 (defrecord TestBackend [store vertx]
-  apex/ApexBackend
+  apex/ResourceLookup
   (lookup-resource [_ uri]
     (get entities uri))
   webdav/WebDav
