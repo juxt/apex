@@ -41,29 +41,29 @@
    format
    inst))
 
-(defmulti http-method (fn [backend req respond raise] (:request-method req)))
+(defmulti http-method (fn [provider req respond raise] (:request-method req)))
 
-(defmethod http-method :default [backend req respond raise]
+(defmethod http-method :default [provider req respond raise]
   (respond
    {:status 501}))
 
-(defmethod http-method :options [backend request respond raise]
+(defmethod http-method :options [provider request respond raise]
   (cond
     ;; Test me with:
     ;; curl -i --request-target "*" -X OPTIONS http://localhost:8000
     (= (:uri request) "*")
     (respond
      {:status 200
-      :headers (server-options backend)})
+      :headers (server-options provider)})
 
     :else
-    (let [resource (lookup-resource backend (java.net.URI. (uri request)))]
+    (let [resource (lookup-resource provider (java.net.URI. (uri request)))]
       (respond
        {:status 200
-        :headers (resource-options-headers backend resource)}))))
+        :headers (resource-options-headers provider resource)}))))
 
-(defmethod http-method :get [backend req respond raise]
-  (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
+(defmethod http-method :get [provider req respond raise]
+  (if-let [resource (lookup-resource provider (java.net.URI. (uri req)))]
 
     ;; Determine status
     ;; Negotiate content representation
@@ -71,14 +71,14 @@
     ;; Check condition (Last-Modified, If-None-Match)
     ;; Generate response with new entity-tag
     ;; Handle errors (by responding with error response, with appropriate re-negotiation)
-    (generate-representation backend {:apex/resource resource} req respond raise)
+    (generate-representation provider {:apex/resource resource} req respond raise)
 
     (respond {:status 404 :body "Apex: 404 (Not found)\n"})))
 
-(defmethod http-method :head [backend req respond raise]
-  (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
+(defmethod http-method :head [provider req respond raise]
+  (if-let [resource (lookup-resource provider (java.net.URI. (uri req)))]
     (generate-representation
-     backend
+     provider
      {:apex/resource resource
       :apex/head? true}
      req
@@ -89,18 +89,18 @@
     (respond {:status 404})))
 
 ;; POST method
-(defmethod http-method :post [backend req respond raise]
-  (post-resource backend {} req respond raise))
+(defmethod http-method :post [provider req respond raise]
+  (post-resource provider {} req respond raise))
 
 
 
-(defn make-handler [backend]
+(defn make-handler [provider]
   (fn handler
     ([req]
      (handler req identity (fn [t] (throw t))))
     ([req respond raise]
      (try
-       (http-method backend req respond raise)
+       (http-method provider req respond raise)
        (catch Throwable t
          (raise
           (ex-info

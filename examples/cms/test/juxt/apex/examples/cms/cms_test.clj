@@ -19,7 +19,7 @@
    (map (juxt :crux.db/id identity))
    (into {})))
 
-(defrecord TestBackend [store vertx]
+(defrecord TestProvider [store vertx]
   apex/ResourceLookup
   (lookup-resource [_ uri]
     (get entities uri))
@@ -40,7 +40,7 @@
     (with-open [vertx (Vertx/vertx)]
       (let [handler
             (apex/make-handler
-             (->TestBackend nil vertx))
+             (->TestProvider nil vertx))
             response (handler req)]
         (is (= 200 (:status response)))
         (is (= "123" (:body response)))))))
@@ -68,7 +68,7 @@
     (with-open [vertx (Vertx/vertx)]
       (let [handler
             (apex/make-handler
-             (->TestBackend nil vertx))
+             (->TestProvider nil vertx))
             response (handler req)]
         (is (= 207 (:status response)))
         (is (string? (:body response)))
