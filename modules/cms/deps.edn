@@ -4,14 +4,11 @@
  :deps
  {
   ;; Core
-  juxt.apex/async {:local/root "../async"}
   juxt.apex/auth-digest {:local/root "../auth-digest"}
   ring/ring-core {:mvn/version "1.8.0"}
-  ;; Needed for xml production
+  ;; Needed for xml production in PROPFIND etc.
   hiccup {:mvn/version "2.0.0-alpha2"}
-
-  ;; Not core
-  selmer {:mvn/version "1.12.2"}}
+  }
 
  :aliases
  {:dev

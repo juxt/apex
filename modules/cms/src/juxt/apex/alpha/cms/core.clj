@@ -17,7 +17,7 @@
           (-> req :uri)))
 
 ;; TODO: Belongs in Apex 'core'
-;; TODO: Break up into we
+;; TODO: Break up into separate protocols
 (defprotocol ApexBackend
   (lookup-resource [_ uri] "Find the resource with the given uri")
   (generate-representation [_ ctx req respond raise])
@@ -25,7 +25,14 @@
   ;; TODO: Should belong in a optional 'writeable' protocol
   (post-resource [_ ctx req respond raise])
   ;; TODO: Should belong in an optional 'webdav' protocol
-  (propfind [_ uri depth] "Find the properties of members of uri"))
+  (propfind [_ uri depth] "Find the properties of members of uri")
+
+  ;; TODO: Should belong to a separate protocol
+  (request-body-as-stream [_ req callback]
+    "Async streaming adapters only (e.g. Vert.x). Call the callback
+    with a Ring-compatible request containing a :body
+    InputStream. This must be called in the request thread, otherwise
+    the body may have already begun to be read."))
 
 (defn rfc1123-date [inst]
   (.
@@ -101,79 +108,90 @@
    candidates))
 
 (defmethod http-method :propfind [backend req respond raise]
-  (let [
-        ;; "Servers SHOULD treat a request without a Depth header as if a
-        ;; "Depth: infinity" header was included." -- RFC 4918
-        depth (get-in req [:headers "depth"] "infinity")
-        uri (java.net.URI. (uri req))
-        resource (lookup-resource backend uri)]
 
-    ;; Unless public, we need to know who is accessing this resource (TODO)
+  ;; Unless public, we need to know who is accessing this resource (TODO)
 
-    ;; Do we have an Authorization header?
+  ;; Do we have an Authorization header?
 
-    (let [members (propfind backend uri depth)
-          body-str (slurp (:body req))
-          props (->>
-                 (x/->*
-                  {:content [(xml/parse (java.io.ByteArrayInputStream. (.getBytes body-str)))]}
-                  :propfind :prop x/content)
-                 (map (juxt :tag :content)))]
+  ;; We ask the backend to provide the entire body as an input-stream,
+  ;; as we determine it's going to be a smallish XML payload.
 
-      (respond
-       (let [body
-             (.toString
-              (html
-               {:mode :xml}
-               (xml-declaration "utf-8")
-               [:multistatus {"xmlns" "DAV:"}
-                (for [[uri ent] members
-                      :let [authorized? (= (:apex/classification resource) :public)]]
-                  (when true
-                    [:response
-                     [:href (str uri)]
-                     [:propstat
-                      [:prop
-                       #_[:displayname "Example collection"]
-                       (for [[prop-name prop-content] props]
-                         (case prop-name
-                           :resourcetype
-                           (if (.endsWith (str uri) "/")
-                             [:resourcetype
-                              [:collection]]
-                             [:resourcetype])
+  (let [cb
+        (fn [req]
+          (let [body-str (slurp (:body req))
+                uri (java.net.URI. (uri req))
+                depth (get-in
+                       req [:headers "depth"]
+                       ;; "Servers SHOULD treat a request without a Depth
+                       ;; header as if a "Depth: infinity" header was
+                       ;; included." -- RFC 4918
+                       "infinity")
+                members (propfind backend uri depth)
 
-                           :getetag
-                           (when-let [etag (:apex.web/entity-tag resource)]
-                             [:getetag etag])
+                props (->>
+                       (x/->*
+                        {:content [(xml/parse (java.io.ByteArrayInputStream. (.getBytes body-str)))]}
+                        :propfind :prop x/content)
+                       (map (juxt :tag :content)))
+                resource (lookup-resource backend uri)]
 
-                           :getcontentlength
-                           (when
-                               (:apex/content resource)
-                               [:getcontentlength (.length (:apex/content resource))])
+            (respond
+             (let [body
+                   (.toString
+                    (html
+                     {:mode :xml}
+                     (xml-declaration "utf-8")
+                     [:multistatus {"xmlns" "DAV:"}
+                      (for [[uri ent] members
+                            :let [authorized? (= (:apex/classification resource) :public)]]
+                        (when true
+                          [:response
+                           [:href (str uri)]
+                           [:propstat
+                            [:prop
+                             #_[:displayname "Example collection"]
+                             (for [[prop-name prop-content] props]
+                               (case prop-name
+                                 :resourcetype
+                                 (if (.endsWith (str uri) "/")
+                                   [:resourcetype
+                                    [:collection]]
+                                   [:resourcetype])
 
-                           :getlastmodified
-                           ;; Hmm, not sure it's resources that are 'last modified', more like representations
-                           (when-let [last-modified (:apex/last-modified resource)]
-                             [:getlastmodified
-                              (rfc1123-date
-                               (java.time.ZonedDateTime/ofInstant
-                                (.toInstant last-modified)
-                                (java.time.ZoneId/systemDefault)))])
+                                 :getetag
+                                 (when-let [etag (:apex.web/entity-tag resource)]
+                                   [:getetag etag])
 
-                           ;; Anything else, ignore
-                           nil))]
-                      [:status
-                       (if true #_authorized?
-                           "HTTP/1.1 200 OK"
-                           "HTTP/1.1 401 Unauthorized")]]]))]
-               "\n"))]
+                                 :getcontentlength
+                                 (when
+                                     (:apex/content resource)
+                                     [:getcontentlength (.length (:apex/content resource))])
 
-         {:status 207                   ; multi-status
-          :headers {"content-type" "application/xml;charset=utf-8"
-                    "content-length" (str (.length body))}
-          :body body})))))
+                                 :getlastmodified
+                                 ;; Hmm, not sure it's resources that are 'last modified', more like representations
+                                 (when-let [last-modified (:apex/last-modified resource)]
+                                   [:getlastmodified
+                                    (rfc1123-date
+                                     (java.time.ZonedDateTime/ofInstant
+                                      (.toInstant last-modified)
+                                      (java.time.ZoneId/systemDefault)))])
 
+                                 ;; Anything else, ignore
+                                 nil))]
+                            [:status
+                             (if true #_authorized?
+                                 "HTTP/1.1 200 OK"
+                                 "HTTP/1.1 401 Unauthorized")]]]))]
+                     "\n"))]
+
+               {:status 207             ; multi-status
+                :headers {"content-type" "application/xml;charset=utf-8"
+                          "content-length" (str (.length body))}
+                :body body}))))]
+
+    (if (:body req)
+      (cb req)
+      (request-body-as-stream backend req cb))))
 
 (defn make-handler [backend]
   (fn handler
@@ -191,16 +209,3 @@
             (:uri req))
            {:request req}
            t)))))))
-
-(defn make-router [backend]
-  (->
-   (make-handler backend)
-
-   ;; Digest authentication. Clients are not allowed to use basic auth
-   ;; over insecure http.
-;;   wrap-auth-digest
-
-   ;; Prime the Ring request with a blocking stream
-   ;; TODO: Depends on factors yet to be determined.
-   a/wrap-read-all-request-body
-   ))

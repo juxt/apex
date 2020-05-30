@@ -18,7 +18,7 @@
    (map (juxt :crux.db/id identity))
    (into {})))
 
-(defrecord TestBackend []
+(defrecord TestBackend [store vertx]
   cms/ApexBackend
   (lookup-resource [_ uri]
     (get entities uri))
@@ -37,7 +37,7 @@
          }]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (cms/make-router
+            (cms/make-handler
              {:store (->TestBackend)
               :vertx vertx})
             response (handler req)]
@@ -66,9 +66,8 @@
                 </propfind>"))}]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (cms/make-router
-             {:store (->TestBackend)
-              :vertx vertx})
+            (cms/make-handler
+             (->TestBackend nil vertx))
             response (handler req)]
         (is (= 207 (:status response)))
         (is (string? (:body response)))

@@ -267,7 +267,7 @@
 
 (defmethod ig/init-key ::router [_ {:keys [vertx engine crux-node] :as opts}]
   (->
-   (cms/make-router
+   (cms/make-handler
     (reify
       cms/ApexBackend
       (lookup-resource [_ uri]
@@ -292,6 +292,17 @@
               :apex/content body
               :apex/classification :public}]])
           (respond {:status 201 :body "Uploaded!\n"})))
+
+      (request-body-as-stream [_ req callback]
+        (.
+         (:apex.vertx/request req)
+         bodyHandler
+         (a/h
+          (fn [buffer]
+            (callback
+             (assoc
+              req
+              :body (new java.io.ByteArrayInputStream (.getBytes buffer))))))))
 
       (propfind [this uri depth]
         (let [uris

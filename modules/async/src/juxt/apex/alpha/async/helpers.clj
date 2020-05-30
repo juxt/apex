@@ -22,7 +22,7 @@
   (fn [cause]
     (on-failure (wrapper cause))))
 
-(defn wrap-read-all-request-body
+(defn wrap-request-body-as-stream
   "Ring middleware. Take a vertx request and add a :body input-stream"
   [handler]
   (fn

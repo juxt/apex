@@ -179,7 +179,7 @@
      listen)))
 
 
-(defn body-input-stream-handler [req respond _]
+#_(defn body-input-stream-handler [req respond _]
   ;; This demonstrates the use of calling .bodyHandler on the request.
   ;; body-buffer here is a Vertx Promise (let [body-buffer (Promise/promise)])
   #_(.bodyHandler
