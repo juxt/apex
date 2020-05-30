@@ -23,6 +23,7 @@
   (post-resource [_ ctx req respond raise]))
 
 (defprotocol ServerOptions
+  (server-header [_] "Apex on Vert.x")
   (server-options [_]))
 
 (defprotocol ResourceOptions
@@ -92,15 +93,19 @@
 (defmethod http-method :post [provider req respond raise]
   (post-resource provider {} req respond raise))
 
-
-
 (defn make-handler [provider]
   (fn handler
     ([req]
      (handler req identity (fn [t] (throw t))))
     ([req respond raise]
      (try
-       (http-method provider req respond raise)
+       (http-method
+        provider
+        req
+        (fn [response]
+          (let [server (server-header provider)]
+            (respond (cond-> response server (assoc-in [:headers "server"] server)))))
+        raise)
        (catch Throwable t
          (raise
           (ex-info

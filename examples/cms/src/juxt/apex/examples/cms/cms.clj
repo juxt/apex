@@ -303,8 +303,10 @@
         {"DAV" (webdav/compliance-value)})
 
       apex/ServerOptions
-      (server-options [_]
-        {"test" "ok!"})
+      ;; The reason for adding JUXT is to make it easier to search for
+      ;; the Apex repo and documentation.
+      (server-header [_] "JUXT Apex (Vert.x)")
+      (server-options [_] {})
 
       apex/ReactiveStreaming
       (request-body-as-stream [_ req callback]
