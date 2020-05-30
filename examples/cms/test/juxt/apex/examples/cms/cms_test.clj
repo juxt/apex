@@ -3,6 +3,7 @@
 (ns juxt.apex.examples.cms.cms-test
   (:require
    [juxt.apex.alpha.http.core :as apex]
+   [juxt.apex.alpha.webdav.core :as webdav]
    [clojure.test :refer [deftest is]])
   (:import
    (io.vertx.reactivex.core Vertx)))
@@ -22,10 +23,11 @@
   apex/ApexBackend
   (lookup-resource [_ uri]
     (get entities uri))
+  webdav/WebDav
   (propfind [this uri depth]
     (into {}
           (for [uri
-                (apex/find-members uri depth (keys entities))]
+                (webdav/find-members uri depth (keys entities))]
             [uri (apex/lookup-resource this uri)]))))
 
 (deftest get-test

@@ -6,8 +6,9 @@
    [clojure.string :as str]
    [crux.api :as crux]
    [integrant.core :as ig]
-   [juxt.apex.alpha.vertx.helpers :as a]
    [juxt.apex.alpha.http.core :as apex]
+   [juxt.apex.alpha.vertx.helpers :as a]
+   [juxt.apex.alpha.webdav.core :as webdav]
    [juxt.apex.examples.cms.images :as images]
    [juxt.apex.examples.cms.adoc :as adoc]
    [ring.middleware.params :refer [params-request]]
@@ -304,6 +305,7 @@
               req
               :body (new java.io.ByteArrayInputStream (.getBytes buffer))))))))
 
+      webdav/WebDav
       (propfind [this uri depth]
         (let [uris
               (map
@@ -315,7 +317,7 @@
           (into
            {}
            (for [uri
-                 (apex/find-members uri depth uris)]
+                 (webdav/find-members uri depth uris)]
              [uri (apex/lookup-resource this uri)]))))))
 
    ;; Dev only, removed on production. Definitely a good example of

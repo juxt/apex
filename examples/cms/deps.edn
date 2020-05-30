@@ -6,6 +6,7 @@
   juxt.apex/html {:local/root "../../modules/html"}
 
   juxt.apex/http {:local/root "../../modules/http"}
+  juxt.apex/webdav {:local/root "../../modules/webdav"}
 
   ;; Use Vert.x adapter
   juxt.apex/vertx {:local/root "../../modules/vertx"}

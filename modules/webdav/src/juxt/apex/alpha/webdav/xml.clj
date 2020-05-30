@@ -1,8 +1,6 @@
 ;; Copyright © 2020, JUXT LTD.
 
-;; TODO: Belongs in webdav module
-
-(ns juxt.apex.alpha.http.xml
+(ns juxt.apex.alpha.webdav.xml
   (:refer-clojure :exclude [-> = descendants]))
 
 ;; See https://juxt.pro/blog/posts/xpath-in-transducers.html if you're baffled by the below
