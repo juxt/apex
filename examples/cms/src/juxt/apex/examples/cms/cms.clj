@@ -79,7 +79,7 @@
 (defn respond-resource-response
   "Return the response for a GET request targetting a resource backed by
   a CMS entity."
-  [backend {:keys [vertx engine apex/head? apex/resource]} req respond raise]
+  [{:keys [vertx engine]} backend {:keys [apex/head? apex/resource]} req respond raise]
 
   ;; Determine status
   ;; Negotiate content representation
@@ -272,7 +272,7 @@
         (println "Error raised:" t)
         (raise t))))))
 
-(defmethod ig/init-key ::router [_ {:keys [crux-node] :as opts}]
+(defmethod ig/init-key ::router [_ {:keys [vertx engine crux-node] :as opts}]
   (->
    (cms/make-router
     (reify
@@ -280,14 +280,14 @@
       (lookup-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
-      (generate-representation [this {:keys [apex/resource] :as ctx} req respond raise]
+      (generate-representation [this ctx req respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
         (let [req (params-request req)
               debug (get-in req [:query-params "debug"])]
           (if debug
             (respond-resource this ctx req respond raise)
-            (respond-resource-response this ctx req respond raise))))
+            (respond-resource-response opts this ctx req respond raise))))
 
       (post-resource [_ ctx req respond raise]
         (let [body (slurp (:body req))]
@@ -314,7 +314,7 @@
                  (cms/find-members uri depth uris)]
              [uri (cms/lookup-resource this uri)])))))
 
-    opts)
+    {})
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.
@@ -325,6 +325,4 @@
    ;; Log requests, often optional and sensitive to the logging
    ;; implementation. Definitely middleware.
    ;; wrap-log
-
-
    ))

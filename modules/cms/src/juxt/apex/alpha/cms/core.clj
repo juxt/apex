@@ -195,7 +195,5 @@
    ;; over insecure http.
    wrap-auth-digest
 
-
-
    ;; Prime the Ring request with a blocking stream
    a/wrap-read-all-request-body))
