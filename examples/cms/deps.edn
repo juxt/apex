@@ -7,7 +7,7 @@
 
   juxt.apex/cms {:local/root "../../modules/cms"}
 
-  ;; Use vertx adapter
+  ;; Use Vert.x adapter
   juxt.apex/vertx {:local/root "../../modules/vertx"}
 }
 
