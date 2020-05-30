@@ -1,12 +1,12 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.cms.core
+(ns juxt.apex.alpha.http.core
   (:require
    [clojure.string :as str]
    [clojure.xml :as xml]
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
-   [juxt.apex.alpha.cms.xml :as x]))
+   [juxt.apex.alpha.http.xml :as x]))
 
 (defn uri [req]
   (format "%s://%s%s"

@@ -5,7 +5,7 @@
  {juxt.apex/params {:local/root "../../modules/params"}
   juxt.apex/html {:local/root "../../modules/html"}
 
-  juxt.apex/cms {:local/root "../../modules/cms"}
+  juxt.apex/http {:local/root "../../modules/http"}
 
   ;; Use Vert.x adapter
   juxt.apex/vertx {:local/root "../../modules/vertx"}

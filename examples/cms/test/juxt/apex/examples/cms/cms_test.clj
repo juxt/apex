@@ -2,7 +2,7 @@
 
 (ns juxt.apex.examples.cms.cms-test
   (:require
-   [juxt.apex.alpha.cms.core :as cms]
+   [juxt.apex.alpha.http.core :as apex]
    [clojure.test :refer [deftest is]])
   (:import
    (io.vertx.reactivex.core Vertx)))
@@ -19,14 +19,14 @@
    (into {})))
 
 (defrecord TestBackend [store vertx]
-  cms/ApexBackend
+  apex/ApexBackend
   (lookup-resource [_ uri]
     (get entities uri))
   (propfind [this uri depth]
     (into {}
           (for [uri
-                (cms/find-members uri depth (keys entities))]
-            [uri (cms/lookup-resource this uri)]))))
+                (apex/find-members uri depth (keys entities))]
+            [uri (apex/lookup-resource this uri)]))))
 
 (deftest get-test
   (let [req
@@ -37,9 +37,8 @@
          }]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (cms/make-handler
-             {:store (->TestBackend)
-              :vertx vertx})
+            (apex/make-handler
+             (->TestBackend nil vertx))
             response (handler req)]
         (is (= 200 (:status response)))
         (is (= "123" (:body response)))))))
@@ -66,7 +65,7 @@
                 </propfind>"))}]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (cms/make-handler
+            (apex/make-handler
              (->TestBackend nil vertx))
             response (handler req)]
         (is (= 207 (:status response)))

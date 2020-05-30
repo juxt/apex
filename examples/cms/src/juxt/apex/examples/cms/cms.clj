@@ -7,7 +7,7 @@
    [crux.api :as crux]
    [integrant.core :as ig]
    [juxt.apex.alpha.vertx.helpers :as a]
-   [juxt.apex.alpha.cms.core :as cms]
+   [juxt.apex.alpha.http.core :as apex]
    [juxt.apex.examples.cms.images :as images]
    [juxt.apex.examples.cms.adoc :as adoc]
    [ring.middleware.params :refer [params-request]]
@@ -72,7 +72,7 @@
         (adoc/template-model
          asciidoctor-engine
          (:apex/content
-          (cms/lookup-resource backend (:apex.asciidoctor/source resource))))))
+          (apex/lookup-resource backend (:apex.asciidoctor/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
@@ -128,7 +128,7 @@
               (:apex/content resource)))))
 
       (:apex.selmer/template resource)
-      (let [source-ent (cms/lookup-resource backend (:apex.asciidoctor/source resource))
+      (let [source-ent (apex/lookup-resource backend (:apex.asciidoctor/source resource))
             _ (when-not source-ent
                 (throw (ex-info "Expected source entity not found" {:source-entity (:apex.asciidoctor/source resource)})))
             headers
@@ -182,8 +182,8 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:apex/source-image resource) (cms/lookup-resource backend (:apex/source-image resource)))
-      (let [source-resource (cms/lookup-resource backend (:apex/source-image resource))]
+      (and (:apex/source-image resource) (apex/lookup-resource backend (:apex/source-image resource)))
+      (let [source-resource (apex/lookup-resource backend (:apex/source-image resource))]
         (case (:apex/content-coding source-resource)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
@@ -267,9 +267,9 @@
 
 (defmethod ig/init-key ::router [_ {:keys [vertx engine crux-node] :as opts}]
   (->
-   (cms/make-handler
+   (apex/make-handler
     (reify
-      cms/ApexBackend
+      apex/ApexBackend
       (lookup-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
@@ -315,8 +315,8 @@
           (into
            {}
            (for [uri
-                 (cms/find-members uri depth uris)]
-             [uri (cms/lookup-resource this uri)]))))))
+                 (apex/find-members uri depth uris)]
+             [uri (apex/lookup-resource this uri)]))))))
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.
