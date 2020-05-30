@@ -198,7 +198,9 @@
 
    ;; Digest authentication. Clients are not allowed to use basic auth
    ;; over insecure http.
-   wrap-auth-digest
+;;   wrap-auth-digest
 
    ;; Prime the Ring request with a blocking stream
-   a/wrap-read-all-request-body))
+   ;; TODO: Depends on factors yet to be determined.
+   a/wrap-read-all-request-body
+   ))

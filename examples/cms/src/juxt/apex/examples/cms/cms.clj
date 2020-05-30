@@ -8,7 +8,7 @@
    [integrant.core :as ig]
    [juxt.apex.alpha.async.helpers :as a]
    [juxt.apex.alpha.cms.core :as cms]
-   [juxt.apex.alpha.cms.images :as images]
+   [juxt.apex.examples.cms.images :as images]
    [juxt.apex.examples.cms.adoc :as adoc]
    [ring.middleware.params :refer [params-request]]
    [selmer.parser :as selmer]

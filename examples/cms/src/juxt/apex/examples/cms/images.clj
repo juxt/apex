@@ -1,6 +1,6 @@
-(ns juxt.apex.alpha.cms.images
-  (:require
-   [clojure.java.io :as io]))
+;; Copyright © 2020, JUXT LTD.
+
+(ns juxt.apex.examples.cms.images)
 
 (defn resize-image [image-inputstream target-width out-stream]
   (let [im
