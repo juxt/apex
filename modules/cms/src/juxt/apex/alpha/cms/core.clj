@@ -18,11 +18,15 @@
           (-> req :uri)))
 
 ;; TODO: Belongs in Apex 'core'
+;; TODO: Break up into we
 (defprotocol ApexBackend
   (lookup-resource [_ uri] "Find the resource with the given uri")
-  (propfind [_ uri depth] "Find the properties of members of uri")
+  (generate-representation [_ ctx req respond raise])
+
+  ;; TODO: Should belong in a optional 'writeable' protocol
   (post-resource [_ ctx req respond raise])
-  (generate-representation [_ ctx req respond raise]))
+  ;; TODO: Should belong in an optional 'webdav' protocol
+  (propfind [_ uri depth] "Find the properties of members of uri"))
 
 (defn rfc1123-date [inst]
   (.
@@ -91,7 +95,7 @@
    #{}
    candidates))
 
-(defmethod http-method :propfind [backend {:keys [vertx]} req respond raise]
+(defmethod http-method :propfind [backend ctx req respond raise]
   (let [
         ;; "Servers SHOULD treat a request without a Depth header as if a
         ;; "Depth: infinity" header was included." -- RFC 4918
@@ -223,9 +227,7 @@
            {:request req}
            t)))))))
 
-(defn make-router [backend {:keys [vertx engine] :as init-ctx}]
-  (assert vertx)
-  (assert engine)
+(defn make-router [backend init-ctx]
   (->
    (make-handler backend init-ctx)
 

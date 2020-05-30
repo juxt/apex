@@ -237,20 +237,15 @@
      cms/ApexBackend
      (lookup-resource [_ uri]
        (crux/entity (crux/db crux-node) uri))
-     (propfind [this uri depth]
-       (let [uris
-             (map
-              first
-              (crux/q
-               (crux/db crux-node)
-               '{:find [e]
-                 :where [(or-join [e] [e :apex/content-source] [e :apex/content])]}))]
-         (into
-          {}
-          (for [uri
-                (cms/find-members uri depth uris)]
-            [uri (cms/lookup-resource this uri)]))))
 
+     (generate-representation [this {:keys [apex/resource] :as ctx} req respond raise]
+       ;; To get the debug query parameter.  Arguably we could use Apex's
+       ;; OpenAPI-compatible replacement.
+       (let [req (params-request req)
+             debug (get-in req [:query-params "debug"])]
+         (if debug
+           (respond-resource this ctx req respond raise)
+           (respond-resource-response this ctx req respond raise))))
 
      (post-resource [_ ctx req respond raise]
        (let [body (slurp (:body req))]
@@ -263,12 +258,18 @@
              :apex/classification :public}]])
          (respond {:status 201 :body "Uploaded!\n"})))
 
-     (generate-representation [this {:keys [apex/resource] :as ctx} req respond raise]
-       ;; To get the debug query parameter.  Arguably we could use Apex's
-       ;; OpenAPI-compatible replacement.
-       (let [req (params-request req)
-             debug (get-in req [:query-params "debug"])]
-         (if debug
-           (respond-resource this ctx req respond raise)
-           (respond-resource-response this ctx req respond raise)))))
+     (propfind [this uri depth]
+       (let [uris
+             (map
+              first
+              (crux/q
+               (crux/db crux-node)
+               '{:find [e]
+                 :where [(or-join [e] [e :apex/content-source] [e :apex/content])]}))]
+         (into
+          {}
+          (for [uri
+                (cms/find-members uri depth uris)]
+            [uri (cms/lookup-resource this uri)])))))
+
    opts))
