@@ -81,13 +81,6 @@
   a CMS entity."
   [{:keys [vertx engine]} backend {:keys [apex/head? apex/resource]} req respond raise]
 
-  ;; Determine status
-  ;; Negotiate content representation
-  ;; Compute entity-tag for representation
-  ;; Check condition (Last-Modified, If-None-Match)
-  ;; Generate response with new entity-tag
-  ;; Handle errors (by responding with error response, with appropriate re-negotiation)
-
   (assert resource)
 
   (try

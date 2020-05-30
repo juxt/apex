@@ -47,7 +47,15 @@
 
 (defmethod http-method :get [backend req respond raise]
   (if-let [resource (lookup-resource backend (java.net.URI. (uri req)))]
+
+    ;; Determine status
+    ;; Negotiate content representation
+    ;; Compute entity-tag for representation
+    ;; Check condition (Last-Modified, If-None-Match)
+    ;; Generate response with new entity-tag
+    ;; Handle errors (by responding with error response, with appropriate re-negotiation)
     (generate-representation backend {:apex/resource resource} req respond raise)
+
     (respond {:status 404 :body "Apex: 404 (Not found)\n"})))
 
 (defmethod http-method :head [backend req respond raise]
