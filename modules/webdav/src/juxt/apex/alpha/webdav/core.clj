@@ -72,7 +72,7 @@
                         {:content [(xml/parse (java.io.ByteArrayInputStream. (.getBytes body-str)))]}
                         :propfind :prop x/content)
                        (map (juxt :tag :content)))
-                resource (apex/lookup-resource backend uri)]
+                resource (apex/locate-resource backend uri)]
 
             (respond
              (let [body

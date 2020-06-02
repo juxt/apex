@@ -20,15 +20,15 @@
    (into {})))
 
 (defrecord TestProvider [store vertx]
-  apex/ResourceLookup
-  (lookup-resource [_ uri]
+  apex/ResourceLocator
+  (locate-resource [_ uri]
     (get entities uri))
   webdav/WebDav
   (propfind [this uri depth]
     (into {}
           (for [uri
                 (webdav/find-members uri depth (keys entities))]
-            [uri (apex/lookup-resource this uri)]))))
+            [uri (apex/locate-resource this uri)]))))
 
 (deftest get-test
   (let [req

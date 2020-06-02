@@ -6,6 +6,9 @@
   juxt.apex/html {:local/root "../../modules/html"}
 
   juxt.apex/http {:local/root "../../modules/http"}
+  ;; Until transitive bug is fixed in deps.edn
+  juxt/reap {:local/root "../../../reap"}
+
   juxt.apex/webdav {:local/root "../../modules/webdav"}
 
   ;; Use Vert.x adapter

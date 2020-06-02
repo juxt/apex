@@ -6,6 +6,11 @@
   ;; Core
   ;; juxt.apex/auth-digest {:local/root "../auth-digest"}
   ring/ring-core {:mvn/version "1.8.0"}
+
+  juxt/reap
+  {:local/root "../../../reap"}
+  #_{:git/url "https://github.com/juxt/reap.git"
+   :sha "57fecc6f8a7790c1e10867832ef31596da68dc87"}
   }
 
  :aliases

@@ -73,7 +73,7 @@
         (adoc/template-model
          asciidoctor-engine
          (:apex/content
-          (apex/lookup-resource backend (:apex.asciidoctor/source resource))))))
+          (apex/locate-resource backend (:apex.asciidoctor/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
@@ -129,7 +129,7 @@
               (:apex/content resource)))))
 
       (:apex.selmer/template resource)
-      (let [source-ent (apex/lookup-resource backend (:apex.asciidoctor/source resource))
+      (let [source-ent (apex/locate-resource backend (:apex.asciidoctor/source resource))
             _ (when-not source-ent
                 (throw (ex-info "Expected source entity not found" {:source-entity (:apex.asciidoctor/source resource)})))
             headers
@@ -183,8 +183,8 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:apex/source-image resource) (apex/lookup-resource backend (:apex/source-image resource)))
-      (let [source-resource (apex/lookup-resource backend (:apex/source-image resource))]
+      (and (:apex/source-image resource) (apex/locate-resource backend (:apex/source-image resource)))
+      (let [source-resource (apex/locate-resource backend (:apex/source-image resource))]
         (case (:apex/content-coding source-resource)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
@@ -270,8 +270,8 @@
   (->
    (apex/make-handler
     (reify
-      apex/ResourceLookup
-      (lookup-resource [_ uri]
+      apex/ResourceLocator
+      (locate-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
       apex/RepresentationResponse
@@ -333,7 +333,7 @@
            {}
            (for [uri
                  (webdav/find-members uri depth uris)]
-             [uri (apex/lookup-resource this uri)]))))))
+             [uri (apex/locate-resource this uri)]))))))
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.
