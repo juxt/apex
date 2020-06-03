@@ -274,8 +274,8 @@
       (locate-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
-      apex/RepresentationResponse
-      (generate-representation [this ctx req respond raise]
+      apex/ResponseBody
+      (send-ok-response [this ctx req respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
         (let [req (params-request req)

@@ -13,40 +13,48 @@
 ;; TODO: OpenAPI in Apex support should be written in terms of these
 ;; interfaces.
 
-(defprotocol ResourceLocator
+(defprotocol ^:apex/required ResourceLocator
   (locate-resource
     [_ uri]
-    "Find the resource with the given uri. Required."))
+    "Find the resource with the given uri."))
 
-(defprotocol ContentNegotiation
+(defprotocol ^:apex/required ResponseBody
+  (send-ok-response
+    [_ ctx request respond raise]
+    "Call the given respond function with a map containing the body and any
+    explicit status override and additional headers."))
+
+(defprotocol ^:apex/optional ContentNegotiation
   (negotiate-content
     [_ resource request]
-    "For a given resource, return the resource (or resources)
-    corresponding to the best representation (with respect to the
-    request). If a collection containing multiple values are returned,
-    a 300 will result. The pattern of negotiation is up to the
-    provider (proactive, reactive, transparent, etc.). If the resource
-    has a URI, return the URI rather than the resource, so it can be
-    subsequently located and placed in the 'Content-Location' response
-    header. Optional."))
+    "For a given resource, return the resource (or resources) corresponding to
+    the best representation (with respect to the request). If a collection
+    containing multiple values are returned, a 300 will result. The pattern of
+    negotiation is up to the provider (proactive, reactive, transparent,
+    etc.). If the resource has a URI, return the URI rather than the resource,
+    so it can be subsequently located and placed in the 'Content-Location'
+    response header. Optional."))
 
-(defprotocol RepresentationResponse
-  (generate-representation
-    [_ ctx request respond raise]))
+(defprotocol ^:apex/optional MultipleRepresentations
+  (send-300-response
+    [_ representations request respond raise]
+    "Satisfy this protocol if you want to support reactive
+    negotationn. Optional."))
 
-(defprotocol ResourceUpdate
+(defprotocol ^:apex/optional ResourceUpdate
   (post-resource
-    [_ ctx request respond raise]))
+    [_ ctx request respond raise]
+    "Update the resource to the new state."))
 
-(defprotocol ServerOptions
+(defprotocol ^:apex/optional ServerOptions
   (server-header [_]
     "Return the value for server header, or nil to avoid setting it.")
   (server-options [_]))
 
-(defprotocol ResourceOptions
+(defprotocol ^:apex/optional ResourceOptions
   (resource-options-headers [_ resource]))
 
-(defprotocol ReactiveStreaming
+(defprotocol ^:apex/optional ReactiveStreaming
   (request-body-as-stream [_ req callback]
     "Async streaming adapters only (e.g. Vert.x). Call the callback
     with a Ring-compatible request containing a :body
@@ -67,8 +75,9 @@
 
 ;; TODO: Most :apex ns keywords should be in :apex.http ns. Refactor!
 
-;; Section 4.3.1
-(defmethod http-method :get [provider request respond raise]
+;;(defn uri? [i] (instance? java.net.URI i))
+
+(defn get-or-head-method [provider request respond raise]
   (if-let [resource (locate-resource provider (java.net.URI. (uri request)))]
 
     ;; Determine status: 200 (or 206, partial content)
@@ -88,44 +97,53 @@
 
         (and (sequential? representations)
              (>= (count representations) 2))
-        (respond {:status 300
-                  :body "TODO: Render multiple representations"})
+        (if (satisfies? MultipleRepresentations provider)
+          (send-300-response provider (filter uri? representations) request respond raise)
+          (throw (ex-info "negotiate-content of juxt.apex.alpha.http.ContentNegotiation protocol returned multiple representations but provider does not satisfy juxt.apex.alpha.http.MultipleRepresentations protocol"
+                          {})))
 
         :else
-        (let [content-resource-uri
+        (let [representation-maybe-uri
               (cond-> representations
                 (sequential? representations) first)
 
-              ]
+              [representation content-location]
+              (if (instance? java.net.URI representation-maybe-uri)
+                [(locate-resource provider representation-maybe-uri) representation-maybe-uri]
+                [representation-maybe-uri])
 
-          ;; Generate response with new entity-tag
-          ;; Handle errors (by responding with error response, with appropriate re-negotiation)
-          (generate-representation
-           provider
-           {:apex/resource resource
-            }
-           request respond raise)
+              status 200
 
-          ;; Check condition (Last-Modified, If-None-Match)
-          )))
+              headers
+              (cond-> {}
+                content-location (conj ["content-location" content-location]))]
 
+          ;; TODO: Generate response with new entity-tag
 
+          ;; TODO: Check condition (Last-Modified, If-None-Match)
+
+          ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
+
+          (if (= (:request-method request) :head)
+            (respond {:status status
+                      :headers headers})
+            (send-ok-response
+             provider
+             {:status status
+              :headers headers
+              :apex/resource resource
+              :apex/representation representation}
+             request respond raise)))))
 
     (respond {:status 404 :body "Apex: 404 (Not found)\n"})))
 
-;; Section 4.3.2
-(defmethod http-method :head [provider req respond raise]
-  (if-let [resource (locate-resource provider (java.net.URI. (uri req)))]
-    (generate-representation
-     provider
-     {:apex/resource resource
-      :apex/head? true}
-     req
-     (fn [response]
-       (respond (assoc response :body nil)))
-     raise)
+;; Section 4.3.1
+(defmethod http-method :get [provider request respond raise]
+  (get-or-head-method provider request respond raise))
 
-    (respond {:status 404})))
+;; Section 4.3.2
+(defmethod http-method :head [provider request respond raise]
+  (get-or-head-method provider request respond raise))
 
 ;; Section 4.3.3
 (defmethod http-method :post [provider req respond raise]
@@ -156,6 +174,20 @@
         :headers (resource-options-headers provider resource)}))))
 
 (defn make-handler [provider]
+  (when-not
+      (satisfies? ResourceLocator provider)
+      (throw
+       (ex-info
+        "Provider must satisfy mandatory ResourceLocator protocol"
+        {:provider provider
+         :protocol ResourceLocator})))
+  (when-not
+      (satisfies? ResponseBody provider)
+      (throw
+       (ex-info
+        "Provider must satisfy mandatory ResponseBody protocol"
+        {:provider provider
+         :protocol ResponseBody})))
   (fn handler
     ([req]
      (handler req identity (fn [t] (throw t))))
@@ -165,14 +197,16 @@
         provider
         req
         (fn [response]
-          (let [server (server-header provider)]
+          (let [server (when
+                           (satisfies? ServerOptions provider)
+                           (server-header provider))]
             (respond (cond-> response server (assoc-in [:headers "server"] server)))))
         raise)
        (catch Throwable t
          (raise
           (ex-info
            (format
-            "Error on %s on %s"
+            "Error on %s of %s"
             (str/upper-case (name (:request-method req)))
             (:uri req))
            {:request req}
