@@ -16,11 +16,12 @@
 (defprotocol ^:apex.http/required ResourceLocator
   (locate-resource
     [_ uri]
-    "Find the resource with the given uri."))
+    "Return the resource identified with the given URI. Return nil if not
+    found."))
 
-(defprotocol ^:apex.http/optional ResponseBody
+(defprotocol ^:apex.http/required ResponseBody
   (send-ok-response
-    [_ response request respond raise]
+    [_ resource response request respond raise]
     "Call the given respond function with a map containing the body and any
     explicit status override and additional headers. The given response argument
     contains pre-determined status and headers."))
@@ -34,13 +35,13 @@
     negotiation is up to the provider (proactive, reactive, transparent,
     etc.). If the resource has a URI, return the URI rather than the resource,
     so it can be subsequently located and placed in the 'Content-Location'
-    response header. Optional."))
+    response header."))
 
 (defprotocol ^:apex.http/optional MultipleRepresentations
   (send-300-response
     [_ representations request respond raise]
     "Satisfy this protocol if you want to support reactive
-    negotationn. Optional."))
+    negotation."))
 
 (defprotocol ^:apex.http/optional ResourceUpdate
   (post-resource
@@ -78,7 +79,15 @@
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
-(defn get-or-head-method [provider request respond raise]
+(defn last-modified [provider resource]
+  nil
+  )
+
+(defn entity-tag [provider resource]
+  nil
+  )
+
+(defn- get-or-head-method [provider request respond raise]
   (if-let [resource (locate-resource provider (java.net.URI. (uri request)))]
 
     ;; Determine status: 200 (or 206, partial content)
@@ -113,6 +122,10 @@
                 [(locate-resource provider representation-maybe-uri) representation-maybe-uri]
                 [representation-maybe-uri])
 
+              last-modified (last-modified provider representation)
+
+              entity-tag (entity-tag provider representation)
+
               status 200
 
               headers
@@ -121,12 +134,9 @@
 
               response
               {:status status
-               :headers headers
-               :apex.http/resource resource
-               :apex.http/representation representation}]
+               :headers headers}]
 
-          ;; TODO: Generate response with new entity-tag
-
+          ;; TODO: Get entity tag of representation
           ;; TODO: Check condition (Last-Modified, If-None-Match)
 
           ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
@@ -136,19 +146,13 @@
             (respond (select-keys response [:status :headers]))
 
             (satisfies? ResponseBody provider)
-            (send-ok-response
-             provider
-             response
-             request respond raise)
+            (send-ok-response provider representation response request respond raise)
 
-            (:apex.http/content representation)
-            (respond (-> (conj response [:body (:apex.http/content representation)])
-                         (select-keys [:status :headers :body])))
-
-            :else (throw
-                   (ex-info
-                    "Unable to produce response"
-                    response))))))
+            :else
+            (throw
+             (ex-info
+              "Unable to produce response"
+              response))))))
 
     ;; TODO: Make this a protocol
     (respond {:status 404 :headers {}})))
@@ -197,6 +201,13 @@
         "Provider must satisfy mandatory ResourceLocator protocol"
         {:provider provider
          :protocol ResourceLocator})))
+  (when-not
+      (satisfies? ResponseBody provider)
+      (throw
+       (ex-info
+        "Provider must satisfy mandatory ResponseBody protocol"
+        {:provider provider
+         :protocol ResponseBody})))
   (fn handler
     ([req]
      (handler req identity (fn [t] (throw t))))

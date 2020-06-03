@@ -4,15 +4,23 @@
   (:require
    [ring.mock.request :refer [request]]
    [juxt.apex.alpha.http.core :as http]
-   [clojure.test :refer [deftest is]]))
+   [clojure.test :refer [deftest is]]
+   [juxt.apex.alpha.http.header-names :refer [wrap-headers-normalize-case]]))
 
 (comment
-  (let [h (http/handler
-           (reify
-             http/ResourceLocator
-             (locate-resource [_ uri]
-               (if (= (.getPath uri) "/hello.txt")
-                 {:apex.http/content "Hello World!"}))))]
+  (let [h (->
+           (http/handler
+            (reify
+              http/ResourceLocator
+              (locate-resource [_ uri]
+                (if (= (.getPath uri) "/hello.txt")
+                  {:apex.http/content "Hello World!"}))
+              http/ResponseBody
+              (send-ok-response
+                  [_ resource response request respond raise]
+                (respond
+                 (conj response [:body (:apex.http/content resource)])))))
+           wrap-headers-normalize-case)]
     (h (request :get "/hello.txt"))))
 
 (deftest basic-test
@@ -20,8 +28,13 @@
            (reify
              http/ResourceLocator
              (locate-resource [_ uri]
-               (if (= (.getPath uri) "/hello.txt")
-                 {:apex.http/content "Hello World!"}))))]
+               (when (= (.getPath uri) "/hello.txt")
+                 {:apex.http/content "Hello World!"}))
+             http/ResponseBody
+             (send-ok-response
+                 [_ resource response request respond raise]
+                 (respond
+                  (conj response [:body (:apex.http/content resource)])))))]
     (is (=
          {:status 200
           :headers {}
@@ -32,9 +45,3 @@
          {:status 404
           :headers {}}
          (h (request :get "/not-exists"))))))
-
-
-
-#_http/ResponseBody
-  #_(send-ok-response [_ ctx request respond raise]
-    (respond ctx))

@@ -1,7 +1,9 @@
 ;; Copyright © 2020, JUXT LTD.
 
 (ns juxt.apex.alpha.http.header-names
-  (:require [clojure.string :as str]))
+  (:require
+   [clojure.string :as str]
+   [clojure.set :as set]))
 
 (def header-canonical-case
   {"a-im" "A-IM",
@@ -183,3 +185,22 @@
    (sort)
    (map (juxt str/lower-case identity))
    (into (sorted-map))))
+
+
+(set/rename-keys {"ttl" 20} header-canonical-case)
+
+(defn- wrap-headers-normalize-case-response [response]
+  (update response :headers set/rename-keys header-canonical-case))
+
+(defn wrap-headers-normalize-case
+  "Turn headers into their normalized case. Eg. user-agent becomes User-Agent."
+  [h]
+  (fn
+    ([req]
+     (wrap-headers-normalize-case-response (h req)))
+    ([req respond raise]
+     (h
+      req
+      (fn [response]
+        (respond (wrap-headers-normalize-case-response response)))
+      raise))))
