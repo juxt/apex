@@ -16,7 +16,7 @@
    [selmer.util :refer [*custom-resource-path*]]))
 
 (defn redirect? [resource]
-  (when-let [status (:apex/status resource)]
+  (when-let [status (:apex.http/status resource)]
     (and (>= status 300) (< status 400))))
 
 ;; Copied in this repo - TODO: dedupe!
@@ -32,11 +32,11 @@
 (defn resource-as-html [ent]
   (let [ent
         (cond-> ent
-          (and (:apex/content ent)
+          (and (:apex.http/content ent)
                (or
-                (> (count (:apex/content ent)) 200)
-                (binary? (:apex/content ent))))
-          (assoc :apex/content (format "<%s bytes of content>" (count (.getBytes (:apex/content ent)))))
+                (> (count (:apex.http/content ent)) 200)
+                (binary? (:apex.http/content ent))))
+          (assoc :apex.http/content (format "<%s bytes of content>" (count (.getBytes (:apex.http/content ent)))))
           )]
     (str "<pre>\n"
          (->
@@ -72,7 +72,7 @@
        (merge
         (adoc/template-model
          asciidoctor-engine
-         (:apex/content
+         (:apex.http/content
           (apex/locate-resource backend (:apex.asciidoctor/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
@@ -80,7 +80,7 @@
 (defn respond-resource-response
   "Return the response for a GET request targetting a resource backed by
   a CMS entity."
-  [{:keys [vertx engine]} backend {:keys [apex/head? apex/resource]} req respond raise]
+  [{:keys [vertx engine]} backend {:keys [apex.http/head? apex.http/resource]} req respond raise]
 
   (assert resource)
 
@@ -88,45 +88,45 @@
     (cond
       (redirect? resource)
       (respond
-       {:status (:apex/status resource)
-        :headers {"location" (str (:apex/location resource))}})
+       {:status (:apex.http/status resource)
+        :headers {"location" (str (:apex.http/location resource))}})
 
       ;; We are a static representation
-      (and (string? (:apex/content resource)))
+      (and (string? (:apex.http/content resource)))
       ;; So our etag is easy to compute
       (respond
        (cond->
            {:status 200
             :headers
             (cond-> {}
-              (:apex/content-type resource)
-              (conj ["content-type" (:apex/content-type resource)])
+              (:apex.http/content-type resource)
+              (conj ["content-type" (:apex.http/content-type resource)])
 
-              (:apex/content-language resource)
+              (:apex.http/content-language resource)
               ;; TODO: Support vectors for multiple languages
-              (conj ["content-language" (:apex/content-language resource)])
+              (conj ["content-language" (:apex.http/content-language resource)])
 
-              (:apex/content-length resource)
-              (conj ["content-length" (str (:apex/content-length resource))])
+              (:apex.http/content-length resource)
+              (conj ["content-length" (str (:apex.http/content-length resource))])
 
-              (:apex/last-modified resource)
+              (:apex.http/last-modified resource)
               (conj ["last-modified"
                      (rfc1123-date
                       (java.time.ZonedDateTime/ofInstant
                        ;; Hmm, representations are last-modified, not resources?
-                       (.toInstant (:apex/last-modified resource))
+                       (.toInstant (:apex.http/last-modified resource))
                        (java.time.ZoneId/systemDefault)))])
 
-              (:apex/entity-tag resource)
-              (conj ["etag" (str \" (:apex/entity-tag resource) \")]))}
+              (:apex.http/entity-tag resource)
+              (conj ["etag" (str \" (:apex.http/entity-tag resource) \")]))}
 
            (not head?)
            (assoc
             :body
-            (case (:apex/content-coding resource)
+            (case (:apex.http/content-coding resource)
               :base64
-              (.decode (java.util.Base64/getDecoder) (:apex/content resource))
-              (:apex/content resource)))))
+              (.decode (java.util.Base64/getDecoder) (:apex.http/content resource))
+              (:apex.http/content resource)))))
 
       (:apex.selmer/template resource)
       (let [source-ent (apex/locate-resource backend (:apex.asciidoctor/source resource))
@@ -134,13 +134,13 @@
                 (throw (ex-info "Expected source entity not found" {:source-entity (:apex.asciidoctor/source resource)})))
             headers
             (cond-> {}
-              (:apex/content-type resource)
-              (conj ["content-type" (:apex/content-type resource)])
+              (:apex.http/content-type resource)
+              (conj ["content-type" (:apex.http/content-type resource)])
 
-              (:apex/content-language resource)
+              (:apex.http/content-language resource)
               ;; TODO: Support vectors for multiple languages (see
               ;; identical TODO above)
-              (conj ["content-language" (:apex/content-language resource)])
+              (conj ["content-language" (:apex.http/content-language resource)])
 
               ;; Calc last-modified and/or etag - computed on-the-fly
               ;; in order to prevent stale responses being generated.
@@ -154,7 +154,7 @@
               (conj ["last-modified"
                      (rfc1123-date
                       (java.time.ZonedDateTime/ofInstant
-                       (.toInstant (:apex/last-modified source-ent))
+                       (.toInstant (:apex.http/last-modified source-ent))
                        (java.time.ZoneId/systemDefault)))])
 
               ;; No content-length, this will be chunked
@@ -183,14 +183,14 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:apex/source-image resource) (apex/locate-resource backend (:apex/source-image resource)))
-      (let [source-resource (apex/locate-resource backend (:apex/source-image resource))]
-        (case (:apex/content-coding source-resource)
+      (and (:apex.http/source-image resource) (apex/locate-resource backend (:apex.http/source-image resource)))
+      (let [source-resource (apex/locate-resource backend (:apex.http/source-image resource))]
+        (case (:apex.http/content-coding source-resource)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
             (images/resize-image
-             (new java.io.ByteArrayInputStream (.decode (java.util.Base64/getDecoder) (:apex/content source-resource)))
-             (get resource :apex/width 200)
+             (new java.io.ByteArrayInputStream (.decode (java.util.Base64/getDecoder) (:apex.http/content source-resource)))
+             (get resource :apex.http/width 200)
              baos)
             (let [body (.toByteArray baos)]
 
@@ -199,16 +199,16 @@
                 :headers (cond->
                              {"content-length" (str (count body))}
 
-                           (:apex/last-modified source-resource)
+                           (:apex.http/last-modified source-resource)
                            (assoc
                             "last-modified"
                             (rfc1123-date
                              (java.time.ZonedDateTime/ofInstant
-                              (.toInstant (:apex/last-modified source-resource))
+                              (.toInstant (:apex.http/last-modified source-resource))
                               (java.time.ZoneId/systemDefault))))
 
-                           (:apex/entity-tag source-resource)
-                           (assoc "etag" (str \" (:apex/entity-tag source-resource) \")))
+                           (:apex.http/entity-tag source-resource)
+                           (assoc "etag" (str \" (:apex.http/entity-tag source-resource) \")))
                 ;; Not Ring complaint, but awaiting an adapter from InputStream in my Ring/vertx adapter.
                 :body body})))))
 
@@ -268,7 +268,7 @@
 
 (defmethod ig/init-key ::router [_ {:keys [vertx engine crux-node] :as opts}]
   (->
-   (apex/make-handler
+   (apex/handler
     (reify
       apex/ResourceLocator
       (locate-resource [_ uri]
@@ -291,9 +291,9 @@
            crux-node
            [[:crux.tx/put
              {:crux.db/id (java.net.URI. "https://juxt.pro/frontpage3.css")
-              :apex/content-type "text/css;charset=utf-8"
-              :apex/content body
-              :apex/classification :public}]])
+              :apex.http/content-type "text/css;charset=utf-8"
+              :apex.http/content body
+              :apex.http/classification :public}]])
           (respond {:status 201 :body "Uploaded!\n"})))
 
       apex/ResourceOptions
@@ -328,7 +328,7 @@
                (crux/q
                 (crux/db crux-node)
                 '{:find [e]
-                  :where [(or-join [e] [e :apex/content-source] [e :apex/content])]}))]
+                  :where [(or-join [e] [e :apex.http/content-source] [e :apex.http/content])]}))]
           (into
            {}
            (for [uri

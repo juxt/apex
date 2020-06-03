@@ -39,7 +39,7 @@
          }]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (apex/make-handler
+            (apex/handler
              (->TestProvider nil vertx))
             response (handler req)]
         (is (= 200 (:status response)))
@@ -67,7 +67,7 @@
                 </propfind>"))}]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (apex/make-handler
+            (apex/handler
              (->TestProvider nil vertx))
             response (handler req)]
         (is (= 207 (:status response)))

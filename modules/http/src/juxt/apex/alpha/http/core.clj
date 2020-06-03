@@ -13,19 +13,19 @@
 ;; TODO: OpenAPI in Apex support should be written in terms of these
 ;; interfaces.
 
-(defprotocol ^:apex/required ResourceLocator
+(defprotocol ^:apex.http/required ResourceLocator
   (locate-resource
     [_ uri]
     "Find the resource with the given uri."))
 
-(defprotocol ^:apex/optional ResponseBody
+(defprotocol ^:apex.http/optional ResponseBody
   (send-ok-response
     [_ response request respond raise]
     "Call the given respond function with a map containing the body and any
     explicit status override and additional headers. The given response argument
     contains pre-determined status and headers."))
 
-(defprotocol ^:apex/optional ContentNegotiation
+(defprotocol ^:apex.http/optional ContentNegotiation
   (negotiate-content
     [_ resource request]
     "For a given resource, return the resource (or resources) corresponding to
@@ -36,26 +36,26 @@
     so it can be subsequently located and placed in the 'Content-Location'
     response header. Optional."))
 
-(defprotocol ^:apex/optional MultipleRepresentations
+(defprotocol ^:apex.http/optional MultipleRepresentations
   (send-300-response
     [_ representations request respond raise]
     "Satisfy this protocol if you want to support reactive
     negotationn. Optional."))
 
-(defprotocol ^:apex/optional ResourceUpdate
+(defprotocol ^:apex.http/optional ResourceUpdate
   (post-resource
     [_ ctx request respond raise]
     "Update the resource to the new state."))
 
-(defprotocol ^:apex/optional ServerOptions
+(defprotocol ^:apex.http/optional ServerOptions
   (server-header [_]
     "Return the value for server header, or nil to avoid setting it.")
   (server-options [_]))
 
-(defprotocol ^:apex/optional ResourceOptions
+(defprotocol ^:apex.http/optional ResourceOptions
   (resource-options-headers [_ resource]))
 
-(defprotocol ^:apex/optional ReactiveStreaming
+(defprotocol ^:apex.http/optional ReactiveStreaming
   (request-body-as-stream [_ req callback]
     "Async streaming adapters only (e.g. Vert.x). Call the callback
     with a Ring-compatible request containing a :body
@@ -122,8 +122,8 @@
               response
               {:status status
                :headers headers
-               :apex/resource resource
-               :apex/representation representation}]
+               :apex.http/resource resource
+               :apex.http/representation representation}]
 
           ;; TODO: Generate response with new entity-tag
 
@@ -141,8 +141,8 @@
              response
              request respond raise)
 
-            (:apex/content representation)
-            (respond (-> (conj response [:body (:apex/content representation)])
+            (:apex.http/content representation)
+            (respond (-> (conj response [:body (:apex.http/content representation)])
                          (select-keys [:status :headers :body])))
 
             :else (throw

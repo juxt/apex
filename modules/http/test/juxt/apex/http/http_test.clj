@@ -12,7 +12,7 @@
              http/ResourceLocator
              (locate-resource [_ uri]
                (if (= (.getPath uri) "/hello.txt")
-                 {:apex/content "Hello World!"}))))]
+                 {:apex.http/content "Hello World!"}))))]
     (h (request :get "/hello.txt"))))
 
 (deftest basic-test
@@ -21,7 +21,7 @@
              http/ResourceLocator
              (locate-resource [_ uri]
                (if (= (.getPath uri) "/hello.txt")
-                 {:apex/content "Hello World!"}))))]
+                 {:apex.http/content "Hello World!"}))))]
     (is (=
          {:status 200
           :headers {}
