@@ -2,13 +2,8 @@
 
 (ns juxt.apex.alpha.http.core
   (:require
-   [clojure.string :as str]))
-
-(defn uri [req]
-  (format "%s://%s%s"
-          (-> req :scheme name)
-          (-> req :headers (get "host"))
-          (-> req :uri)))
+   [clojure.string :as str]
+   [ring.util.request :refer [request-url]]))
 
 ;; TODO: OpenAPI in Apex support should be written in terms of these
 ;; interfaces.
@@ -27,7 +22,7 @@
     contains pre-determined status and headers."))
 
 (defprotocol ^:apex.http/optional ContentNegotiation
-  (negotiate-content
+  (best-representation
     [_ resource request]
     "For a given resource, return the resource (or resources) corresponding to
     the best representation (with respect to the request). If a collection
@@ -90,14 +85,14 @@
 ;;(defn uri? [i] (instance? java.net.URI i))
 
 (defn- get-or-head-method [provider request respond raise]
-  (if-let [resource (locate-resource provider (java.net.URI. (uri request)))]
+  (if-let [resource (locate-resource provider (java.net.URI. (request-url request)))]
 
     ;; Determine status: 200 (or 206, partial content)
 
     (let [conneg? (satisfies? ContentNegotiation provider)
           representations
           (if conneg?
-            (negotiate-content provider resource request)
+            (best-representation provider resource request)
             resource)]
 
       (cond
@@ -199,7 +194,7 @@
       :headers (server-options provider)})
 
     :else
-    (let [resource (locate-resource provider (java.net.URI. (uri request)))]
+    (let [resource (locate-resource provider (java.net.URI. (request-url request)))]
       (respond
        {:status 200
         :headers (resource-options-headers provider resource)}))))
