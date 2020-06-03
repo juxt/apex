@@ -6,17 +6,35 @@
    [juxt.apex.alpha.http.core :as http]
    [clojure.test :refer [deftest is]]))
 
-(defrecord BasicProvider []
-  http/ResourceLocator
-  (locate-resource
-    [_ uri]
-    (if (= (.getPath uri) "/hello.txt")
-      {}))
-  http/ResponseBody
-  (send-ok-response [_ ctx request respond raise]
-    (respond ctx)))
+(comment
+  (let [h (http/handler
+           (reify
+             http/ResourceLocator
+             (locate-resource [_ uri]
+               (if (= (.getPath uri) "/hello.txt")
+                 {:apex/content "Hello World!"}))))]
+    (h (request :get "/hello.txt"))))
 
 (deftest basic-test
-  (let [h (http/make-handler (->BasicProvider))]
-    (let [{:keys [status]} (h (request :get "/hello.txt"))]
-      (is (= 200 status)))))
+  (let [h (http/handler
+           (reify
+             http/ResourceLocator
+             (locate-resource [_ uri]
+               (if (= (.getPath uri) "/hello.txt")
+                 {:apex/content "Hello World!"}))))]
+    (is (=
+         {:status 200
+          :headers {}
+          :body "Hello World!"}
+         (h (request :get "/hello.txt"))))
+
+    (is (=
+         {:status 404
+          :headers {}}
+         (h (request :get "/not-exists"))))))
+
+
+
+#_http/ResponseBody
+  #_(send-ok-response [_ ctx request respond raise]
+    (respond ctx))

@@ -18,11 +18,12 @@
     [_ uri]
     "Find the resource with the given uri."))
 
-(defprotocol ^:apex/required ResponseBody
+(defprotocol ^:apex/optional ResponseBody
   (send-ok-response
-    [_ ctx request respond raise]
+    [_ response request respond raise]
     "Call the given respond function with a map containing the body and any
-    explicit status override and additional headers."))
+    explicit status override and additional headers. The given response argument
+    contains pre-determined status and headers."))
 
 (defprotocol ^:apex/optional ContentNegotiation
   (negotiate-content
@@ -116,7 +117,13 @@
 
               headers
               (cond-> {}
-                content-location (conj ["content-location" content-location]))]
+                content-location (conj ["content-location" content-location]))
+
+              response
+              {:status status
+               :headers headers
+               :apex/resource resource
+               :apex/representation representation}]
 
           ;; TODO: Generate response with new entity-tag
 
@@ -124,18 +131,27 @@
 
           ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
 
-          (if (= (:request-method request) :head)
-            (respond {:status status
-                      :headers headers})
+          (cond
+            (= (:request-method request) :head)
+            (respond (select-keys response [:status :headers]))
+
+            (satisfies? ResponseBody provider)
             (send-ok-response
              provider
-             {:status status
-              :headers headers
-              :apex/resource resource
-              :apex/representation representation}
-             request respond raise)))))
+             response
+             request respond raise)
 
-    (respond {:status 404 :body "Apex: 404 (Not found)\n"})))
+            (:apex/content representation)
+            (respond (-> (conj response [:body (:apex/content representation)])
+                         (select-keys [:status :headers :body])))
+
+            :else (throw
+                   (ex-info
+                    "Unable to produce response"
+                    response))))))
+
+    ;; TODO: Make this a protocol
+    (respond {:status 404 :headers {}})))
 
 ;; Section 4.3.1
 (defmethod http-method :get [provider request respond raise]
@@ -173,7 +189,7 @@
        {:status 200
         :headers (resource-options-headers provider resource)}))))
 
-(defn make-handler [provider]
+(defn handler [provider]
   (when-not
       (satisfies? ResourceLocator provider)
       (throw
@@ -181,13 +197,6 @@
         "Provider must satisfy mandatory ResourceLocator protocol"
         {:provider provider
          :protocol ResourceLocator})))
-  (when-not
-      (satisfies? ResponseBody provider)
-      (throw
-       (ex-info
-        "Provider must satisfy mandatory ResponseBody protocol"
-        {:provider provider
-         :protocol ResponseBody})))
   (fn handler
     ([req]
      (handler req identity (fn [t] (throw t))))
