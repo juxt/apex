@@ -43,6 +43,16 @@
     "Satisfy this protocol if you want to support reactive
     negotation."))
 
+(defprotocol ^:apex.http/optional LastModified
+  (last-modified
+    [_ representation]
+    "Return the date that the given representation was last modified."))
+
+(defprotocol ^:apex.http/optional EntityTag
+  (entity-tag
+    [_ representation]
+    "Return the current entity-tag for the given representation."))
+
 (defprotocol ^:apex.http/optional ResourceUpdate
   (post-resource
     [_ ctx request respond raise]
@@ -79,14 +89,6 @@
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
-(defn last-modified [provider resource]
-  nil
-  )
-
-(defn entity-tag [provider resource]
-  nil
-  )
-
 (defn- get-or-head-method [provider request respond raise]
   (if-let [resource (locate-resource provider (java.net.URI. (uri request)))]
 
@@ -122,9 +124,14 @@
                 [(locate-resource provider representation-maybe-uri) representation-maybe-uri]
                 [representation-maybe-uri])
 
-              last-modified (last-modified provider representation)
+              last-modified
+              (when (satisfies? LastModified provider)
+                (last-modified provider representation))
 
-              entity-tag (entity-tag provider representation)
+              ;; TODO: Get entity tag of representation
+              entity-tag
+              (when (satisfies? EntityTag provider)
+                (entity-tag provider representation))
 
               status 200
 
@@ -136,7 +143,6 @@
               {:status status
                :headers headers}]
 
-          ;; TODO: Get entity tag of representation
           ;; TODO: Check condition (Last-Modified, If-None-Match)
 
           ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
