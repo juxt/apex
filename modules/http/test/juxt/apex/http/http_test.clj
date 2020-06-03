@@ -23,18 +23,25 @@
            wrap-headers-normalize-case)]
     (h (request :get "/hello.txt"))))
 
+(defn wrap-dissoc-date [h]
+  (fn [req]
+    (->
+     (h req)
+     (update :headers dissoc "date"))))
+
 (deftest basic-test
-  (let [h (http/handler
-           (reify
-             http/ResourceLocator
-             (locate-resource [_ uri]
-               (when (= (.getPath uri) "/hello.txt")
-                 {:apex.http/content "Hello World!"}))
-             http/ResponseBody
-             (send-ok-response
-                 [_ resource response request respond raise]
-                 (respond
-                  (conj response [:body (:apex.http/content resource)])))))]
+  (let [h (-> (http/handler
+               (reify
+                 http/ResourceLocator
+                 (locate-resource [_ uri]
+                   (when (= (.getPath uri) "/hello.txt")
+                     {:apex.http/content "Hello World!"}))
+                 http/ResponseBody
+                 (send-ok-response
+                     [_ resource response request respond raise]
+                     (respond
+                      (conj response [:body (:apex.http/content resource)])))))
+              wrap-dissoc-date)]
     (is (=
          {:status 200
           :headers {}

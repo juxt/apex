@@ -135,8 +135,13 @@
 
               status 200
 
+              ;; "In theory, the date ought to represent the moment just before
+              ;; the payload is generated."
+              orig-date
+              (java.time.ZonedDateTime/now)
+
               headers
-              (cond-> {}
+              (cond-> {"date" (rfc1123-date orig-date)}
                 content-location (conj ["content-location" content-location]))
 
               response
@@ -226,7 +231,10 @@
           (let [server (when
                            (satisfies? ServerOptions provider)
                            (server-header provider))]
-            (respond (cond-> response server (assoc-in [:headers "server"] server)))))
+            (respond
+             (cond-> response
+               server (assoc-in [:headers "server"] server)
+               ))))
         raise)
        (catch Throwable t
          (raise
