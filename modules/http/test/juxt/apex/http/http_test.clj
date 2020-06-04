@@ -76,7 +76,7 @@
 
               http/ContentNegotiation
               (best-representation [provider resource request]
-                (conneg/select-best-representation
+                (conneg/select-most-acceptable-representation
                  request
                  (map #(http/lookup-resource provider %) (:apex.http/variants resource))))
 

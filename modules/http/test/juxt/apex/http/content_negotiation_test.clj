@@ -4,7 +4,7 @@
   (:require
    [clojure.test :refer [deftest is are]]
    [juxt.apex.alpha.http.content-negotiation
-    :refer [acceptable-media-type-score select-best-representation]]
+    :refer [acceptable-media-type-score select-most-acceptable-representation]]
    [juxt.reap.alpha.api :as reap]
    [ring.mock.request :refer [request]]))
 
@@ -50,11 +50,11 @@
 ;; case-insensitively. String's equalsIgnoreCase is not sufficient because
 ;; parameter maps need to be compared for quality.
 
-(deftest select-best-representation-test
+(deftest select-most-acceptable-representation-test
   (are [accept-header expected-content]
       (= expected-content
          (:id
-          (select-best-representation
+          (select-most-acceptable-representation
            (-> (request :get "/hello")
                (update
                 :headers conj

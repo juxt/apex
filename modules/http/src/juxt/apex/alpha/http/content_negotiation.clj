@@ -4,15 +4,19 @@
   (:require
    [juxt.reap.alpha.api :as reap]))
 
-;; See http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
-
 (defn acceptable-media-type-score
   "Determine the variant's score (as a map) with respect to what is
   acceptable. The accepts parameter is a data structure returned from parsing
   the Accept header with reap. The variant is a map corresponding to the
   resource of the variant."
   [variant accepts]
-  (let [content-type (reap/content-type (:apex.http/content-type variant))]
+  (let [content-type
+        ;; Performance note: Possibly need to find a way to avoid having to
+        ;; parse the content-type of the variant each time, but each variant is
+        ;; only parsed once per dimension per request. The best representation
+        ;; chosen should itself be the subject of memoization rather than the
+        ;; individual details used in the algorithm.
+        (reap/content-type (:apex.http/content-type variant))]
     (reduce
      (fn [acc accept]
        (if-let
@@ -78,14 +82,14 @@
           :else acc)))
     {:items [] :val 0} coll)))
 
+;; Apache httpd Negotiation Algorithm -- http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
+
 ;; Dimensions:
 ;;
 ;; media-type
 ;; language
 ;; encoding
-;; charset (avoid)
-
-;; httpd Negotiation Algorithm
+;; charset
 
 ;; httpd can use the following algorithm to select the 'best' variant (if any) to return to the browser. This algorithm is not further configurable. It operates as follows:
 
@@ -102,7 +106,6 @@
 ;;         Select the first variant of those remaining. This will be either the first listed in the type-map file, or when variants are read from the directory, the one whose file name comes first when sorted using ASCII code order.
 ;;     The algorithm has now selected one 'best' variant, so return it as the response. The HTTP response header Vary is set to indicate the dimensions of negotiation (browsers and caches can use this information when caching the resource). End.
 ;;     To get here means no variant was selected (because none are acceptable to the browser). Return a 406 status (meaning "No acceptable representation") with a response body consisting of an HTML document listing the available variants. Also set the HTTP Vary header to indicate the dimensions of variance.
-
 
 (defn assign-media-type-quality [accepts]
   (keep
@@ -130,32 +133,32 @@
    ;; don't keep parsing headers! But with one left, keep parsing because
    ;; maybe that will be eliminated too!
 
+   variants))
 
-   variants)
-  )
+(defn select-most-acceptable-representation [request variants]
 
-(defn select-best-representation [request variants]
+  (let [representations (select-acceptable-representations request variants)]
 
-  (reduce
-   (fn [variants step]
-     (if (< (count variants) 2)
-       (reduced (first variants))
-       (step variants)))
+    (reduce
+     (fn [variants step]
+       ;; Short-circuit the algorithm when 0 or 1 representation remains.
+       (if (< (count variants) 2)
+         (reduced (first variants))
+         (step variants)))
 
-   ;; Accumulator
-   (select-acceptable-representations request variants)
+     representations
 
-   ;; Steps
-   [(fn [variants]
-      (select-max-by
-       (comp :quality-factor :apex.http.content-negotiation/media-type-quality)
-       variants))
-    ;; TODO: Select the variants with the highest language quality factor.
-    ;; TODO: Select the variants with the best language match
-    ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
-    ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
-    ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
-    ;; TODO: Select the variants with the best encoding.
-    ;; TODO: Select the variants with the smallest content length.
-    ;; TODO: Select the first variant of those remaining
-    first]))
+     ;; Algorithm steps
+     [(fn [variants]
+        (select-max-by
+         (comp :quality-factor :apex.http.content-negotiation/media-type-quality)
+         variants))
+      ;; TODO: Select the variants with the highest language quality factor.
+      ;; TODO: Select the variants with the best language match
+      ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
+      ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
+      ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
+      ;; TODO: Select the variants with the best encoding.
+      ;; TODO: Select the variants with the smallest content length.
+      ;; TODO: Select the first variant of those remaining
+      first])))
