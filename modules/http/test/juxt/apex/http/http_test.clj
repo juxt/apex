@@ -77,10 +77,9 @@
 
               http/ContentNegotiation
               (best-representation [provider resource request]
-                (:apex.http/uri
-                 (conneg/select-best-representation
-                  request
-                  (map #(http/lookup-resource provider %) (:apex.http/variants resource)))))
+                (conneg/select-best-representation
+                 request
+                 (map #(http/lookup-resource provider %) (:apex.http/variants resource))))
 
               http/ResponseBody
               (send-ok-response
@@ -88,6 +87,7 @@
                   (println "resource is" resource)
                   (respond
                    (conj response [:body (:apex.http/content resource)])))))
+           ;; Help with fixed comparisons
            wrap-dissoc-date)]
     (is (=
          {:status 200

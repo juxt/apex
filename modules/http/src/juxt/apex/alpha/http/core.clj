@@ -28,9 +28,7 @@
     the best representation (with respect to the request). If a collection
     containing multiple values are returned, a 300 will result. The pattern of
     negotiation is up to the provider (proactive, reactive, transparent,
-    etc.). If the resource has a URI, return the URI rather than the resource,
-    so it can be subsequently located and placed in the 'Content-Location'
-    response header."))
+    etc.)."))
 
 (defprotocol ^:apex.http/optional MultipleRepresentations
   (send-300-response
@@ -74,17 +72,15 @@
    format
    inst))
 
+(defn uri [request]
+  (java.net.URI. (request-url request)))
+
 (defn lookup-resource
   "Return the map corresponding to the resource identified by the given URI. Add
   the URI to the map as the :apex.http/uri entry. Return nil if not found."
   [provider ^java.net.URI uri]
   (when-let [resource (locate-resource provider uri)]
       (conj resource [:apex.http/uri uri])))
-
-(defn requested-resource
-  "Return the map corresponding resource targeted by the request."
-  [provider request]
-  (lookup-resource provider (java.net.URI. (request-url request))))
 
 (defmulti http-method (fn [provider request respond raise] (:request-method request)))
 
@@ -95,84 +91,83 @@
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
+
+
 (defn- get-or-head-method [provider request respond raise]
-  (if-let [resource (requested-resource provider request)]
+  (let [uri (uri request)]
+    (if-let [resource (lookup-resource provider uri)]
 
-    ;; Determine status: 200 (or 206, partial content)
+      ;; Determine status: 200 (or 206, partial content)
 
-    (let [conneg? (satisfies? ContentNegotiation provider)
-          representations
-          (if conneg?
-            (best-representation provider resource request)
-            resource)]
+      (let [conneg? (satisfies? ContentNegotiation provider)
+            representations
+            (if conneg?
+              (best-representation provider resource request)
+              resource)]
 
-      (cond
-        (or
-         (nil? representations)
-         (and (sequential? representations)
-              (zero? (count representations))))
-        (respond {:status 406})
+        (cond
+          (or
+           (nil? representations)
+           (and (sequential? representations)
+                (zero? (count representations))))
+          (respond {:status 406})
 
-        (and (sequential? representations)
-             (>= (count representations) 2))
-        (if (satisfies? MultipleRepresentations provider)
-          (send-300-response provider (filter uri? representations) request respond raise)
-          (throw (ex-info "negotiate-content of juxt.apex.alpha.http.ContentNegotiation protocol returned multiple representations but provider does not satisfy juxt.apex.alpha.http.MultipleRepresentations protocol"
-                          {})))
+          (and (sequential? representations)
+               (>= (count representations) 2))
+          (if (satisfies? MultipleRepresentations provider)
+            (send-300-response provider (filter uri? representations) request respond raise)
+            (throw (ex-info "negotiate-content of juxt.apex.alpha.http.ContentNegotiation protocol returned multiple representations but provider does not satisfy juxt.apex.alpha.http.MultipleRepresentations protocol"
+                            {})))
 
-        :else
-        (let [representation-maybe-uri
-              (cond-> representations
-                (sequential? representations) first)
+          :else
+          (let [representation
+                (cond-> representations
+                  (sequential? representations) first)
 
-              [representation content-location]
-              (if (instance? java.net.URI representation-maybe-uri)
-                [(locate-resource provider representation-maybe-uri) representation-maybe-uri]
-                [representation-maybe-uri])
+                last-modified
+                (when (satisfies? LastModified provider)
+                  (last-modified provider representation))
 
-              last-modified
-              (when (satisfies? LastModified provider)
-                (last-modified provider representation))
+                ;; TODO: Get entity tag of representation
+                entity-tag
+                (when (satisfies? EntityTag provider)
+                  (entity-tag provider representation))
 
-              ;; TODO: Get entity tag of representation
-              entity-tag
-              (when (satisfies? EntityTag provider)
-                (entity-tag provider representation))
+                status 200
 
-              status 200
+                ;; "In theory, the date ought to represent the moment just before
+                ;; the payload is generated."
+                orig-date
+                (java.time.ZonedDateTime/now)
 
-              ;; "In theory, the date ought to represent the moment just before
-              ;; the payload is generated."
-              orig-date
-              (java.time.ZonedDateTime/now)
+                headers
+                (cond-> {"date" (rfc1123-date orig-date)}
+                  (not= (:apex.http/uri representation) uri)
+                  (conj ["content-location" (str (:apex.http/uri representation))]))
 
-              headers
-              (cond-> {"date" (rfc1123-date orig-date)}
-                content-location (conj ["content-location" (str content-location)]))
+                response
+                {:status status
+                 :headers headers}]
 
-              response
-              {:status status
-               :headers headers}]
+            ;; TODO: Check condition (Last-Modified, If-None-Match)
 
-          ;; TODO: Check condition (Last-Modified, If-None-Match)
+            ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
 
-          ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
+            (cond
+              (= (:request-method request) :head)
+              (respond (select-keys response [:status :headers]))
 
-          (cond
-            (= (:request-method request) :head)
-            (respond (select-keys response [:status :headers]))
+              (satisfies? ResponseBody provider)
+              (send-ok-response provider representation response request respond raise)
 
-            (satisfies? ResponseBody provider)
-            (send-ok-response provider representation response request respond raise)
+              :else
+              (throw
+               (ex-info
+                "Unable to produce response"
+                response))))))
 
-            :else
-            (throw
-             (ex-info
-              "Unable to produce response"
-              response))))))
-
-    ;; TODO: Make this a protocol
-    (respond {:status 404 :headers {}})))
+      ;; TODO: Make this a protocol
+      (respond {:status 404 :headers {}}))))
 
 ;; Section 4.3.1
 (defmethod http-method :get [provider request respond raise]
@@ -205,7 +200,7 @@
       :headers (server-options provider)})
 
     :else
-    (let [resource (requested-resource provider request)]
+    (let [resource (lookup-resource provider (uri request))]
       (respond
        {:status 200
         :headers (resource-options-headers provider resource)}))))
