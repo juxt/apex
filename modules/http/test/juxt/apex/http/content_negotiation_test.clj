@@ -4,7 +4,7 @@
   (:require
    [clojure.test :refer [deftest is are]]
    [juxt.apex.alpha.http.content-negotiation
-    :refer [acceptable-media-type-score select-most-acceptable-representation]]
+    :refer [acceptable-media-type-qvalue select-most-acceptable-representation select-acceptable-representations]]
    [juxt.reap.alpha.api :as reap]
    [ring.mock.request :refer [request]]))
 
@@ -19,10 +19,9 @@
 
     (are [content-type expected]
         (= expected
-           (:qvalue
-            (acceptable-media-type-score
-             {:apex.http/content-type content-type}
-             accepts)))
+           (acceptable-media-type-qvalue
+            {:apex.http/content-type content-type}
+            accepts))
 
         "text/html;level=1" 1.0
         "text/html" 0.7
@@ -30,6 +29,25 @@
         "image/jpeg" 0.5
         "text/html;level=2" 0.4
         "text/html;level=3" 0.7)))
+
+(select-most-acceptable-representation
+ (-> (request :get "/hello")
+     (update
+      :headers conj
+      ["accept" "text/html;q=0.8,text/plain"]))
+
+ [{:id :html
+   :apex.http/content "<h1>Hello World!</h1>"
+   :apex.http/content-type "text/html;charset=utf-8"}
+
+  {:id :html-level-2
+   :apex.http/content "<h1>Hello World!</h1>"
+   :apex.http/content-type "text/html;level=2;charset=utf-8"}
+
+  {:id :plain-text
+   :apex.http/content "Hello World!"
+   :apex.http/content-type "text/plain;charset=utf-8"}])
+
 
 (deftest select-most-acceptable-representation-test
 
