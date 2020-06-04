@@ -13,44 +13,26 @@
 ;; rules of precedence. These rules are specified in the RFC and are independent
 ;; of the actual content negotiation algorithm that is used.
 (deftest acceptable-media-type-test
+
   (let [accepts
         (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
-    (is (= 1.0 (:qvalue
-                (acceptable-media-type-score
-                 {:apex.http/content-type "text/html;level=1"}
-                 accepts))))
 
-    (is (= 0.7 (:qvalue
-                (acceptable-media-type-score
-                 {:apex.http/content-type "text/html"}
-                 accepts))))
+    (are [content-type expected]
+        (= expected
+           (:qvalue
+            (acceptable-media-type-score
+             {:apex.http/content-type content-type}
+             accepts)))
 
-    (is (= 0.3 (:qvalue
-                (acceptable-media-type-score
-                 {:apex.http/content-type "text/plain"}
-                 accepts
-                 ))))
-
-    (is (= 0.5 (:qvalue
-                (acceptable-media-type-score
-                 {:apex.http/content-type "image/jpeg"}
-                 accepts))))
-
-    (is (= 0.4 (:qvalue
-                (acceptable-media-type-score
-                 {:apex.http/content-type "text/html;level=2"}
-                 accepts))))
-
-    (is (= 0.7 (:qvalue
-                (acceptable-media-type-score
-                 {:apex.http/content-type "text/html;level=3"}
-                 accepts))))))
-
-;; TODO: Reap should return lower-case to ensure comparisons work
-;; case-insensitively. String's equalsIgnoreCase is not sufficient because
-;; parameter maps need to be compared for quality.
+        "text/html;level=1" 1.0
+        "text/html" 0.7
+        "text/plain" 0.3
+        "image/jpeg" 0.5
+        "text/html;level=2" 0.4
+        "text/html;level=3" 0.7)))
 
 (deftest select-most-acceptable-representation-test
+
   (are [accept-header expected-content]
       (= expected-content
          (:id

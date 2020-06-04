@@ -8,7 +8,15 @@
   "Determine the variant's score (as a map) with respect to what is
   acceptable. The accepts parameter is a data structure returned from parsing
   the Accept header with reap. The variant is a map corresponding to the
-  resource of the variant."
+  resource of the variant.
+
+  This function determines the qvalue according to rules of precedence in RFC
+  7231 Section 5.3.2 which are independent of the actual content negotation
+  used.
+
+  The score is the qvalue multiplied by the optional quality-of-source value in
+  the variant."
+
   [variant accepts]
   (let [content-type
         ;; Performance note: Possibly need to find a way to avoid having to
@@ -40,6 +48,7 @@
               1)]
 
            (let [qvalue (get accept :qvalue 1.0)
+                 ;; TODO: Simplify: Apply the quality-factor in a separate function
                  quality-factor (*
                                  qvalue
                                  (get variant :apex.http/quality-of-source 1))]
