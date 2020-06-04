@@ -4,7 +4,6 @@
   (:require
    [ring.mock.request :refer [request]]
    [juxt.apex.alpha.http.content-negotiation :as conneg]
-   [juxt.reap.alpha.api :as reap]
    [juxt.apex.alpha.http.core :as http]
    [clojure.test :refer [deftest is]]
    [juxt.apex.alpha.http.header-names :refer [wrap-headers-normalize-case]]))
@@ -15,7 +14,7 @@
             (reify
               http/ResourceLocator
               (locate-resource [_ uri]
-                (if (= (.getPath uri) "/hello.txt")
+                (when (= (.getPath uri) "/hello.txt")
                   {:apex.http/content "Hello World!"}))
               http/ResponseBody
               (send-ok-response
