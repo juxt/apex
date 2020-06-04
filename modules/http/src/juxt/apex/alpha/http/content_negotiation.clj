@@ -6,8 +6,12 @@
 
 ;; See http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
-(defn acceptable-media-type
-  [accepts variant]
+(defn acceptable-media-type-score
+  "Determine the variant's score (as a map) with respect to what is
+  acceptable. The accepts parameter is a data structure returned from parsing
+  the Accept header with reap. The variant is a map corresponding to the
+  resource of the variant."
+  [variant accepts]
   (let [content-type (reap/content-type (:apex.http/content-type variant))]
     (reduce
      (fn [acc accept]
@@ -40,9 +44,10 @@
                   (and (= precedence (get acc :precedence 0))
                        (> quality-factor (get acc :quality-factor 0.0))))
 
-               {:accept accept
+               {:quality-factor quality-factor ; primary score
+                ;; These are for debug
+                :accept accept
                 :qvalue qvalue
-                :quality-factor quality-factor
                 :precedence precedence}
 
                acc))
@@ -99,52 +104,58 @@
 ;;     To get here means no variant was selected (because none are acceptable to the browser). Return a 406 status (meaning "No acceptable representation") with a response body consisting of an HTML document listing the available variants. Also set the HTTP Vary header to indicate the dimensions of variance.
 
 
+(defn assign-media-type-quality [accepts]
+  (keep
+   (fn [variant]
+     (let [quality (acceptable-media-type-score variant accepts)]
+       (cond-> variant
+         quality (conj [:apex.http.content-negotiation/media-type-quality quality]))))))
+
+(defn select-acceptable-representations [request variants]
+  (sequence
+
+   ;; Multiply the quality factor from the Accept header with the
+   ;; quality-of-source factor for this variants media type, and select
+   ;; the variants with the highest value.
+   (assign-media-type-quality
+    (reap/accept
+     (get-in
+      request
+      [:headers "accept"]
+      ;; "A request without any Accept header field implies that the user
+      ;; agent will accept any media type in response". -- test for this
+      "*/*")))
+
+   ;; TODO: repeat for other dimensions. Short circuit, so if 0 variants left,
+   ;; don't keep parsing headers! But with one left, keep parsing because
+   ;; maybe that will be eliminated too!
+
+
+   variants)
+  )
+
 (defn select-best-representation [request variants]
 
-  (let [assign-media-type-quality
-        (fn [accepts]
-          (fn [variant]
-            (let [quality (acceptable-media-type accepts variant)]
-              (cond-> variant
-                quality (conj [:apex.http.content-negotiation/media-type-quality quality])))))]
+  (reduce
+   (fn [variants step]
+     (if (< (count variants) 2)
+       (reduced (first variants))
+       (step variants)))
 
-    (reduce
-     (fn [variants step]
-       (if (< (count variants) 2)
-         (reduced (first variants))
-         (step variants)))
+   ;; Accumulator
+   (select-acceptable-representations request variants)
 
-     ;; Accumulator
-     (->> variants
-          (keep
-           ;; Multiply the quality factor from the Accept header with the
-           ;; quality-of-source factor for this variants media type, and select
-           ;; the variants with the highest value.
-           (assign-media-type-quality
-            (reap/accept
-             (get-in
-              request
-              [:headers "accept"]
-              ;; "A request without any Accept header field implies that the user
-              ;; agent will accept any media type in response". -- test for this
-              "*/*"))))
-
-          ;; TODO: repeat for other dimensions. Short circuit, so if 0 variants left,
-          ;; don't keep parsing headers! But with one left, keep parsing because
-          ;; maybe that will be eliminated too!
-          )
-
-     ;; Steps
-     [(fn [variants]
-        (select-max-by
-         (comp :quality-factor :apex.http.content-negotiation/media-type-quality)
-         variants))
-      ;; TODO: Select the variants with the highest language quality factor.
-      ;; TODO: Select the variants with the best language match
-      ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
-      ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
-      ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
-      ;; TODO: Select the variants with the best encoding.
-      ;; TODO: Select the variants with the smallest content length.
-      ;; TODO: Select the first variant of those remaining
-      first])))
+   ;; Steps
+   [(fn [variants]
+      (select-max-by
+       (comp :quality-factor :apex.http.content-negotiation/media-type-quality)
+       variants))
+    ;; TODO: Select the variants with the highest language quality factor.
+    ;; TODO: Select the variants with the best language match
+    ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
+    ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
+    ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
+    ;; TODO: Select the variants with the best encoding.
+    ;; TODO: Select the variants with the smallest content length.
+    ;; TODO: Select the first variant of those remaining
+    first]))
