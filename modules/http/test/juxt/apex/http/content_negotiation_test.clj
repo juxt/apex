@@ -18,33 +18,33 @@
     (is (= 1.0 (:qvalue
                 (acceptable-media-type-score
                  {:apex.http/content-type "text/html;level=1"}
-                 accepts
-                 ))))
+                 accepts))))
+
     (is (= 0.7 (:qvalue
                 (acceptable-media-type-score
                  {:apex.http/content-type "text/html"}
-                 accepts
-                 ))))
+                 accepts))))
+
     (is (= 0.3 (:qvalue
                 (acceptable-media-type-score
                  {:apex.http/content-type "text/plain"}
                  accepts
                  ))))
+
     (is (= 0.5 (:qvalue
                 (acceptable-media-type-score
                  {:apex.http/content-type "image/jpeg"}
-                 accepts
-                 ))))
+                 accepts))))
+
     (is (= 0.4 (:qvalue
                 (acceptable-media-type-score
                  {:apex.http/content-type "text/html;level=2"}
-                 accepts
-                 ))))
+                 accepts))))
+
     (is (= 0.7 (:qvalue
                 (acceptable-media-type-score
                  {:apex.http/content-type "text/html;level=3"}
-                 accepts
-                 ))))))
+                 accepts))))))
 
 ;; TODO: Reap should return lower-case to ensure comparisons work
 ;; case-insensitively. String's equalsIgnoreCase is not sufficient because
