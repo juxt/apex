@@ -55,7 +55,7 @@
           :headers {}}
          (h (request :get "/not-exists"))))))
 
-(deftest negotiate-content-test
+(deftest content-negotiation-test
   (let [h (->
            (http/handler
             (reify
@@ -77,9 +77,10 @@
 
               http/ContentNegotiation
               (best-representation [provider resource request]
-                (conneg/select-best-representation
-                 request
-                 (map #(http/locate-resource provider %) (:apex.http/variants resource))))
+                (:apex.http/uri
+                 (conneg/select-best-representation
+                  request
+                  (map #(http/lookup-resource provider %) (:apex.http/variants resource)))))
 
               http/ResponseBody
               (send-ok-response
@@ -90,45 +91,8 @@
            wrap-dissoc-date)]
     (is (=
          {:status 200
-          :headers {}
-          :body "Hello World!"}
-         (h (request :get "/hello"))))
-
-    ))
-
-
-#_(let [h (http/handler
-         (reify
-           http/ResourceLocator
-           (locate-resource [_ uri]
-             (case (.getPath uri)
-               "/hello"
-               {:apex.http/variants
-                [(java.net.URI. "/hello.html")
-                 (java.net.URI. "/hello.txt")]}
-               "/hello.html"
-               {:apex.http/content "<h1>Hello World!</h1>"
-                :apex.http/content-type "text/html;charset=utf-8"}
-               "/hello.txt"
-               {:apex.http/content "Hello World!"
-                :apex.http/content-type "text/plain;charset=utf-8"}
-               ;; else not found
-               nil))
-
-           http/ContentNegotiation
-           (best-representation [provider resource request]
-             ;; Get variants
-             (let [variants (map #(http/locate-resource provider %) (:apex.http/variants resource))
-                   accept (reap/accept (get-in request [:headers "accept"]))]
-               {:apex.http/content {:accept accept :variants variants}}))
-
-           http/ResponseBody
-           (send-ok-response
-               [_ resource response request respond raise]
-             (respond
-              (conj response [:body (:apex.http/content resource)])))))]
-
-  (h (-> (request :get "/hello")
-         (update :headers conj ["accept" "text/html"])))
-
-    )
+          :headers {"content-location" "/hello.html"}
+          :body "<h1>Hello World!</h1>"}
+         (h (update
+             (request :get "/hello")
+             :headers conj ["accept" "text/html"]))))))

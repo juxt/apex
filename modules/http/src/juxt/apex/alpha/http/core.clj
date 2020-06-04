@@ -74,6 +74,18 @@
    format
    inst))
 
+(defn lookup-resource
+  "Return the map corresponding to the resource identified by the given URI. Add
+  the URI to the map as the :apex.http/uri entry. Return nil if not found."
+  [provider ^java.net.URI uri]
+  (when-let [resource (locate-resource provider uri)]
+      (conj resource [:apex.http/uri uri])))
+
+(defn requested-resource
+  "Return the map corresponding resource targeted by the request."
+  [provider request]
+  (lookup-resource provider (java.net.URI. (request-url request))))
+
 (defmulti http-method (fn [provider request respond raise] (:request-method request)))
 
 (defmethod http-method :default [provider request respond raise]
@@ -84,7 +96,7 @@
 ;;(defn uri? [i] (instance? java.net.URI i))
 
 (defn- get-or-head-method [provider request respond raise]
-  (if-let [resource (locate-resource provider (java.net.URI. (request-url request)))]
+  (if-let [resource (requested-resource provider request)]
 
     ;; Determine status: 200 (or 206, partial content)
 
@@ -136,7 +148,7 @@
 
               headers
               (cond-> {"date" (rfc1123-date orig-date)}
-                content-location (conj ["content-location" content-location]))
+                content-location (conj ["content-location" (str content-location)]))
 
               response
               {:status status
@@ -193,7 +205,7 @@
       :headers (server-options provider)})
 
     :else
-    (let [resource (locate-resource provider (java.net.URI. (request-url request)))]
+    (let [resource (requested-resource provider request)]
       (respond
        {:status 200
         :headers (resource-options-headers provider resource)}))))
