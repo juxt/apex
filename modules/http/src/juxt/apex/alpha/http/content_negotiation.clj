@@ -14,15 +14,13 @@
   7231 Section 5.3.2 which are independent of the actual content negotation
   used.
 
-  The score is the qvalue multiplied by the optional quality-of-source value in
-  the variant.
-
-  The qvalue is set to 0 if unacceptable. This still gives the content
-  negotiation algorithm the choice of returning a variant, if preferable to
-  returning a 406.
-  "
+  The qvalue is set to 0 if 'not acceptable' (See RFC 7231 Section 5.3.1). This
+  still gives the content negotiation algorithm the chance of returning a
+  variant, if there are no more preferable variants and if returning one is
+  preferable to returning a 406 status code."
 
   [variant accepts]
+
   (let [content-type
         ;; Performance note: Possibly need to find a way to avoid having to
         ;; parse the content-type of the variant each time, but each variant is

@@ -30,7 +30,7 @@
         "text/html;level=2" 0.4
         "text/html;level=3" 0.7)))
 
-(select-most-acceptable-representation
+#_(select-most-acceptable-representation
  (-> (request :get "/hello")
      (update
       :headers conj
@@ -79,7 +79,7 @@
     "text/plain" :plain-text
     "text/html;q=0.8,text/plain" :plain-text
 
-    ;;"TEXT/HTML;level=2" :html-level-2
+    "TEXT/HTML;level=2" :html-level-2
     ))
 
 ;; TODO: Test quality-of-source
