@@ -8,22 +8,104 @@
 
 ;; See http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
-(defprotocol Variant
-  ;; TODO: Check RFC for correct naming (should this by media-type?)
-  (content-type [_] "Return content type (with charset parameter).")
-  (quality-of-source [_]))
-
-(extend-protocol Variant
-  clojure.lang.APersistentMap
-  (content-type [m] (:apex.http/content-type m))
-  (quality-of-source [m] (:apex.http/quality-of-source m))
-  String
-  (content-type [s] s)
-  (quality-of-source [s] 1))
-
 (defn acceptable-media-type
   [accepts variant]
-  (let [content-type (reap/content-type (content-type variant))]
+  (let [content-type (reap/content-type (:apex.http/content-type variant))]
+    (reduce
+     (fn [acc accept]
+       (if-let
+           [precedence
+            (cond
+              (and
+               (= (:type accept) (:type content-type))
+               (= (:subtype accept) (:subtype content-type)))
+              (if (pos? (count (:parameters accept)))
+                (when (= (:parameters accept) (:parameters content-type)) 4)
+                3)
+
+              (and
+               (= (:type accept) (:type content-type))
+               (= "*" (:subtype accept)))
+              2
+
+              (and
+               (= "*" (:type accept))
+               (= "*" (:subtype accept)))
+              1)]
+
+           (let [qvalue (get accept :qvalue 1.0)
+                 quality-factor (*
+                                 qvalue
+                                 (get variant :apex.http/quality-of-source 1))]
+             (if (or
+                  (> precedence (get acc :precedence 0))
+                  (and (= precedence (get acc :precedence 0))
+                       (> quality-factor (get acc :quality-factor 0.0))))
+
+               {:accept accept
+                :qvalue qvalue
+                :quality-factor quality-factor
+                :precedence precedence}
+
+               acc))
+           acc))
+     nil
+     accepts)))
+
+
+
+(comment
+  (acceptable-media-type
+   (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4")
+   "image/png"))
+
+(comment
+  (acceptable-media-type
+   (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")
+   "text/html;level=3"))
+
+#_(let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
+  (acceptable-media-type
+   accepts
+   "text/plain"))
+
+(deftest acceptable-media-type-test
+  (let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
+    (is (= 1.0 (:qvalue
+                (acceptable-media-type
+                 accepts
+                 {:apex.http/content-type "text/html;level=1"}))))
+    (is (= 0.7 (:qvalue
+                (acceptable-media-type
+                 accepts
+                 {:apex.http/content-type "text/html"}))))
+    (is (= 0.3 (:qvalue
+                (acceptable-media-type
+                 accepts
+                 {:apex.http/content-type "text/plain"}))))
+    (is (= 0.5 (:qvalue
+                (acceptable-media-type
+                 accepts
+                 {:apex.http/content-type "image/jpeg"}))))
+    (is (= 0.4 (:qvalue
+                (acceptable-media-type
+                 accepts
+                 {:apex.http/content-type "text/html;level=2"}))))
+    (is (= 0.7 (:qvalue
+                (acceptable-media-type
+                 accepts
+                 {:apex.http/content-type "text/html;level=3"}))))))
+
+;; TODO: Reap should return lower-case to ensure comparisons work
+;; case-insensitively. String's equalsIgnoreCase is not sufficient because
+;; parameter maps need to be compared for quality.
+
+
+#_(reap/accept-language "en")
+
+#_(defn acceptable-language
+  [accepts variant]
+  (let [language (reap/language (:apex.http/language variant))]
     (reduce
      (fn [acc accept]
        (if-let
@@ -65,51 +147,6 @@
      nil
      accepts)))
 
-(comment
-  (acceptable-media-type
-   (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4")
-   "image/png"))
-
-(comment
-  (acceptable-media-type
-   (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")
-   "text/html;level=3"))
-
-#_(let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
-  (acceptable-media-type
-   accepts
-   "text/plain"))
-
-(deftest acceptable-media-type-test
-  (let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
-    (is (= 1.0 (:qvalue
-                (acceptable-media-type
-                 accepts
-                 "text/html;level=1"))))
-    (is (= 0.7 (:qvalue
-                (acceptable-media-type
-                 accepts
-                 "text/html"))))
-    (is (= 0.3 (:qvalue
-                (acceptable-media-type
-                 accepts
-                 "text/plain"))))
-    (is (= 0.5 (:qvalue
-                (acceptable-media-type
-                 accepts
-                 "image/jpeg"))))
-    (is (= 0.4 (:qvalue
-                (acceptable-media-type
-                 accepts
-                 "text/html;level=2"))))
-    (is (= 0.7 (:qvalue
-                (acceptable-media-type
-                 accepts
-                 "text/html;level=3"))))))
-
-;; TODO: Reap should return lower-case to ensure comparisons work
-;; case-insensitively. String's equalsIgnoreCase is not sufficient because
-;; parameter maps need to be compared for quality.
 
 ;; Dimensions:
 ;;
@@ -143,7 +180,14 @@
           (fn [variant]
             (let [quality (acceptable-media-type accepts variant)]
               (cond-> variant
-                quality (conj [:apex.http.content-negotiation/media-type-quality quality])))))]
+                quality (conj [:apex.http.content-negotiation/media-type-quality quality])))))
+
+        #_assign-language-quality
+        #_(fn [accepts]
+          (fn [variant]
+            (let [quality (acceptable-language accepts variant)]
+              (cond-> variant
+                quality (conj [:apex.http.content-negotiation/language-quality quality])))))]
 
     (reduce
      (fn [variants step]
@@ -165,6 +209,17 @@
               ;; "A request without any Accept header field implies that the user
               ;; agent will accept any media type in response". -- test for this
               "*/*"))))
+
+          #_(keep
+           (assign-language-quality
+            (reap/accept-language
+             (get-in
+              request
+              [:headers "accept-language"]
+              ;; "A request without any Accept-Language header field implies
+              ;; that the user agent will accept any language in response.
+              ;; ". -- test for this
+              "*"))))
           ;; TODO: repeat for other dimensions. Short circuit, so if 0 variants left,
           ;; don't keep parsing headers! But with one left, keep parsing because
           ;; maybe that will be eliminated too!
@@ -190,10 +245,15 @@
      (update
       :headers conj
       ["accept" "text/html;q=0.8,text/plain;q=0.7"]
-      ["accept-language" "en"]))
+      ["accept-language" "de"]))
 
  [{:apex.http/content "<h1>Hello World!</h1>"
    :apex.http/content-type "text/html;charset=utf-8"
+   :apex.http/language "en"
+   }
+  {:apex.http/content "<h1>Hallo Welt!</h1>"
+   :apex.http/content-type "text/html;charset=utf-8"
+   :apex.http/language "de"
    }
   {:apex.http/content "Hello World!"
    :apex.http/content-type "text/plain;charset=utf-8"
