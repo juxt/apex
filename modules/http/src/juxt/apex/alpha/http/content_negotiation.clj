@@ -138,9 +138,13 @@
       ;; agent will accept any media type in response". -- test for this
       "*/*")))
 
-   ;; TODO: repeat for other dimensions. Short circuit, so if 0 variants left,
-   ;; don't keep parsing headers! But with one left, keep parsing because
-   ;; maybe that will be eliminated too!
+   ;; TODO: Repeat for other dimensions. Short circuit, so if 0 variants left,
+   ;; don't keep parsing headers! But with one left, keep parsing because maybe
+   ;; that will be eliminated too! Keep in mind that 406 is discouraged for
+   ;; unacceptable languages: "or honor the header field by sending a 406 (Not
+   ;; Acceptable) response.  However, the latter is not encouraged, as doing so
+   ;; can prevent users from accessing content that they might be able to use
+   ;; (with translation software, for example). -- RFC 7231 Section 5.3.5"
 
    variants))
 
