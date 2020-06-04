@@ -19,7 +19,7 @@
   variant, if there are no more preferable variants and if returning one is
   preferable to returning a 406 status code."
 
-  [variant accepts]
+  [accepts variant]
 
   (let [content-type
         ;; Performance note: Possibly need to find a way to avoid having to
@@ -116,7 +116,7 @@
 (defn assign-media-type-quality [accepts]
   (keep
    (fn [variant]
-     (let [qvalue (:qvalue (acceptable-media-type-rating variant accepts))]
+     (let [qvalue (:qvalue (acceptable-media-type-rating accepts variant))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/media-type-qvalue qvalue]))))))
 

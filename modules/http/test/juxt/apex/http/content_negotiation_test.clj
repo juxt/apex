@@ -21,8 +21,8 @@
         (= expected
            (:qvalue
             (acceptable-media-type-rating
-             {:apex.http/content-type content-type}
-             accepts)))
+             accepts
+             {:apex.http/content-type content-type})))
 
         "text/html;level=1" 1.0
         "text/html" 0.7
@@ -30,6 +30,20 @@
         "image/jpeg" 0.5
         "text/html;level=2" 0.4
         "text/html;level=3" 0.7)))
+
+;; precedence 3, qvalue 0.1
+
+(deftest parameter-matching
+  (are [content-type expected]
+      (= (select-keys
+          (acceptable-media-type-rating
+           (reap/accept "text/html;q=0.1,text/html;level=2;q=0.4,text/html;level=3;q=0.5")
+           {:apex.http/content-type content-type})
+          [:qvalue :precedence])
+         expected)
+    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
+    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}
+    ))
 
 (deftest select-most-acceptable-representation-test
 
