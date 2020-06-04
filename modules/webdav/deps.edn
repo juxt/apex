@@ -5,7 +5,12 @@
  {
   ;; Needed for xml production in PROPFIND etc.
   hiccup {:mvn/version "2.0.0-alpha2"}
+
+  juxt.apex/http
+  {:local/root "../http"}
+
   }
+
 
  :aliases
  {:dev

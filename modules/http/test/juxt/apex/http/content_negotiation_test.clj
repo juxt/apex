@@ -101,53 +101,6 @@
 ;; parameter maps need to be compared for quality.
 
 
-#_(reap/accept-language "en")
-
-#_(defn acceptable-language
-  [accepts variant]
-  (let [language (reap/language (:apex.http/language variant))]
-    (reduce
-     (fn [acc accept]
-       (if-let
-           [precedence
-            (cond
-              (and
-               (= (:type accept) (:type content-type))
-               (= (:subtype accept) (:subtype content-type)))
-              (if (pos? (count (:parameters accept)))
-                (when (= (:parameters accept) (:parameters content-type)) 4)
-                3)
-
-              (and
-               (= (:type accept) (:type content-type))
-               (= "*" (:subtype accept)))
-              2
-
-              (and
-               (= "*" (:type accept))
-               (= "*" (:subtype accept)))
-              1)]
-
-           (let [qvalue (get accept :qvalue 1.0)
-                 quality-factor (*
-                                 qvalue
-                                 (or (quality-of-source variant) 1))]
-             (if (or
-                  (> precedence (get acc :precedence 0))
-                  (and (= precedence (get acc :precedence 0))
-                       (> quality-factor (get acc :quality-factor 0.0))))
-
-               {:accept accept
-                :qvalue qvalue
-                :quality-factor quality-factor
-                :precedence precedence}
-
-               acc))
-           acc))
-     nil
-     accepts)))
-
-
 ;; Dimensions:
 ;;
 ;; media-type
@@ -180,14 +133,7 @@
           (fn [variant]
             (let [quality (acceptable-media-type accepts variant)]
               (cond-> variant
-                quality (conj [:apex.http.content-negotiation/media-type-quality quality])))))
-
-        #_assign-language-quality
-        #_(fn [accepts]
-          (fn [variant]
-            (let [quality (acceptable-language accepts variant)]
-              (cond-> variant
-                quality (conj [:apex.http.content-negotiation/language-quality quality])))))]
+                quality (conj [:apex.http.content-negotiation/media-type-quality quality])))))]
 
     (reduce
      (fn [variants step]
@@ -210,16 +156,6 @@
               ;; agent will accept any media type in response". -- test for this
               "*/*"))))
 
-          #_(keep
-           (assign-language-quality
-            (reap/accept-language
-             (get-in
-              request
-              [:headers "accept-language"]
-              ;; "A request without any Accept-Language header field implies
-              ;; that the user agent will accept any language in response.
-              ;; ". -- test for this
-              "*"))))
           ;; TODO: repeat for other dimensions. Short circuit, so if 0 variants left,
           ;; don't keep parsing headers! But with one left, keep parsing because
           ;; maybe that will be eliminated too!

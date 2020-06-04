@@ -275,14 +275,14 @@
         (crux/entity (crux/db crux-node) uri))
 
       apex/ResponseBody
-      (send-ok-response [this ctx req respond raise]
+      (send-ok-response [this resource response request respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
-        (let [req (params-request req)
-              debug (get-in req [:query-params "debug"])]
+        (let [request (params-request request)
+              debug (get-in request [:query-params "debug"])]
           (if debug
-            (respond-resource this ctx req respond raise)
-            (respond-resource-response opts this ctx req respond raise))))
+            (respond-resource this ctx request respond raise)
+            (respond-resource-response opts this ctx request respond raise))))
 
       apex/ResourceUpdate
       (post-resource [_ ctx req respond raise]

@@ -2,6 +2,7 @@
 
 (ns juxt.apex.alpha.webdav.core
   (:require
+   [ring.util.request :refer [request-url]]
    [clojure.string :as str]
    [clojure.xml :as xml]
    [hiccup2.core :refer [html]]
@@ -58,7 +59,7 @@
   (let [cb
         (fn [req]
           (let [body-str (slurp (:body req))
-                uri (java.net.URI. (apex/uri req))
+                uri (java.net.URI. (request-url req))
                 depth (get-in
                        req [:headers "depth"]
                        ;; "Servers SHOULD treat a request without a Depth
