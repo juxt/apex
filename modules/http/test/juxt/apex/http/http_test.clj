@@ -3,6 +3,7 @@
 (ns juxt.apex.http.http-test
   (:require
    [ring.mock.request :refer [request]]
+   [juxt.apex.alpha.http.content-negotiation :as conneg]
    [juxt.reap.alpha.api :as reap]
    [juxt.apex.alpha.http.core :as http]
    [clojure.test :refer [deftest is]]
@@ -55,29 +56,38 @@
          (h (request :get "/not-exists"))))))
 
 (deftest negotiate-content-test
-  (let [h (-> (http/handler
-               (reify
-                 http/ResourceLocator
-                 (locate-resource [_ uri]
-                   (case (.getPath uri)
-                     "/hello"
-                     {:apex.http/variants
-                      [(java.net.URI. "/hello.html")
-                       (java.net.URI. "/hello.txt")]}
-                     "/hello.html"
-                     {:apex.http/content "<h1>Hello World!</h1>"
-                      :apex.http/content-type "text/html;charset=utf-8"}
-                     "/hello.txt"
-                     {:apex.http/content "Hello World!"
-                      :apex.http/content-type "text/plain;charset=utf-8"}
-                     ;; else not found
-                     nil))
-                 http/ResponseBody
-                 (send-ok-response
-                     [_ resource response request respond raise]
-                     (respond
-                      (conj response [:body (:apex.http/content resource)])))))
-              wrap-dissoc-date)]
+  (let [h (->
+           (http/handler
+            (reify
+              http/ResourceLocator
+              (locate-resource [_ uri]
+                (case (.getPath uri)
+                  "/hello"
+                  {:apex.http/variants
+                   [(java.net.URI. "/hello.html")
+                    (java.net.URI. "/hello.txt")]}
+                  "/hello.html"
+                  {:apex.http/content "<h1>Hello World!</h1>"
+                   :apex.http/content-type "text/html;charset=utf-8"}
+                  "/hello.txt"
+                  {:apex.http/content "Hello World!"
+                   :apex.http/content-type "text/plain;charset=utf-8"}
+                  ;; else not found
+                  nil))
+
+              http/ContentNegotiation
+              (best-representation [provider resource request]
+                (conneg/select-best-representation
+                 request
+                 (map #(http/locate-resource provider %) (:apex.http/variants resource))))
+
+              http/ResponseBody
+              (send-ok-response
+                  [_ resource response request respond raise]
+                  (println "resource is" resource)
+                  (respond
+                   (conj response [:body (:apex.http/content resource)])))))
+           wrap-dissoc-date)]
     (is (=
          {:status 200
           :headers {}
@@ -87,7 +97,7 @@
     ))
 
 
-(let [h (http/handler
+#_(let [h (http/handler
          (reify
            http/ResourceLocator
            (locate-resource [_ uri]

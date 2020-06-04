@@ -2,15 +2,19 @@
 
 (ns juxt.apex.http.content-negotiation-test
   (:require
-   [clojure.test :refer [deftest is]]
-   [ring.mock.request :refer [request]]
+   [clojure.test :refer [deftest is are]]
    [juxt.apex.alpha.http.content-negotiation
-    :refer [acceptable-media-type select-best-representation]]))
+    :refer [acceptable-media-type select-best-representation]]
+   [juxt.reap.alpha.api :as reap]
+   [ring.mock.request :refer [request]]))
 
-;; This test is derived from the table in RFC 7231 Section 5.3.2.
-
+;; This test represents the table in RFC 7231 Section 5.3.2, where quality
+;; values are determined from matching a variant's content-type according to
+;; rules of precedence. These rules are specified in the RFC and are independent
+;; of the actual content negotiation algorithm that is used.
 (deftest acceptable-media-type-test
-  (let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
+  (let [accepts
+        (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
     (is (= 1.0 (:qvalue
                 (acceptable-media-type
                  accepts

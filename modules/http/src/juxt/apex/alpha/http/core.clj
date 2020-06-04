@@ -74,11 +74,10 @@
    format
    inst))
 
-(defmulti http-method (fn [provider req respond raise] (:request-method req)))
+(defmulti http-method (fn [provider request respond raise] (:request-method request)))
 
-(defmethod http-method :default [provider req respond raise]
-  (respond
-   {:status 501}))
+(defmethod http-method :default [provider request respond raise]
+  (respond {:status 501}))
 
 ;; TODO: Most :apex ns keywords should be in :apex.http ns. Refactor!
 
@@ -200,43 +199,40 @@
         :headers (resource-options-headers provider resource)}))))
 
 (defn handler [provider]
-  (when-not
-      (satisfies? ResourceLocator provider)
+  (when-not (satisfies? ResourceLocator provider)
       (throw
        (ex-info
         "Provider must satisfy mandatory ResourceLocator protocol"
         {:provider provider
          :protocol ResourceLocator})))
-  (when-not
-      (satisfies? ResponseBody provider)
-      (throw
-       (ex-info
-        "Provider must satisfy mandatory ResponseBody protocol"
-        {:provider provider
-         :protocol ResponseBody})))
+  (when-not (satisfies? ResponseBody provider)
+    (throw
+     (ex-info
+      "Provider must satisfy mandatory ResponseBody protocol"
+      {:provider provider
+       :protocol ResponseBody})))
   (fn handler
-    ([req]
-     (handler req identity (fn [t] (throw t))))
-    ([req respond raise]
+    ([request]
+     (handler request identity (fn [t] (throw t))))
+    ([request respond raise]
      (try
        (http-method
         provider
-        req
+        request
         (fn [response]
-          (let [server (when
-                           (satisfies? ServerOptions provider)
-                           (server-header provider))]
+          (let [server
+                (when (satisfies? ServerOptions provider)
+                  (server-header provider))]
             (respond
              (cond-> response
-               server (assoc-in [:headers "server"] server)
-               ))))
+               server (assoc-in [:headers "server"] server)))))
         raise)
        (catch Throwable t
          (raise
           (ex-info
            (format
             "Error on %s of %s"
-            (str/upper-case (name (:request-method req)))
-            (:uri req))
-           {:request req}
+            (str/upper-case (name (:request-method request)))
+            (:uri request))
+           {:request request}
            t)))))))
