@@ -24,11 +24,11 @@
            wrap-headers-normalize-case)]
     (h (request :get "/hello.txt"))))
 
-(defn wrap-dissoc-date [h]
+(defn wrap-remove-header [h header]
   (fn [req]
     (->
      (h req)
-     (update :headers dissoc "date"))))
+     (update :headers dissoc header))))
 
 (deftest locate-resource-test
   (let [h (-> (http/handler
@@ -42,7 +42,7 @@
                      [_ resource response request respond raise]
                      (respond
                       (conj response [:body (:apex.http/content resource)])))))
-              wrap-dissoc-date)]
+              (wrap-remove-header "date"))]
     (is (=
          {:status 200
           :headers {}
@@ -86,7 +86,7 @@
                   (respond
                    (conj response [:body (:apex.http/content resource)])))))
            ;; Help with fixed comparisons
-           wrap-dissoc-date)]
+           (wrap-remove-header "date"))]
     (is (=
          {:status 200
           :headers {"content-location" "/hello.html"}
