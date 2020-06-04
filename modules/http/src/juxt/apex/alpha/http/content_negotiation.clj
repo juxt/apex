@@ -142,7 +142,12 @@
 
    variants))
 
-(defn select-most-acceptable-representation [request variants]
+(defn select-most-acceptable-representation
+
+  "Implementation of the Apache httpd content-negotiation algorithm detailed at
+  https://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm"
+
+  [request variants]
 
   (let [representations (select-acceptable-representations request variants)]
 
