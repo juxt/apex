@@ -82,11 +82,10 @@
 
 (deftest acceptable-media-type-test
   (let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
-    (is (= 1.0 (get-in
+    (is (= 1.0 (:qvalue
                 (acceptable-media-type
                  accepts
-                 "text/html;level=1")
-                [:accept :qvalue])))
+                 "text/html;level=1"))))
     (is (= 0.7 (:qvalue
                 (acceptable-media-type
                  accepts
@@ -139,7 +138,7 @@
 
 (defn select-best-representation [request variants]
 
-  (let [assign-quality
+  (let [assign-media-type-quality
         (fn [accepts]
           (fn [variant]
             (let [quality (acceptable-media-type accepts variant)]
@@ -155,7 +154,10 @@
      ;; Accumulator
      (->> variants
           (keep
-           (assign-quality
+           ;; Multiply the quality factor from the Accept header with the
+           ;; quality-of-source factor for this variants media type, and select
+           ;; the variants with the highest value.
+           (assign-media-type-quality
             (reap/accept
              (get-in
               request
