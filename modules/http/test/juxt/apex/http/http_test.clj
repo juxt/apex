@@ -84,7 +84,6 @@
               http/ResponseBody
               (send-ok-response
                   [_ resource response request respond raise]
-                  (println "resource is" resource)
                   (respond
                    (conj response [:body (:apex.http/content resource)])))))
            ;; Help with fixed comparisons
