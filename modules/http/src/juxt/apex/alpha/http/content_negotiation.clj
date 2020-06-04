@@ -4,8 +4,8 @@
   (:require
    [juxt.reap.alpha.api :as reap]))
 
-(defn acceptable-media-type-qvalue
-  "Determine the variant's qvalue with respect to what is
+(defn acceptable-media-type-rating
+  "Determine the variant's rating (precedence, qvalue) with respect to what is
   acceptable. The accepts parameter is a data structure returned from parsing
   the Accept header with reap. The variant is a map corresponding to the
   resource of the variant.
@@ -28,43 +28,42 @@
         ;; chosen should itself be the subject of memoization rather than the
         ;; individual details used in the algorithm.
         (reap/content-type (:apex.http/content-type variant))]
-    (:qvalue
-     (reduce
-      (fn [acc accept]
-        (if-let
-            [precedence
-             (cond
-               (and
-                (= (:type accept) (:type content-type))
-                (= (:subtype accept) (:subtype content-type)))
-               (if (pos? (count (:parameters accept)))
-                 (when (= (:parameters accept) (:parameters content-type)) 4)
-                 3)
+    (reduce
+     (fn [acc accept]
+       (if-let
+           [precedence
+            (cond
+              (and
+               (= (:type accept) (:type content-type))
+               (= (:subtype accept) (:subtype content-type)))
+              (if (pos? (count (:parameters accept)))
+                (when (= (:parameters accept) (:parameters content-type)) 4)
+                3)
 
-               (and
-                (= (:type accept) (:type content-type))
-                (= "*" (:subtype accept)))
-               2
+              (and
+               (= (:type accept) (:type content-type))
+               (= "*" (:subtype accept)))
+              2
 
-               (and
-                (= "*" (:type accept))
-                (= "*" (:subtype accept)))
-               1)]
+              (and
+               (= "*" (:type accept))
+               (= "*" (:subtype accept)))
+              1)]
 
-          (let [qvalue (get accept :qvalue 1.0)]
-            (if (or
-                 (> precedence (get acc :precedence 0))
-                 (and (= precedence (get acc :precedence 0))
-                      (> qvalue (get acc :qvalue 0.0))))
+         (let [qvalue (get accept :qvalue 1.0)]
+           (if (or
+                (> precedence (get acc :precedence 0))
+                (and (= precedence (get acc :precedence 0))
+                     (> qvalue (get acc :qvalue 0.0))))
 
-              {:qvalue qvalue
-               :precedence precedence
-               :apex.debug/accept accept}
+             {:qvalue qvalue
+              :precedence precedence
+              :apex.debug/accept accept}
 
-              acc))
-          acc))
-      {:qvalue 0.0}
-      accepts))))
+             acc))
+         acc))
+     {:qvalue 0.0}
+     accepts)))
 
 (defn select-max-by
   "Return the items in the collection that share the maximum numeric value
@@ -117,7 +116,7 @@
 (defn assign-media-type-quality [accepts]
   (keep
    (fn [variant]
-     (let [qvalue (acceptable-media-type-qvalue variant accepts)]
+     (let [qvalue (:qvalue (acceptable-media-type-rating variant accepts))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/media-type-qvalue qvalue]))))))
 

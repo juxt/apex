@@ -4,7 +4,7 @@
   (:require
    [clojure.test :refer [deftest is are]]
    [juxt.apex.alpha.http.content-negotiation
-    :refer [acceptable-media-type-qvalue select-most-acceptable-representation select-acceptable-representations]]
+    :refer [acceptable-media-type-rating select-most-acceptable-representation select-acceptable-representations]]
    [juxt.reap.alpha.api :as reap]
    [ring.mock.request :refer [request]]))
 
@@ -19,9 +19,10 @@
 
     (are [content-type expected]
         (= expected
-           (acceptable-media-type-qvalue
-            {:apex.http/content-type content-type}
-            accepts))
+           (:qvalue
+            (acceptable-media-type-rating
+             {:apex.http/content-type content-type}
+             accepts)))
 
         "text/html;level=1" 1.0
         "text/html" 0.7
@@ -79,7 +80,7 @@
     "text/plain" :plain-text
     "text/html;q=0.8,text/plain" :plain-text
 
-    "TEXT/HTML;level=2" :html-level-2
+    ;;"TEXT/HTML;level=2" :html-level-2
     ))
 
 ;; TODO: Test quality-of-source
