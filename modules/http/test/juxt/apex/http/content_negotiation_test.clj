@@ -8,9 +8,19 @@
 
 ;; See http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
+(defprotocol Variant
+  ;; TODO: Check RFC for correct naming (should this by media-type?)
+  (content-type [_] "Return content type (with charset parameter)."))
+
+(extend-protocol Variant
+  clojure.lang.APersistentMap
+  (content-type [m] (:apex.http/content-type m))
+  String
+  (content-type [s] s))
+
 (defn acceptable-media-type
   [accepts variant]
-  (let [content-type (reap/content-type (:apex.http/content-type variant))]
+  (let [content-type (reap/content-type (content-type variant))]
     (reduce
      (fn [acc accept]
        (if-let
@@ -20,7 +30,7 @@
                (= (:type accept) (:type content-type))
                (= (:subtype accept) (:subtype content-type)))
               (if (pos? (count (:parameters accept)))
-                (if (= (:parameters accept) (:parameters content-type)) 4)
+                (when (= (:parameters accept) (:parameters content-type)) 4)
                 3)
 
               (and
@@ -33,57 +43,60 @@
                (= "*" (:subtype accept)))
               1)]
 
-         (let [qvalue (get accept :qvalue 1.0)]
-           (if (or
-                (> precedence (get acc :precedence 0))
-                (and (= precedence (get acc :precedence 0))
-                     (> qvalue (get acc :qvalue 0.0))))
+           (let [qvalue (get accept :qvalue 1.0)]
+             (if (or
+                  (> precedence (get acc :apex.http.content-negotiation/precedence 0))
+                  (and (= precedence (get acc :apex.http.content-negotiation/precedence 0))
+                       (> qvalue (get acc :apex.http.content-negotiation/qvalue 0.0))))
 
-             {:variant variant
-              :accept accept
-              :qvalue qvalue
-              :precedence precedence}
+               {:apex.http.content-negotiation/accept accept
+                :apex.http.content-negotiation/qvalue qvalue
+                :apex.http.content-negotiation/precedence precedence}
 
-             acc))
-         acc))
+               acc))
+           acc))
      nil
      accepts)))
 
-#_(acceptable-media-type
+(acceptable-media-type
  (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4")
- (reap/content-type "image/png"))
+ "image/png")
 
-#_(acceptable-media-type
+(acceptable-media-type
    (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")
-   (reap/content-type "text/html;level=3"))
+   "text/html;level=3")
 
+(let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
+  (acceptable-media-type
+   accepts
+   "text/html;level=1"))
 
 (deftest acceptable-media-type-test
   (let [accepts (reap/accept "text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5")]
-    (is (= 1.0 (:qvalue
+    (is (= 1.0 (:apex.http.content-negotiation/qvalue
                 (acceptable-media-type
                  accepts
-                 (reap/content-type "text/html;level=1")))))
-    (is (= 0.7 (:qvalue
+                 "text/html;level=1"))))
+    (is (= 0.7 (:apex.http.content-negotiation/qvalue
                 (acceptable-media-type
                  accepts
-                 (reap/content-type "text/html")))))
-    (is (= 0.3 (:qvalue
+                 "text/html"))))
+    (is (= 0.3 (:apex.http.content-negotiation/qvalue
                 (acceptable-media-type
                  accepts
-                 (reap/content-type "text/plain")))))
-    (is (= 0.5 (:qvalue
+                 "text/plain"))))
+    (is (= 0.5 (:apex.http.content-negotiation/qvalue
                 (acceptable-media-type
                  accepts
-                 (reap/content-type "image/jpeg")))))
-    (is (= 0.4 (:qvalue
+                 "image/jpeg"))))
+    (is (= 0.4 (:apex.http.content-negotiation/qvalue
                 (acceptable-media-type
                  accepts
-                 (reap/content-type "text/html;level=2")))))
-    (is (= 0.7 (:qvalue
+                 "text/html;level=2"))))
+    (is (= 0.7 (:apex.http.content-negotiation/qvalue
                 (acceptable-media-type
                  accepts
-                 (reap/content-type "text/html;level=3")))))))
+                 "text/html;level=3"))))))
 
 ;; TODO: Reap should return lower-case to ensure comparisons work
 ;; case-insensitively. String's equalsIgnoreCase is not sufficient because
@@ -119,15 +132,12 @@
   (let [assign-quality
         (fn [accepts]
           (fn [variant]
-            (acceptable-media-type
-             accepts
-             variant
-             )))]
+            (merge variant (acceptable-media-type accepts variant))))]
 
     (reduce
      (fn [variants step]
        (if (< (count variants) 2)
-         (reduced (:variant (first variants)))
+         (reduced (first variants))
          (step variants)))
 
      ;; Accumulator
@@ -147,14 +157,14 @@
           )
 
      ;; Steps
-     [(fn [variants] (select-max-by :qvalue variants))
-      (fn [variants] (:variant (first variants)))])))
+     [(fn [variants] (select-max-by :apex.http.content-negotiation/qvalue variants))
+      (fn [variants] (first variants))])))
 
 (select-best-representation
  (-> (request :get "/hello")
      (update
       :headers conj
-      ["accept" "text/plain"]
+      ["accept" "text/html"]
       ["accept-language" "en"]))
 
  [{:apex.http/content "<h1>Hello World!</h1>"
