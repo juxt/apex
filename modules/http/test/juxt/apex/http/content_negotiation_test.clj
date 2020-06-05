@@ -31,8 +31,6 @@
         "text/html;level=2" 0.4
         "text/html;level=3" 0.7)))
 
-;; precedence 3, qvalue 0.1
-
 (deftest parameter-matching
   (are [content-type expected]
       (= (select-keys
@@ -42,8 +40,7 @@
           [:qvalue :precedence])
          expected)
     "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
-    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}
-    ))
+    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
 
 (deftest select-most-acceptable-representation-test
 

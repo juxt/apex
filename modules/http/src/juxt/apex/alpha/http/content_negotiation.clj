@@ -4,6 +4,42 @@
   (:require
    [juxt.reap.alpha.api :as reap]))
 
+(defn match?
+  "Return truthy if the given accept-field (reap format) accepts the given
+  content-type (reap format). The return value is a the precedence value (if
+  matched), nil otherwise."
+  [accept-field content-type]
+  (cond
+    (and
+     (= (:type accept-field) (:type content-type))
+     (= (:subtype accept-field) (:subtype content-type))
+     ;; Try to match on all the parameters asked for in the accept,
+     ;; but discard all others in the content type.
+     (pos? (count (:parameters accept-field)))
+     (= (:parameters accept-field)
+        (select-keys (:parameters content-type) (keys (:parameters accept-field)))))
+    ;; The precedence could be 3, plus the number of parameters in the
+    ;; accept. For now, we don't include the count of the parameters
+    ;; in the determination of precedence.
+    4
+
+    (and
+     (= (:type accept-field) (:type content-type))
+     (= (:subtype accept-field) (:subtype content-type))
+     (zero? (count (:parameters accept-field))))
+    3
+
+    (and
+     (= (:type accept-field) (:type content-type))
+     (= "*" (:subtype accept-field)))
+    2
+
+    (and
+     (= "*" (:type accept-field))
+     (= "*" (:subtype accept-field)))
+    1)
+  )
+
 (defn acceptable-media-type-rating
   "Determine the variant's rating (precedence, qvalue) with respect to what is
   acceptable. The accepts parameter is a data structure returned from parsing
@@ -19,7 +55,7 @@
   variant, if there are no more preferable variants and if returning one is
   preferable to returning a 406 status code."
 
-  [accepts variant]
+  [accept-fields variant]
 
   (let [content-type
         ;; Performance note: Possibly need to find a way to avoid having to
@@ -27,43 +63,30 @@
         ;; only parsed once per dimension per request. The best representation
         ;; chosen should itself be the subject of memoization rather than the
         ;; individual details used in the algorithm.
+
+        ;; TODO: Let's not put variant in here, but use content-type instead.
         (reap/content-type (:apex.http/content-type variant))]
     (reduce
-     (fn [acc accept]
+     ;; TODO: Extract this function so it can be used as 'reductions' for debugging
+     (fn [acc accept-field]
        (if-let
-           [precedence
-            (cond
-              (and
-               (= (:type accept) (:type content-type))
-               (= (:subtype accept) (:subtype content-type)))
-              (if (pos? (count (:parameters accept)))
-                (when (= (:parameters accept) (:parameters content-type)) 4)
-                3)
+           [precedence (match? accept-field content-type)
+            ]
 
-              (and
-               (= (:type accept) (:type content-type))
-               (= "*" (:subtype accept)))
-              2
+           (let [qvalue (get accept-field :qvalue 1.0)]
+             (if (or
+                  (> precedence (get acc :precedence 0))
+                  (and (= precedence (get acc :precedence 0))
+                       (> qvalue (get acc :qvalue 0.0))))
 
-              (and
-               (= "*" (:type accept))
-               (= "*" (:subtype accept)))
-              1)]
+               {:qvalue qvalue
+                :precedence precedence
+                :apex.debug/accept-field accept-field}
 
-         (let [qvalue (get accept :qvalue 1.0)]
-           (if (or
-                (> precedence (get acc :precedence 0))
-                (and (= precedence (get acc :precedence 0))
-                     (> qvalue (get acc :qvalue 0.0))))
-
-             {:qvalue qvalue
-              :precedence precedence
-              :apex.debug/accept accept}
-
-             acc))
-         acc))
+               acc))
+           acc))
      {:qvalue 0.0}
-     accepts)))
+     accept-fields)))
 
 (defn select-max-by
   "Return the items in the collection that share the maximum numeric value
