@@ -45,6 +45,7 @@
   "Designed to be used as a reducing function, if the parsed-accept-field is a
   higher precedence (or same precedence with higher qvalue), return an updated
   best-match map."
+
   [best-match parsed-accept-field]
 
   (let [precedence (match? parsed-accept-field (:content-type best-match))
@@ -80,24 +81,16 @@
   [parsed-accept-fields parsed-content-type]
 
   (reduce
-   ;; TODO: Extract this function so it can be used as 'reductions' for debugging
    select-better-match
-   #_(fn [acc parsed-accept-field]
-       (if-let
-           [precedence (match? parsed-accept-field parsed-content-type)]
+   {:qvalue 0.0
+    :content-type parsed-content-type}
+   parsed-accept-fields))
 
-           (let [qvalue (get parsed-accept-field :qvalue 1.0)]
-             (if (or
-                  (> precedence (get acc :precedence 0))
-                  (and (= precedence (get acc :precedence 0))
-                       (> qvalue (get acc :qvalue 0.0))))
-
-               {:qvalue qvalue
-                :precedence precedence
-                :apex.debug/parsed-accept-field parsed-accept-field}
-
-               acc))
-           acc))
+(defn debug-acceptable-media-type-rating
+  "Same as acceptable-media-type-rating but with reductions, for debugging."
+  [parsed-accept-fields parsed-content-type]
+  (reductions
+   select-better-match
    {:qvalue 0.0
     :content-type parsed-content-type}
    parsed-accept-fields))
@@ -153,14 +146,15 @@
 (defn assign-media-type-quality [parsed-accept-fields]
   (keep
    (fn [variant]
-     (let [qvalue (:qvalue
-                   (acceptable-media-type-rating
-                    parsed-accept-fields
-                    (reap/content-type (:apex.http/content-type variant))))]
+     (let [qvalue
+           (:qvalue
+            (acceptable-media-type-rating
+             parsed-accept-fields
+             (reap/content-type (:apex.http/content-type variant))))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/media-type-qvalue qvalue]))))))
 
-(defn select-acceptable-representations [request variants]
+(defn rate-variants [request variants]
   (sequence
 
    (assign-media-type-quality
@@ -189,7 +183,7 @@
 
   [request variants]
 
-  (let [representations (select-acceptable-representations request variants)]
+  (let [representations (rate-variants request variants)]
 
     (reduce
      (fn [variants step]
