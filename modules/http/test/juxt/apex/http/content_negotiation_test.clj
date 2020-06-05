@@ -22,7 +22,7 @@
            (:qvalue
             (acceptable-media-type-rating
              accepts
-             {:apex.http/content-type content-type})))
+             (reap/content-type content-type))))
 
         "text/html;level=1" 1.0
         "text/html" 0.7
@@ -36,7 +36,7 @@
       (= (select-keys
           (acceptable-media-type-rating
            (reap/accept "text/html;q=0.1,text/html;level=2;q=0.4,text/html;level=3;q=0.5")
-           {:apex.http/content-type content-type})
+           (reap/content-type content-type))
           [:qvalue :precedence])
          expected)
     "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}

@@ -4,46 +4,68 @@
   (:require
    [juxt.reap.alpha.api :as reap]))
 
-(defn match?
+(defn- match?
   "Return truthy if the given accept-field (reap format) accepts the given
   content-type (reap format). The return value is a the precedence value (if
   matched), nil otherwise."
-  [accept-field content-type]
+  [parsed-accept-field parsed-content-type]
   (cond
     (and
-     (= (:type accept-field) (:type content-type))
-     (= (:subtype accept-field) (:subtype content-type))
+     (= (:type parsed-accept-field) (:type parsed-content-type))
+     (= (:subtype parsed-accept-field) (:subtype parsed-content-type))
      ;; Try to match on all the parameters asked for in the accept,
      ;; but discard all others in the content type.
-     (pos? (count (:parameters accept-field)))
-     (= (:parameters accept-field)
-        (select-keys (:parameters content-type) (keys (:parameters accept-field)))))
+     (pos? (count (:parameters parsed-accept-field)))
+     (= (:parameters parsed-accept-field)
+        (select-keys
+         (:parameters parsed-content-type)
+         (keys (:parameters parsed-accept-field)))))
     ;; The precedence could be 3, plus the number of parameters in the
     ;; accept. For now, we don't include the count of the parameters
     ;; in the determination of precedence.
     4
 
     (and
-     (= (:type accept-field) (:type content-type))
-     (= (:subtype accept-field) (:subtype content-type))
-     (zero? (count (:parameters accept-field))))
+     (= (:type parsed-accept-field) (:type parsed-content-type))
+     (= (:subtype parsed-accept-field) (:subtype parsed-content-type))
+     (zero? (count (:parameters parsed-accept-field))))
     3
 
     (and
-     (= (:type accept-field) (:type content-type))
-     (= "*" (:subtype accept-field)))
+     (= (:type parsed-accept-field) (:type parsed-content-type))
+     (= "*" (:subtype parsed-accept-field)))
     2
 
     (and
-     (= "*" (:type accept-field))
-     (= "*" (:subtype accept-field)))
-    1)
-  )
+     (= "*" (:type parsed-accept-field))
+     (= "*" (:subtype parsed-accept-field)))
+    1))
+
+(defn- select-better-match
+  "Designed to be used as a reducing function, if the parsed-accept-field is a
+  higher precedence (or same precedence with higher qvalue), return an updated
+  best-match map."
+  [best-match parsed-accept-field]
+
+  (let [precedence (match? parsed-accept-field (:content-type best-match))
+        qvalue (get parsed-accept-field :qvalue 1.0)]
+
+    (cond-> best-match
+      (and
+       precedence
+       (or
+        (> precedence (get best-match :precedence 0))
+        (and (= precedence (get best-match :precedence 0))
+             (> qvalue (get best-match :qvalue 0.0)))))
+      (conj
+       [:qvalue qvalue]
+       [:precedence precedence]
+       [:apex.debug/parsed-accept-field parsed-accept-field]))))
 
 (defn acceptable-media-type-rating
-  "Determine the variant's rating (precedence, qvalue) with respect to what is
-  acceptable. The accepts parameter is a data structure returned from parsing
-  the Accept header with reap. The variant is a map corresponding to the
+  "Determine the given content-type's rating (precedence, qvalue) with respect to
+  what is acceptable. The accepts parameter is a data structure returned from
+  parsing the Accept header with reap. The variant is a map corresponding to the
   resource of the variant.
 
   This function determines the qvalue according to rules of precedence in RFC
@@ -55,25 +77,16 @@
   variant, if there are no more preferable variants and if returning one is
   preferable to returning a 406 status code."
 
-  [accept-fields variant]
+  [parsed-accept-fields parsed-content-type]
 
-  (let [content-type
-        ;; Performance note: Possibly need to find a way to avoid having to
-        ;; parse the content-type of the variant each time, but each variant is
-        ;; only parsed once per dimension per request. The best representation
-        ;; chosen should itself be the subject of memoization rather than the
-        ;; individual details used in the algorithm.
-
-        ;; TODO: Let's not put variant in here, but use content-type instead.
-        (reap/content-type (:apex.http/content-type variant))]
-    (reduce
-     ;; TODO: Extract this function so it can be used as 'reductions' for debugging
-     (fn [acc accept-field]
+  (reduce
+   ;; TODO: Extract this function so it can be used as 'reductions' for debugging
+   select-better-match
+   #_(fn [acc parsed-accept-field]
        (if-let
-           [precedence (match? accept-field content-type)
-            ]
+           [precedence (match? parsed-accept-field parsed-content-type)]
 
-           (let [qvalue (get accept-field :qvalue 1.0)]
+           (let [qvalue (get parsed-accept-field :qvalue 1.0)]
              (if (or
                   (> precedence (get acc :precedence 0))
                   (and (= precedence (get acc :precedence 0))
@@ -81,12 +94,13 @@
 
                {:qvalue qvalue
                 :precedence precedence
-                :apex.debug/accept-field accept-field}
+                :apex.debug/parsed-accept-field parsed-accept-field}
 
                acc))
            acc))
-     {:qvalue 0.0}
-     accept-fields)))
+   {:qvalue 0.0
+    :content-type parsed-content-type}
+   parsed-accept-fields))
 
 (defn select-max-by
   "Return the items in the collection that share the maximum numeric value
@@ -136,10 +150,13 @@
 ;;     The algorithm has now selected one 'best' variant, so return it as the response. The HTTP response header Vary is set to indicate the dimensions of negotiation (browsers and caches can use this information when caching the resource). End.
 ;;     To get here means no variant was selected (because none are acceptable to the browser). Return a 406 status (meaning "No acceptable representation") with a response body consisting of an HTML document listing the available variants. Also set the HTTP Vary header to indicate the dimensions of variance.
 
-(defn assign-media-type-quality [accepts]
+(defn assign-media-type-quality [parsed-accept-fields]
   (keep
    (fn [variant]
-     (let [qvalue (:qvalue (acceptable-media-type-rating accepts variant))]
+     (let [qvalue (:qvalue
+                   (acceptable-media-type-rating
+                    parsed-accept-fields
+                    (reap/content-type (:apex.http/content-type variant))))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/media-type-qvalue qvalue]))))))
 
