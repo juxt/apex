@@ -186,9 +186,6 @@
    (map (juxt str/lower-case identity))
    (into (sorted-map))))
 
-
-(set/rename-keys {"ttl" 20} header-canonical-case)
-
 (defn- wrap-headers-normalize-case-response [response]
   (update response :headers set/rename-keys header-canonical-case))
 
