@@ -204,6 +204,7 @@
            (* (get variant :apex.http.content-negotiation/media-type-qvalue)
               (get variant :apex.http/quality-of-source 1.0)))
          variants))
+
       ;; TODO: Select the variants with the highest language quality factor.
       ;; TODO: Select the variants with the best language match
       ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
@@ -211,5 +212,6 @@
       ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
       ;; TODO: Select the variants with the best encoding.
       ;; TODO: Select the variants with the smallest content length.
-      ;; TODO: Select the first variant of those remaining
+
+      ;; Select the first variant of those remaining
       first])))

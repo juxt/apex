@@ -6,7 +6,9 @@
    [juxt.apex.alpha.http.content-negotiation
     :refer [acceptable-media-type-rating select-most-acceptable-representation]]
    [juxt.reap.alpha.api :as reap]
-   [ring.mock.request :refer [request]]))
+   [ring.mock.request :refer [request]]
+   [juxt.reap.alpha.rfc7231 :as rfc7231]
+   [juxt.reap.alpha.regex :as re]))
 
 ;; This test represents the table in RFC 7231 Section 5.3.2, where quality
 ;; values are determined from matching a variant's content-type according to
@@ -72,7 +74,7 @@
     "text/plain" :plain-text
     "text/html;q=0.8,text/plain" :plain-text
 
-    ;;"TEXT/HTML;level=2" :html-level-2
+;;    "TEXT/HTML;level=2;q=0.8,text/html" :html-level-2
     ))
 
 ;; TODO: Test quality-of-source
