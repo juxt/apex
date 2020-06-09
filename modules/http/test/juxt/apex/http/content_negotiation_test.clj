@@ -49,19 +49,6 @@
         "text/html;level=2" 0.4
         "text/html;level=3" 0.7)))
 
-#_(deftest acceptable-language-rating-test
-  (are [language expected]
-      (= (select-keys
-
-          [:qvalue :precedence])
-         expected)
-    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
-    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
-
-#_(acceptable-language-rating
- (reap/accept-language "en")
- (reap/content-language "en"))
-
 ;; This test represents the example in RFC 4647 Section 3.3.1.
 (deftest language-match-test
   (is
@@ -81,9 +68,40 @@
      (:langtag (first (reap/content-language "de-Latn-DE"))))))
 
   (is
+   (not
+    (language-match?
+     (:language-range (first (reap/accept-language "en-gb")))
+     (:langtag (first (reap/content-language "en"))))))
+
+  (is
    (language-match?
     (:language-range (first (reap/accept-language "*")))
     (:langtag (first (reap/content-language "de"))))))
+
+
+(reap/content-language "de,en")
+
+;; RFC 7231 Section 5.3.5:
+;; For example,
+
+;;      Accept-Language: da, en-gb;q=0.8, en;q=0.7
+
+;;    would mean: "I prefer Danish, but will accept British English and
+;;    other types of English".
+
+
+#_(deftest acceptable-language-rating-test
+  (are [language expected]
+      (= (select-keys
+
+          [:qvalue :precedence])
+         expected)
+    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
+    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
+
+#_(acceptable-language-rating
+ (reap/accept-language "en")
+ (reap/content-language "en"))
 
 (deftest select-most-acceptable-representation-test
 

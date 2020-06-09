@@ -103,15 +103,16 @@
   (assert (string? language-tag))
 
   (or
-   ;; "A language range matches a particular language tag if, in a
-   ;; case-insensitive comparison, it exactly equals the tag, …"
-   (.equalsIgnoreCase language-range language-tag)
+   (and
+    ;; "A language range matches a particular language tag if, in a
+    ;; case-insensitive comparison, it exactly equals the tag, …"
+    (.regionMatches language-range true 0 language-tag 0 (. language-range length))
 
-   ;; "or if it exactly equals a prefix of the tag such that the first character
-   ;; following the prefix is '-'. "
-   (.equalsIgnoreCase
-    (str language-range "-")
-    (subs language-tag 0 (inc (. language-range length))))
+    ;; "or if it exactly equals a prefix of the tag such that the first character
+    ;; following the prefix is '-'. "
+    (if (< (count language-range) (count language-tag))
+      (= \- (.charAt language-tag (count language-range)))
+      true))
 
    ;; "The special range '*' in a language priority list matches any tag."
    (.equals language-range "*")))
