@@ -99,7 +99,9 @@
   "Basic filtering as per RFC 4647 Section 3.3.1."
   [^String language-range ^String language-tag]
 
+  (assert language-range)
   (assert (string? language-range))
+  (assert language-tag)
   (assert (string? language-tag))
 
   (or
@@ -123,7 +125,7 @@
     (cond-> best-match
       (and (language-match?
             (:language-range parsed-accept-language-field)
-            (:langtag best-match))
+            (get-in best-match [:language-tag :langtag]))
            (> qvalue (get best-match :qvalue 0.0)))
       (conj
        [:qvalue qvalue]
@@ -197,7 +199,13 @@
              (:qvalue
               (acceptable-language-rating
                parsed-accept-language-fields
-               (reap/content-language content-language))))]
+               ;; Content languages can be lists of language tags for the
+               ;; 'intended audience'. But for the purposes of language
+               ;; negotiation, we pick the FIRST content-language in the
+               ;; list. The matching of multiple languages with a language tag
+               ;; is not defined by any RFC (as far as I can tell).
+               (first
+                (reap/content-language content-language)))))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/language-qvalue qvalue]))))))
 
@@ -284,12 +292,18 @@
         ;; the variants with the highest value."
         (select-max-by
          (fn [variant]
-           (* (get variant :apex.http.content-negotiation/content-type-qvalue)
+           (* (get variant :apex.http.content-negotiation/content-type-qvalue 1.0)
               (get variant :apex.http/quality-of-source 1.0)))
          variants))
 
-      ;; TODO: Select the variants with the highest language quality factor.
-      ;; TODO: Select the variants with the best language match
+      ;; Select the variants with the highest language quality factor.
+      (fn [variants]
+        (select-max-by #(get % :apex.http/language-quality-factor 1.0) variants))
+
+      ;; Select the variants with the best language match
+      (fn [variants]
+        (select-max-by :apex.http.content-negotiation/language-qvalue variants))
+
       ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
       ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
       ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.

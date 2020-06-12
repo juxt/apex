@@ -6,6 +6,7 @@
    [juxt.apex.alpha.http.content-negotiation
     :refer [acceptable-content-type-rating
             acceptable-language-rating
+            assign-language-quality
             language-match?
             select-most-acceptable-representation]]
    [juxt.reap.alpha.api :as reap]
@@ -133,7 +134,88 @@
     "text/plain" :plain-text
     "text/html;q=0.8,text/plain" :plain-text
 
-;;    "TEXT/HTML;level=2;q=0.8,text/html" :html-level-2
-    ))
+    "TEXT/HTML;level=2;text/html;q=0.8" :html-level-2))
 
 ;; TODO: Test quality-of-source
+
+(deftest language-test
+  (let [variants
+        [{:id :en
+          :apex.http/content "Hello!"
+          :apex.http/content-language "en"}
+
+         {:id :en-us
+          :apex.http/content-language "en-US"
+          ;; https://en.wikipedia.org/wiki/Howdy
+          ;; Not everyone in the US uses 'Howdy!' but this is just a test...
+          :apex.http/content "Howdy!"}
+
+         {:id :ar-eg
+          :apex.http/content-language "ar-eg,en"
+          :apex.http/content "ألسّلام عليكم"}]]
+
+    (are [accept-header expected]
+        (=
+         expected
+         (map
+          (juxt :id :apex.http.content-negotiation/language-qvalue)
+          (sequence
+           (assign-language-quality
+            (reap/accept-language accept-header))
+           variants)))
+
+        "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
+        "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
+        "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
+        "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
+        "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
+        "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
+
+    (are [accept-header expected]
+        (= expected
+           (:apex.http/content
+            (select-most-acceptable-representation
+             (-> (request :get "/hello")
+                 (update
+                  :headers conj
+                  ["accept-language" accept-header]))
+             variants)))
+        "en" "Hello!"
+        "en-us" "Howdy!"
+        "ar-eg" "ألسّلام عليكم"
+        "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
+        "*" "Hello!"
+        "en-us,*;q=0.1" "Howdy!"
+        ;; No rules of precedence apply to languages. If a '*' has greater
+        ;; qvalue than another more specific language, it is still
+        ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
+        ;; selected because it comes before ar-eg.
+        "en-us;q=0.8,*" "Hello!")
+
+    ;; If no Accept-Language header, just pick the first variant.
+    (is (= "Hello!"
+           (:apex.http/content
+            (select-most-acceptable-representation
+             (-> (request :get "/hello"))
+             variants))
+           ))
+
+    ;; The language quality factor of a variant, if present, is used in
+    ;; preference to an Accept-Language header.
+    (is
+     (=
+      "Bonjour!"
+      (:apex.http/content
+       (select-most-acceptable-representation
+        (-> (request :get "/hello")
+            (update
+             :headers conj
+             ["accept-language" "en"]))
+        (conj
+         variants
+         {:id :fr-fr
+          :apex.http/content "Bonjour!"
+          :apex.http/content-language "fr-FR"
+          :apex.http/language-quality-factor 2})))))))
+
+;; TODO: Add language quality factor in variants: e.g. apex.http/language-quality-factor 0.8 - easy to test for
