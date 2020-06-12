@@ -50,38 +50,6 @@
         "text/html;level=2" 0.4
         "text/html;level=3" 0.7)))
 
-;; This test represents the example in RFC 4647 Section 3.3.1.
-(deftest language-match-test
-  (is
-   (language-match?
-    (:language-range (first (reap/accept-language "en")))
-    (:langtag (first (reap/content-language "en")))))
-
-  (is
-   (language-match?
-    (:language-range (first (reap/accept-language "de-de")))
-    (:langtag (first (reap/content-language "de-DE-1996")))))
-
-  (is
-   (not
-    (language-match?
-     (:language-range (first (reap/accept-language "de-de")))
-     (:langtag (first (reap/content-language "de-Latn-DE"))))))
-
-  (is
-   (not
-    (language-match?
-     (:language-range (first (reap/accept-language "en-gb")))
-     (:langtag (first (reap/content-language "en"))))))
-
-  (is
-   (language-match?
-    (:language-range (first (reap/accept-language "*")))
-    (:langtag (first (reap/content-language "de"))))))
-
-
-(reap/content-language "de,en")
-
 ;; RFC 7231 Section 5.3.5:
 ;; For example,
 
@@ -90,21 +58,7 @@
 ;;    would mean: "I prefer Danish, but will accept British English and
 ;;    other types of English".
 
-
-#_(deftest acceptable-language-rating-test
-  (are [language expected]
-      (= (select-keys
-
-          [:qvalue :precedence])
-         expected)
-    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
-    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
-
-#_(acceptable-language-rating
- (reap/accept-language "en")
- (reap/content-language "en"))
-
-(deftest select-most-acceptable-representation-test
+(deftest accept-test
 
   (are [accept-header expected-content]
       (= expected-content
@@ -138,7 +92,36 @@
 
 ;; TODO: Test quality-of-source
 
-(deftest language-test
+;; This test represents the example in RFC 4647 Section 3.3.1.
+(deftest language-match-test
+  (is
+   (language-match?
+    (:language-range (first (reap/accept-language "en")))
+    (:langtag (first (reap/content-language "en")))))
+
+  (is
+   (language-match?
+    (:language-range (first (reap/accept-language "de-de")))
+    (:langtag (first (reap/content-language "de-DE-1996")))))
+
+  (is
+   (not
+    (language-match?
+     (:language-range (first (reap/accept-language "de-de")))
+     (:langtag (first (reap/content-language "de-Latn-DE"))))))
+
+  (is
+   (not
+    (language-match?
+     (:language-range (first (reap/accept-language "en-gb")))
+     (:langtag (first (reap/content-language "en"))))))
+
+  (is
+   (language-match?
+    (:language-range (first (reap/accept-language "*")))
+    (:langtag (first (reap/content-language "de"))))))
+
+(deftest accept-language-test
   (let [variants
         [{:id :en
           :apex.http/content "Hello!"
@@ -197,8 +180,7 @@
            (:apex.http/content
             (select-most-acceptable-representation
              (-> (request :get "/hello"))
-             variants))
-           ))
+             variants))))
 
     ;; The language quality factor of a variant, if present, is used in
     ;; preference to an Accept-Language header.
@@ -217,5 +199,3 @@
           :apex.http/content "Bonjour!"
           :apex.http/content-language "fr-FR"
           :apex.http/language-quality-factor 2})))))))
-
-;; TODO: Add language quality factor in variants: e.g. apex.http/language-quality-factor 0.8 - easy to test for
