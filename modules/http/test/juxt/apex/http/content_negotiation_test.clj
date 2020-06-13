@@ -16,6 +16,15 @@
 
 ;; TODO: test for content-type-match?
 
+;; TODO: Refactor and polish these tests so they are consistent with each other.
+
+;; TODO: Test for nils, blank strings, negative qvalues, malformed strings -
+;; when and how should a 400 be signalled?
+
+;; TODO: Explain content negotiation, perhaps as a 406 body but also by using an
+;; Expect (which is a 'must understand' semantic' or Prefer header (which
+;; isn't)? See RFC 7240
+
 (deftest acceptable-content-type-rating-test
   (are [content-type expected]
       (= (select-keys
@@ -24,8 +33,8 @@
            (reap/content-type content-type))
           [:qvalue :precedence])
          expected)
-    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
-    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
+      "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
+      "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
 
 ;; This test represents the table in RFC 7231 Section 5.3.2, where quality
 ;; values are determined from matching a variant's content-type according to
