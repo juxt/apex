@@ -5,14 +5,11 @@
    [clojure.test :refer [deftest is are]]
    [juxt.apex.alpha.http.content-negotiation
     :refer [acceptable-content-type-rating
-            acceptable-language-rating
-            assign-language-quality
-            language-match?
+            assign-language-quality basic-language-match?
+            acceptable-encoding-rating assign-encoding-quality
             select-most-acceptable-representation]]
    [juxt.reap.alpha.api :as reap]
-   [ring.mock.request :refer [request]]
-   [juxt.reap.alpha.rfc7231 :as rfc7231]
-   [juxt.reap.alpha.regex :as re]))
+   [ring.mock.request :refer [request]]))
 
 ;; TODO: test for content-type-match?
 
@@ -102,31 +99,31 @@
 ;; TODO: Test quality-of-source
 
 ;; This test represents the example in RFC 4647 Section 3.3.1.
-(deftest language-match-test
+(deftest basic-language-match-test
   (is
-   (language-match?
+   (basic-language-match?
     (:language-range (first (reap/accept-language "en")))
     (:langtag (first (reap/content-language "en")))))
 
   (is
-   (language-match?
+   (basic-language-match?
     (:language-range (first (reap/accept-language "de-de")))
     (:langtag (first (reap/content-language "de-DE-1996")))))
 
   (is
    (not
-    (language-match?
+    (basic-language-match?
      (:language-range (first (reap/accept-language "de-de")))
      (:langtag (first (reap/content-language "de-Latn-DE"))))))
 
   (is
    (not
-    (language-match?
+    (basic-language-match?
      (:language-range (first (reap/accept-language "en-gb")))
      (:langtag (first (reap/content-language "en"))))))
 
   (is
-   (language-match?
+   (basic-language-match?
     (:language-range (first (reap/accept-language "*")))
     (:langtag (first (reap/content-language "de"))))))
 
@@ -142,9 +139,14 @@
           ;; Not everyone in the US uses 'Howdy!' but this is just a test...
           :apex.http/content "Howdy!"}
 
+
          {:id :ar-eg
           :apex.http/content-language "ar-eg,en"
-          :apex.http/content "ألسّلام عليكم"}]]
+          :apex.http/content "ألسّلام عليكم"}
+
+         ;; TODO: Test for when no content-language is specified - what should
+         ;; we default to?
+         ]]
 
     (are [accept-header expected]
         (=
@@ -163,14 +165,15 @@
         "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
         "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
 
-    (are [accept-header expected]
+
+    (are [accept-language-header expected]
         (= expected
            (:apex.http/content
             (select-most-acceptable-representation
              (-> (request :get "/hello")
                  (update
                   :headers conj
-                  ["accept-language" accept-header]))
+                  ["accept-language" accept-language-header]))
              variants)))
         "en" "Hello!"
         "en-us" "Howdy!"
@@ -182,7 +185,11 @@
         ;; qvalue than another more specific language, it is still
         ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
         ;; selected because it comes before ar-eg.
-        "en-us;q=0.8,*" "Hello!")
+        "en-us;q=0.8,*" "Hello!"
+
+        ;; TODO: en-*
+
+        )
 
     ;; If no Accept-Language header, just pick the first variant.
     (is (= "Hello!"
@@ -208,3 +215,78 @@
           :apex.http/content "Bonjour!"
           :apex.http/content-language "fr-FR"
           :apex.http/language-quality-factor 2})))))))
+
+;; See RFC 7231 5.3.4
+
+(deftest acceptable-encoding-rating-test
+  (are [accept-encoding content-encoding expected-qvalue]
+      (= (long (* 1000 expected-qvalue))
+         (long (* 1000 (acceptable-encoding-rating
+                       (reap/accept-encoding accept-encoding)
+                       (reap/content-encoding content-encoding)))))
+      "gzip" "gzip" 1.0
+      "gzip;q=0.8" "gzip" 0.8
+      "gzip" "deflate" 0.0
+      "gzip,deflate" "gzip,deflate" 1.0
+      "gzip;q=0.8,deflate;q=0.5,*" "identity" 1.0
+      "gzip;q=0.8,deflate;q=0.5,*;q=0.1" "identity" 0.1
+
+      ;; Multiple codings applied to content, if all are acceptable, we
+      ;; determine the total qvalue with multiplication.
+      "gzip" "gzip,deflate" 0.0
+      "deflate" "gzip,deflate" 0.0
+      "gzip;q=0.9,deflate;q=0.5;compress;q=0.2" "gzip,deflate" 0.45
+      "gzip;q=0.4,deflate;q=0.5,compress;q=0.2" "gzip,deflate,compress" 0.04))
+
+(deftest accept-encoding-test
+  (let [variants
+        [{:id :gzip
+          :apex.http/content-encoding "gzip"}
+
+         {:id :deflate
+          :apex.http/content-encoding "deflate"}
+
+         {:id :gzip-then-deflate
+          :apex.http/content-encoding "gzip,deflate"}
+
+         {:id :identity
+          :apex.http/content-encoding "identity"}
+
+         {:id :unspecified ;; content-encoding defaults to 'identity'
+          }
+         ]]
+
+    (are [accept-encoding-header expected]
+        (=
+         expected
+         (map
+          (juxt :id :apex.http.content-negotiation/encoding-qvalue)
+          (sequence
+           (assign-encoding-quality
+            (reap/accept-encoding accept-encoding-header))
+           variants)))
+
+      ;; "If no Accept-Encoding field is in the request, any content-coding is
+      ;; considered acceptable by the user agent."
+
+        nil [[:gzip 1]
+             [:deflate 1]
+             [:gzip-then-deflate 1]
+             [:identity 1]
+             [:unspecified 1]]
+
+        "gzip" [[:gzip 1]
+                [:deflate 0]
+                [:gzip-then-deflate 0]
+                [:identity 0]
+                ;; "If the representation has no content-coding, then it is
+                ;; acceptable by default unless specifically excluded by the
+                ;; Accept-Encoding field stating either 'identity;q=0' or
+                ;; '*;q=0' without a more specific entry for 'identity'."
+                [:unspecified 1]]
+
+
+        )
+    )
+
+  )

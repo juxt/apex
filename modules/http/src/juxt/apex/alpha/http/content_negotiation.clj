@@ -95,7 +95,7 @@
     :content-type parsed-content-type}
    parsed-accept-fields))
 
-(defn language-match?
+(defn basic-language-match?
   "Basic filtering as per RFC 4647 Section 3.3.1."
   [^String language-range ^String language-tag]
 
@@ -123,10 +123,11 @@
   [best-match parsed-accept-language-field]
   (let [qvalue (get parsed-accept-language-field :qvalue 1.0)]
     (cond-> best-match
-      (and (language-match?
-            (:language-range parsed-accept-language-field)
-            (get-in best-match [:language-tag :langtag]))
-           (> qvalue (get best-match :qvalue 0.0)))
+      (and
+       (> qvalue (get best-match :qvalue 0.0))
+       (basic-language-match?
+        (:language-range parsed-accept-language-field)
+        (get-in best-match [:language-tag :langtag])))
       (conj
        [:qvalue qvalue]
        [:apex.debug/parsed-accept-language-field parsed-accept-language-field]))))
@@ -146,6 +147,8 @@
   variant, if there are no more preferable variants and if returning one is
   preferable to returning a 406 status code."
 
+  ;; TODO: Improve this function by allowing multiple language tags
+
   [parsed-accept-language-fields parsed-language-tag]
 
   (reduce
@@ -153,6 +156,22 @@
    {:qvalue 0.0
     :language-tag parsed-language-tag}
    parsed-accept-language-fields))
+
+
+(defn acceptable-encoding-rating
+    [parsed-accept-encoding-fields parsed-content-encoding]
+
+    (reduce
+     ;; For content-encodings with multiple codings, it feels sensible to
+     ;; multiply the qvalues together. Any unsupported coding will yield a total
+     ;; qvalue 0.0, while if all qvalues are 1.0, the total will be 1.0.
+     *
+     (for [{:keys [content-coding]} parsed-content-encoding]
+       (reduce
+        max 0.0
+        (for [{accept-coding :codings :as field} parsed-accept-encoding-fields
+              :when (or (= accept-coding content-coding) (= accept-coding "*"))]
+          (get field :qvalue 1.0))))))
 
 ;; Apache httpd Negotiation Algorithm -- http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
@@ -208,6 +227,18 @@
                 (reap/content-language content-language)))))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/language-qvalue qvalue]))))))
+
+(defn assign-encoding-quality [parsed-accept-encoding-fields]
+  (keep
+   (fn [variant]
+     (let [qvalue
+           (when-let [content-encoding (:apex.http/content-encoding variant)]
+             (:qvalue
+              (acceptable-encoding-rating
+               parsed-accept-encoding-fields
+               (reap/content-encoding content-encoding))))]
+       (cond-> variant
+         qvalue (conj [:apex.http.content-negotiation/encoding-qvalue qvalue]))))))
 
 (defn rate-variants [request variants]
   (sequence
