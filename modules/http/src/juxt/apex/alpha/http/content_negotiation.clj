@@ -210,55 +210,64 @@
 ;;     The algorithm has now selected one 'best' variant, so return it as the response. The HTTP response header Vary is set to indicate the dimensions of negotiation (browsers and caches can use this information when caching the resource). End.
 ;;     To get here means no variant was selected (because none are acceptable to the browser). Return a 406 status (meaning "No acceptable representation") with a response body consisting of an HTML document listing the available variants. Also set the HTTP Vary header to indicate the dimensions of variance.
 
-(defn assign-content-type-quality [parsed-accept-fields]
-  (keep
-   (fn [variant]
-     (let [qvalue
-           (when-let [content-type (:apex.http/content-type variant)]
-             (:qvalue
-              (acceptable-content-type-rating
-               parsed-accept-fields
-               (reap/content-type content-type))))]
-       (cond-> variant
-         qvalue (conj [:apex.http.content-negotiation/content-type-qvalue qvalue]))))))
+(defn assign-content-type-quality [accept-fields-or-header]
+  (let [parsed-accept-fields
+        (reap/accept-when-string accept-fields-or-header)]
+    (keep
+     (fn [variant]
+       (let [qvalue
+             (when-let [content-type (:apex.http/content-type variant)]
+               (:qvalue
+                (acceptable-content-type-rating
+                 parsed-accept-fields
+                 (reap/content-type-when-string content-type))))]
+         (cond-> variant
+           qvalue (conj [:apex.http.content-negotiation/content-type-qvalue qvalue])))))))
 
-(defn assign-language-quality [parsed-accept-language-fields]
-  (keep
-   (fn [variant]
-     (let [qvalue
-           (when-let [content-language (:apex.http/content-language variant)]
-             (:qvalue
-              (acceptable-language-rating
-               parsed-accept-language-fields
-               ;; Content languages can be lists of language tags for the
-               ;; 'intended audience'. But for the purposes of language
-               ;; negotiation, we pick the FIRST content-language in the
-               ;; list. The matching of multiple languages with a language tag
-               ;; is not defined by any RFC (as far as I can tell).
-               (first
-                (reap/content-language content-language)))))]
-       (cond-> variant
-         qvalue (conj [:apex.http.content-negotiation/language-qvalue qvalue]))))))
+(defn assign-language-quality [accept-language-fields-or-header]
+  (let [parsed-accept-language-fields
+        (reap/accept-language-when-string accept-language-fields-or-header)]
+    (keep
+     (fn [variant]
+       (let [qvalue
+             (when-let [content-language (:apex.http/content-language variant)]
+               (:qvalue
+                (acceptable-language-rating
+                 parsed-accept-language-fields
+                 ;; Content languages can be lists of language tags for the
+                 ;; 'intended audience'. But for the purposes of language
+                 ;; negotiation, we pick the FIRST content-language in the
+                 ;; list. The matching of multiple languages with a language tag
+                 ;; is not defined by any RFC (as far as I can tell).
+                 ;;
+                 ;; TODO: We should now use the accept-encoding method of
+                 ;; arriving at the combined quality factor via multiplication.
+                 (first
+                  (reap/content-language-when-string content-language)))))]
+         (cond-> variant
+           qvalue (conj [:apex.http.content-negotiation/language-qvalue qvalue])))))))
 
 (defn assign-encoding-quality
   "Returns a transducer that will apply a rating on each of a collection of
   variants, according to the given parsed Accept-Encoding fields. This argument
   can be nil, which is interpretted to mean that no Accept-Encoding header is
   present."
-  [parsed-accept-encoding-fields]
-  (keep
-   (fn [variant]
-     (let [qvalue
-           (if parsed-accept-encoding-fields
-             (acceptable-encoding-rating
-              parsed-accept-encoding-fields
-              (some-> variant :apex.http/content-encoding reap/content-encoding))
-             ;; "If no Accept-Encoding field is in the request, any
-             ;; content-coding is considered acceptable by the user agent."
-             ;; -- RFC 7231 Section 5.3.4
-             1.0)]
-       (cond-> variant
-         qvalue (conj [:apex.http.content-negotiation/encoding-qvalue qvalue]))))))
+  [accept-encoding-fields-or-header]
+  (let [accept-encoding-fields
+        (reap/accept-encoding-when-string accept-encoding-fields-or-header)]
+    (keep
+     (fn [variant]
+       (let [qvalue
+             (if accept-encoding-fields
+               (acceptable-encoding-rating
+                accept-encoding-fields
+                (some-> variant :apex.http/content-encoding reap/content-encoding-when-string))
+               ;; "If no Accept-Encoding field is in the request, any
+               ;; content-coding is considered acceptable by the user agent."
+               ;; -- RFC 7231 Section 5.3.4
+               1.0)]
+         (cond-> variant
+           qvalue (conj [:apex.http.content-negotiation/encoding-qvalue qvalue])))))))
 
 (defn rate-variants [request variants]
   (sequence
@@ -266,14 +275,13 @@
    (comp
 
     (assign-content-type-quality
-     (reap/accept
-      (get-in
-       request
-       [:headers "accept"]
-       ;; "A request without any Accept header field implies that the user
-       ;; agent will accept any media type in response". -- test for this
-       ;; -- RFC 7231 Section 5.3.2
-       "*/*")))
+     (get-in
+      request
+      [:headers "accept"]
+      ;; "A request without any Accept header field implies that the user
+      ;; agent will accept any media type in response". -- test for this
+      ;; -- RFC 7231 Section 5.3.2
+      "*/*"))
 
     (assign-language-quality
      (reap/accept-language
@@ -356,13 +364,19 @@
         (select-max-by :apex.http.content-negotiation/language-qvalue variants))
 
       ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
+
       ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
+
       ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
+
       ;; TODO: Select the variants with the best encoding.
+
       ;; TODO: Select the variants with the smallest content length.
 
       ;; Select the first variant of those remaining
       first])))
 
 ;; TODO: Produce an 'explain' for each content negotiation that can be
-;; logged/response on a 406 (and to support debugging)
+;; logged/response on a 406 (and to support debugging). Perhaps as a 406 body
+;; but also by using an Expect (which is a 'must understand' semantic) or Prefer
+;; header (which isn't)? See RFC 7240.

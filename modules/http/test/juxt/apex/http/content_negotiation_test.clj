@@ -18,10 +18,6 @@
 ;; TODO: Test for nils, blank strings, negative qvalues, malformed strings -
 ;; when and how should a 400 be signalled?
 
-;; TODO: Explain content negotiation, perhaps as a 406 body but also by using an
-;; Expect (which is a 'must understand' semantic' or Prefer header (which
-;; isn't)? See RFC 7240
-
 (deftest acceptable-content-type-rating-test
   (are [content-type expected]
       (= (select-keys
@@ -154,8 +150,7 @@
          (map
           (juxt :id :apex.http.content-negotiation/language-qvalue)
           (sequence
-           (assign-language-quality
-            (reap/accept-language accept-header))
+           (assign-language-quality accept-header)
            variants)))
 
         "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
@@ -166,14 +161,15 @@
         "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
 
 
-    (are [accept-language-header expected]
-        (= expected
+    (are [accept-language-header expected-greeting]
+        (= expected-greeting
            (:apex.http/content
             (select-most-acceptable-representation
-             (-> (request :get "/hello")
-                 (update
-                  :headers conj
-                  ["accept-language" accept-language-header]))
+             (cond-> (request :get "/hello")
+               accept-language-header
+               (update
+                :headers conj
+                ["accept-language" accept-language-header]))
              variants)))
         "en" "Hello!"
         "en-us" "Howdy!"
@@ -187,9 +183,7 @@
         ;; selected because it comes before ar-eg.
         "en-us;q=0.8,*" "Hello!"
 
-        ;; TODO: en-*
-
-        )
+        nil "Hello!")
 
     ;; If no Accept-Language header, just pick the first variant.
     (is (= "Hello!"
@@ -261,8 +255,7 @@
          (map
           (juxt :id :apex.http.content-negotiation/encoding-qvalue)
           (sequence
-           (assign-encoding-quality
-            (reap/accept-encoding accept-encoding-header))
+           (assign-encoding-quality accept-encoding-header)
            variants)))
 
       ;; "If no Accept-Encoding field is in the request, any content-coding is
@@ -282,4 +275,22 @@
                 ;; acceptable by default unless specifically excluded by the
                 ;; Accept-Encoding field stating either 'identity;q=0' or
                 ;; '*;q=0' without a more specific entry for 'identity'."
-                [:unspecified 1.0]])))
+                [:unspecified 1.0]])
+
+
+    (are [accept-encoding-header expected-id]
+        (=
+         expected-id
+         (:id (select-most-acceptable-representation
+               (cond-> (request :get "/hello")
+                 accept-encoding-header
+                 (update
+                  :headers conj
+                  ["accept-encoding" accept-encoding-header]))
+               variants)))
+
+      "gzip" :gzip
+;;      "gzip" :gzip
+      )
+
+    ))
