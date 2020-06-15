@@ -159,19 +159,31 @@
 
 
 (defn acceptable-encoding-rating
-    [parsed-accept-encoding-fields parsed-content-encoding]
+  "Determine the qvalue for the given parsed content-encoding according to the
+  given parsed Accept-Encoding header fields.
 
-    (reduce
-     ;; For content-encodings with multiple codings, it feels sensible to
-     ;; multiply the qvalues together. Any unsupported coding will yield a total
-     ;; qvalue 0.0, while if all qvalues are 1.0, the total will be 1.0.
-     *
-     (for [{:keys [content-coding]} parsed-content-encoding]
-       (reduce
-        max 0.0
-        (for [{accept-coding :codings :as field} parsed-accept-encoding-fields
-              :when (or (= accept-coding content-coding) (= accept-coding "*"))]
-          (get field :qvalue 1.0))))))
+  The content-encoding can be nil.
+
+  > If the representation has no content-coding, then it is acceptable by
+  default unless specifically excluded by the Accept-Encoding field stating
+  either 'identity;q=0' or '*;q=0' without a more specific entry for 'identity'.
+  -- RFC 7231 Section 5.3.4
+
+  "
+  [parsed-accept-encoding-fields parsed-content-encoding]
+
+  (float
+   (reduce
+    ;; For content-encodings with multiple codings, it feels sensible to
+    ;; multiply the qvalues together. Any unsupported coding will yield a total
+    ;; qvalue 0.0, while if all qvalues are 1.0, the total will be 1.0.
+    *
+    (for [entry parsed-content-encoding]
+      (reduce
+       max 0.0
+       (for [{accept-coding :codings :as field} parsed-accept-encoding-fields
+             :when (or (= accept-coding (get entry :content-coding "identity")) (= accept-coding "*"))]
+         (get field :qvalue 1.0)))))))
 
 ;; Apache httpd Negotiation Algorithm -- http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
@@ -232,11 +244,9 @@
   (keep
    (fn [variant]
      (let [qvalue
-           (when-let [content-encoding (:apex.http/content-encoding variant)]
-             (:qvalue
-              (acceptable-encoding-rating
-               parsed-accept-encoding-fields
-               (reap/content-encoding content-encoding))))]
+           (acceptable-encoding-rating
+            parsed-accept-encoding-fields
+            (some-> variant :apex.http/content-encoding reap/content-encoding))]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/encoding-qvalue qvalue]))))))
 

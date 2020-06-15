@@ -218,12 +218,14 @@
 
 ;; See RFC 7231 5.3.4
 
+(long 11.99999)
+
 (deftest acceptable-encoding-rating-test
   (are [accept-encoding content-encoding expected-qvalue]
-      (= (long (* 1000 expected-qvalue))
-         (long (* 1000 (acceptable-encoding-rating
-                       (reap/accept-encoding accept-encoding)
-                       (reap/content-encoding content-encoding)))))
+      (= (Math/rint (* 1000 expected-qvalue))
+         (Math/rint (* 1000 (acceptable-encoding-rating
+                             (reap/accept-encoding accept-encoding)
+                             (reap/content-encoding content-encoding)))))
       "gzip" "gzip" 1.0
       "gzip;q=0.8" "gzip" 0.8
       "gzip" "deflate" 0.0
@@ -269,21 +271,21 @@
       ;; "If no Accept-Encoding field is in the request, any content-coding is
       ;; considered acceptable by the user agent."
 
-        nil [[:gzip 1]
-             [:deflate 1]
-             [:gzip-then-deflate 1]
-             [:identity 1]
-             [:unspecified 1]]
+        #_nil #_[[:gzip 1]
+                 [:deflate 1]
+                 [:gzip-then-deflate 1]
+                 [:identity 1]
+                 [:unspecified 1]]
 
-        "gzip" [[:gzip 1]
-                [:deflate 0]
-                [:gzip-then-deflate 0]
-                [:identity 0]
+        "gzip" [[:gzip 1.0]
+                [:deflate 0.0]
+                [:gzip-then-deflate 0.0]
+                [:identity 0.0]
                 ;; "If the representation has no content-coding, then it is
                 ;; acceptable by default unless specifically excluded by the
                 ;; Accept-Encoding field stating either 'identity;q=0' or
                 ;; '*;q=0' without a more specific entry for 'identity'."
-                [:unspecified 1]]
+                [:unspecified 1.0]]
 
 
         )
