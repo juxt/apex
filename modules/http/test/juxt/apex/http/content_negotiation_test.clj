@@ -270,27 +270,61 @@
         "gzip" [[:gzip 1.0]
                 [:deflate 0.0]
                 [:gzip-then-deflate 0.0]
+
+                ;; TODO: Not sure about this - perhaps should be 1.0,
+                ;; clients can only forbid identity by explicit setting
+                ;; of qvalue to 0.0.
                 [:identity 0.0]
+
                 ;; "If the representation has no content-coding, then it is
                 ;; acceptable by default unless specifically excluded by the
                 ;; Accept-Encoding field stating either 'identity;q=0' or
                 ;; '*;q=0' without a more specific entry for 'identity'."
-                [:unspecified 1.0]])
+                [:unspecified 1.0]]
 
+        "deflate" [[:gzip 0.0]
+                   [:deflate 1.0]
+                   [:gzip-then-deflate 0.0]
 
-    (are [accept-encoding-header expected-id]
-        (=
-         expected-id
-         (:id (select-most-acceptable-representation
-               (cond-> (request :get "/hello")
-                 accept-encoding-header
-                 (update
-                  :headers conj
-                  ["accept-encoding" accept-encoding-header]))
-               variants)))
+                   ;; TODO: Not sure about this - perhaps should be 1.0,
+                   ;; clients can only forbid identity by explicit setting
+                   ;; of qvalue to 0.0.
+                   [:identity 0.0]
 
-      "gzip" :gzip
-;;      "gzip" :gzip
-      )
+                   [:unspecified 1.0]]
+
+        "deflate,gzip" [[:gzip 1.0]
+                        [:deflate 1.0]
+                        [:gzip-then-deflate 1.0]
+                        ;; TODO: Not sure about this - perhaps should be 1.0,
+                        ;; clients can only forbid identity by explicit setting
+                        ;; of qvalue to 0.0.
+                        [:identity 0.0]
+                        [:unspecified 1.0]]
+
+        "deflate;q=0.5,gzip;q=0.2"
+        [[:gzip 0.2]
+         [:deflate 0.5]
+         [:gzip-then-deflate 0.1]
+         ;; TODO: Not sure about this - perhaps should be 1.0,
+         ;; clients can only forbid identity by explicit setting
+         ;; of qvalue to 0.0.
+         [:identity 0.0]
+         [:unspecified 1.0]])
+
+    #_(are [accept-encoding-header expected-id]
+          (=
+           expected-id
+           (:id (select-most-acceptable-representation
+                 (cond-> (request :get "/hello")
+                   accept-encoding-header
+                   (update
+                    :headers conj
+                    ["accept-encoding" accept-encoding-header]))
+                 variants)))
+
+          "gzip" :gzip
+          "deflate" :deflate
+          )
 
     ))

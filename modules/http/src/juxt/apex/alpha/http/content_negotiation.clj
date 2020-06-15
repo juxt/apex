@@ -172,7 +172,7 @@
   "
   [parsed-accept-encoding-fields parsed-content-encoding]
 
-  (float
+  (double
    (reduce
     ;; For content-encodings with multiple codings, it feels sensible to
     ;; multiply the qvalues together. Any unsupported coding will yield a total
@@ -369,7 +369,9 @@
 
       ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
 
-      ;; TODO: Select the variants with the best encoding.
+      ;; Select the variants with the best encoding.
+      (fn [variants]
+        (select-max-by :apex.http.content-negotiation/encoding-qvalue variants))
 
       ;; TODO: Select the variants with the smallest content length.
 
