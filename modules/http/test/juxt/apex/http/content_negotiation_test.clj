@@ -218,8 +218,6 @@
 
 ;; See RFC 7231 5.3.4
 
-(long 11.99999)
-
 (deftest acceptable-encoding-rating-test
   (are [accept-encoding content-encoding expected-qvalue]
       (= (Math/rint (* 1000 expected-qvalue))
@@ -254,9 +252,8 @@
          {:id :identity
           :apex.http/content-encoding "identity"}
 
-         {:id :unspecified ;; content-encoding defaults to 'identity'
-          }
-         ]]
+         ;; content-encoding defaults to 'identity'
+         {:id :unspecified}]]
 
     (are [accept-encoding-header expected]
         (=
