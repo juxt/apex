@@ -240,13 +240,23 @@
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/language-qvalue qvalue]))))))
 
-(defn assign-encoding-quality [parsed-accept-encoding-fields]
+(defn assign-encoding-quality
+  "Returns a transducer that will apply a rating on each of a collection of
+  variants, according to the given parsed Accept-Encoding fields. This argument
+  can be nil, which is interpretted to mean that no Accept-Encoding header is
+  present."
+  [parsed-accept-encoding-fields]
   (keep
    (fn [variant]
      (let [qvalue
-           (acceptable-encoding-rating
-            parsed-accept-encoding-fields
-            (some-> variant :apex.http/content-encoding reap/content-encoding))]
+           (if parsed-accept-encoding-fields
+             (acceptable-encoding-rating
+              parsed-accept-encoding-fields
+              (some-> variant :apex.http/content-encoding reap/content-encoding))
+             ;; "If no Accept-Encoding field is in the request, any
+             ;; content-coding is considered acceptable by the user agent."
+             ;; -- RFC 7231 Section 5.3.4
+             1.0)]
        (cond-> variant
          qvalue (conj [:apex.http.content-negotiation/encoding-qvalue qvalue]))))))
 

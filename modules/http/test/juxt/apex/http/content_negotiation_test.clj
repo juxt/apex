@@ -271,11 +271,11 @@
       ;; "If no Accept-Encoding field is in the request, any content-coding is
       ;; considered acceptable by the user agent."
 
-        #_nil #_[[:gzip 1]
-                 [:deflate 1]
-                 [:gzip-then-deflate 1]
-                 [:identity 1]
-                 [:unspecified 1]]
+        nil [[:gzip 1.0]
+             [:deflate 1.0]
+             [:gzip-then-deflate 1.0]
+             [:identity 1.0]
+             [:unspecified 1.0]]
 
         "gzip" [[:gzip 1.0]
                 [:deflate 0.0]
@@ -285,10 +285,4 @@
                 ;; acceptable by default unless specifically excluded by the
                 ;; Accept-Encoding field stating either 'identity;q=0' or
                 ;; '*;q=0' without a more specific entry for 'identity'."
-                [:unspecified 1.0]]
-
-
-        )
-    )
-
-  )
+                [:unspecified 1.0]])))
