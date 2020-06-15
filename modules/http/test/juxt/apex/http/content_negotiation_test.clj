@@ -312,19 +312,37 @@
          [:identity 0.0]
          [:unspecified 1.0]])
 
-    #_(are [accept-encoding-header expected-id]
-          (=
-           expected-id
-           (:id (select-most-acceptable-representation
-                 (cond-> (request :get "/hello")
-                   accept-encoding-header
-                   (update
-                    :headers conj
-                    ["accept-encoding" accept-encoding-header]))
-                 variants)))
+    (are [accept-encoding-header expected-id]
+        (=
+         expected-id
+         (:id (select-most-acceptable-representation
+               (cond-> (request :get "/hello")
+                 accept-encoding-header
+                 (update
+                  :headers conj
+                  ["accept-encoding" accept-encoding-header]))
+               variants)))
 
-          "gzip" :gzip
-          "deflate" :deflate
-          )
+        "gzip" :gzip
+        "deflate" :deflate)))
 
-    ))
+
+#_(select-most-acceptable-representation
+   (-> (request :get "/hello")
+       (update
+        :headers conj
+        ["accept-encoding" "deflate"]))
+   [{:id :gzip
+     :apex.http/content-encoding "gzip"}
+
+    {:id :deflate
+     :apex.http/content-encoding "deflate"}
+
+    {:id :gzip-then-deflate
+     :apex.http/content-encoding "gzip,deflate"}
+
+    {:id :identity
+     :apex.http/content-encoding "identity"}
+
+    ;; content-encoding defaults to 'identity'
+    {:id :unspecified}])
