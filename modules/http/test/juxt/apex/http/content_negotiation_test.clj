@@ -234,7 +234,7 @@
 
 ;; TODO: Quality factors for encodings
 
-(deftest accept-encoding-test
+(deftest assign-encoding-quality-test
   (let [variants
         [{:id :gzip
           :apex.http/content-encoding "gzip"}
@@ -352,18 +352,66 @@
                       [:deflate 0.0]
                       [:gzip-then-deflate 0.0]
                       [:identity 0.0]
-                      [:unspecified 0.0]])
+                      [:unspecified 0.0]])))
 
-    (are [accept-encoding-header expected-id]
-        (=
-         expected-id
-         (:id (select-most-acceptable-representation
-               (cond-> (request :get "/hello")
-                 accept-encoding-header
-                 (update
-                  :headers conj
-                  ["accept-encoding" accept-encoding-header]))
-               variants)))
 
-        "gzip" :gzip
-        "deflate" :deflate)))
+(deftest accept-encoding-test
+  (are [accept-encoding-header variants expected-id]
+      (=
+       expected-id
+       (:id (select-most-acceptable-representation
+             (cond-> (request :get "/hello")
+               accept-encoding-header
+               (update
+                :headers conj
+                ["accept-encoding" accept-encoding-header]))
+             variants)))
+
+      "gzip"
+      [{:id :gzip
+        :apex.http/content-encoding "gzip"}]
+      :gzip
+
+      "deflate"
+      [{:id :deflate
+        :apex.http/content-encoding "deflate"}]
+      :deflate
+
+      "gzip;q=0.8,deflate"
+      [{:id :deflate
+        :apex.http/content-encoding "deflate"}
+       {:id :gzip
+        :apex.http/content-encoding "gzip"}
+       ]
+      :deflate
+
+      ;; Pick first acceptable variant as per variant order, rather than
+      ;; accept-encoding header order.
+      "gzip,deflate"
+      [{:id :deflate
+        :apex.http/content-encoding "deflate"}
+       {:id :gzip
+        :apex.http/content-encoding "gzip"}]
+      :deflate
+
+      "gzip,deflate"
+      [{:id :gzip-then-deflate
+        :apex.http/content-encoding "gzip,deflate"}
+       ]
+      :gzip-then-deflate
+
+      "gzip"
+      [{:id :gzip-then-deflate
+        :apex.http/content-encoding "gzip,deflate"}
+       {:id :identity}]
+      :identity
+
+      ;; "If an Accept-Encoding header field is present in a request and none of
+      ;; the available representations for the response have a content-coding
+      ;; that is listed as acceptable, the origin server SHOULD send a response
+      ;; without any content-coding." -- RFC 7231 Section 5.3.4
+      "br,compress"
+      [{:id :identity}
+       {:id :gzip :apex.http/content-encoding "gzip"}]
+      :identity
+      ))
