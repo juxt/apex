@@ -381,8 +381,7 @@
       [{:id :deflate
         :apex.http/content-encoding "deflate"}
        {:id :gzip
-        :apex.http/content-encoding "gzip"}
-       ]
+        :apex.http/content-encoding "gzip"}]
       :deflate
 
       ;; Pick first acceptable variant as per variant order, rather than
