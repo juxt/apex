@@ -396,8 +396,7 @@
 
       "gzip,deflate"
       [{:id :gzip-then-deflate
-        :apex.http/content-encoding "gzip,deflate"}
-       ]
+        :apex.http/content-encoding "gzip,deflate"}]
       :gzip-then-deflate
 
       "gzip"
@@ -413,5 +412,4 @@
       "br,compress"
       [{:id :identity}
        {:id :gzip :apex.http/content-encoding "gzip"}]
-      :identity
-      ))
+      :identity))
