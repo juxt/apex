@@ -26,8 +26,8 @@
            (reap/content-type content-type))
           [:qvalue :precedence])
          expected)
-      "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
-      "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
+    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
+    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
 
 ;; This test represents the table in RFC 7231 Section 5.3.2, where quality
 ;; values are determined from matching a variant's content-type according to
@@ -45,12 +45,12 @@
              accepts
              (reap/content-type content-type))))
 
-        "text/html;level=1" 1.0
-        "text/html" 0.7
-        "text/plain" 0.3
-        "image/jpeg" 0.5
-        "text/html;level=2" 0.4
-        "text/html;level=3" 0.7)))
+      "text/html;level=1" 1.0
+      "text/html" 0.7
+      "text/plain" 0.3
+      "image/jpeg" 0.5
+      "text/html;level=2" 0.4
+      "text/html;level=3" 0.7)))
 
 ;; RFC 7231 Section 5.3.5:
 ;; For example,
@@ -153,12 +153,12 @@
            (assign-language-quality accept-header)
            variants)))
 
-        "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
-        "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
-        "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
-        "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
-        "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
-        "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
+      "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
+      "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
+      "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
+      "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
+      "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
+      "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
 
 
     (are [accept-language-header expected-greeting]
@@ -171,19 +171,19 @@
                 :headers conj
                 ["accept-language" accept-language-header]))
              variants)))
-        "en" "Hello!"
-        "en-us" "Howdy!"
-        "ar-eg" "ألسّلام عليكم"
-        "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
-        "*" "Hello!"
-        "en-us,*;q=0.1" "Howdy!"
-        ;; No rules of precedence apply to languages. If a '*' has greater
-        ;; qvalue than another more specific language, it is still
-        ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
-        ;; selected because it comes before ar-eg.
-        "en-us;q=0.8,*" "Hello!"
+      "en" "Hello!"
+      "en-us" "Howdy!"
+      "ar-eg" "ألسّلام عليكم"
+      "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
+      "*" "Hello!"
+      "en-us,*;q=0.1" "Howdy!"
+      ;; No rules of precedence apply to languages. If a '*' has greater
+      ;; qvalue than another more specific language, it is still
+      ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
+      ;; selected because it comes before ar-eg.
+      "en-us;q=0.8,*" "Hello!"
 
-        nil "Hello!")
+      nil "Hello!")
 
     ;; If no Accept-Language header, just pick the first variant.
     (is (= "Hello!"
@@ -218,19 +218,21 @@
          (Math/rint (* 1000 (acceptable-encoding-rating
                              (reap/accept-encoding accept-encoding)
                              (reap/content-encoding content-encoding)))))
-      "gzip" "gzip" 1.0
-      "gzip;q=0.8" "gzip" 0.8
-      "gzip" "deflate" 0.0
-      "gzip,deflate" "gzip,deflate" 1.0
-      "gzip;q=0.8,deflate;q=0.5,*" "identity" 1.0
-      "gzip;q=0.8,deflate;q=0.5,*;q=0.1" "identity" 0.1
+    "gzip" "gzip" 1.0
+    "gzip;q=0.8" "gzip" 0.8
+    "gzip" "deflate" 0.0
+    "gzip,deflate" "gzip,deflate" 1.0
+    "gzip;q=0.8,deflate;q=0.5,*" "identity" 1.0
+    "gzip;q=0.8,deflate;q=0.5,*;q=0.1" "identity" 0.1
 
-      ;; Multiple codings applied to content, if all are acceptable, we
-      ;; determine the total qvalue with multiplication.
-      "gzip" "gzip,deflate" 0.0
-      "deflate" "gzip,deflate" 0.0
-      "gzip;q=0.9,deflate;q=0.5;compress;q=0.2" "gzip,deflate" 0.45
-      "gzip;q=0.4,deflate;q=0.5,compress;q=0.2" "gzip,deflate,compress" 0.04))
+    ;; Multiple codings applied to content, if all are acceptable, we
+    ;; determine the total qvalue with multiplication.
+    "gzip" "gzip,deflate" 0.0
+    "deflate" "gzip,deflate" 0.0
+    "gzip;q=0.9,deflate;q=0.5;compress;q=0.2" "gzip,deflate" 0.45
+    "gzip;q=0.4,deflate;q=0.5,compress;q=0.2" "gzip,deflate,compress" 0.04))
+
+;; TODO: Quality factors for encodings
 
 (deftest accept-encoding-test
   (let [variants
@@ -246,7 +248,7 @@
          {:id :identity
           :apex.http/content-encoding "identity"}
 
-         ;; content-encoding defaults to 'identity'
+         ;; :apex.http/content-encoding defaults to 'identity'
          {:id :unspecified}]]
 
     (are [accept-encoding-header expected]
@@ -258,9 +260,8 @@
            (assign-encoding-quality accept-encoding-header)
            variants)))
 
-      ;; "If no Accept-Encoding field is in the request, any content-coding is
+      ;; Rule 1: "If no Accept-Encoding field is in the request, any content-coding is
       ;; considered acceptable by the user agent."
-
         nil [[:gzip 1.0]
              [:deflate 1.0]
              [:gzip-then-deflate 1.0]
@@ -270,47 +271,88 @@
         "gzip" [[:gzip 1.0]
                 [:deflate 0.0]
                 [:gzip-then-deflate 0.0]
+                [:identity 1.0]
 
-                ;; TODO: Not sure about this - perhaps should be 1.0,
-                ;; clients can only forbid identity by explicit setting
-                ;; of qvalue to 0.0.
-                [:identity 0.0]
-
-                ;; "If the representation has no content-coding, then it is
-                ;; acceptable by default unless specifically excluded by the
-                ;; Accept-Encoding field stating either 'identity;q=0' or
-                ;; '*;q=0' without a more specific entry for 'identity'."
+                ;; Rule 2: "If the representation has no content-coding, then it
+                ;; is acceptable by default unless specifically excluded by the
+                ;; Accept-Encoding field stating either 'identity;q=0' or '*;q=0'
+                ;; without a more specific entry for 'identity'."
                 [:unspecified 1.0]]
 
         "deflate" [[:gzip 0.0]
                    [:deflate 1.0]
                    [:gzip-then-deflate 0.0]
-
-                   ;; TODO: Not sure about this - perhaps should be 1.0,
-                   ;; clients can only forbid identity by explicit setting
-                   ;; of qvalue to 0.0.
-                   [:identity 0.0]
-
+                   [:identity 1.0]
                    [:unspecified 1.0]]
+
+        "gzip,deflate;q=0.0" [[:gzip 1.0]
+                              [:deflate 0.0]
+                              [:gzip-then-deflate 0.0]
+                              [:identity 1.0]
+                              [:unspecified 1.0]]
+
+        ;; "The asterisk '*' symbol in an Accept-Encoding field matches any available
+        ;; content-coding not explicitly listed in the header field."
+        "*" [[:gzip 1.0]
+             [:deflate 1.0]
+             [:gzip-then-deflate 1.0]
+             [:identity 1.0]
+             [:unspecified 1.0]]
+
+        "gzip;q=0.5,*" [[:gzip 0.5]
+                        [:deflate 1.0]
+                        [:gzip-then-deflate 0.5]
+                        [:identity 1.0]
+                        [:unspecified 1.0]]
+
+        "*,gzip;q=0.5" [[:gzip 0.5]
+                        [:deflate 1.0]
+                        [:gzip-then-deflate 0.5]
+                        [:identity 1.0]
+                        [:unspecified 1.0]]
+
+        "gzip;q=0.5,*" [[:gzip 0.5]
+                        [:deflate 1.0]
+                        [:gzip-then-deflate 0.5]
+                        [:identity 1.0]
+                        [:unspecified 1.0]]
+
+        "gzip;q=0.5,*;q=0.2" [[:gzip 0.5]
+                              [:deflate 0.2]
+                              [:gzip-then-deflate 0.1]
+                              [:identity 0.2]
+                              [:unspecified 0.2]]
 
         "deflate,gzip" [[:gzip 1.0]
                         [:deflate 1.0]
                         [:gzip-then-deflate 1.0]
-                        ;; TODO: Not sure about this - perhaps should be 1.0,
-                        ;; clients can only forbid identity by explicit setting
-                        ;; of qvalue to 0.0.
-                        [:identity 0.0]
+                        [:identity 1.0]
                         [:unspecified 1.0]]
 
         "deflate;q=0.5,gzip;q=0.2"
         [[:gzip 0.2]
          [:deflate 0.5]
          [:gzip-then-deflate 0.1]
-         ;; TODO: Not sure about this - perhaps should be 1.0,
-         ;; clients can only forbid identity by explicit setting
-         ;; of qvalue to 0.0.
-         [:identity 0.0]
-         [:unspecified 1.0]])
+         [:identity 1.0]
+         [:unspecified 1.0]]
+
+        "gzip,identity;q=0.8" [[:gzip 1.0]
+                               [:deflate 0.0]
+                               [:gzip-then-deflate 0.0]
+                               [:identity 0.8]
+                               [:unspecified 0.8]]
+
+        "gzip,identity;q=0" [[:gzip 1.0]
+                             [:deflate 0.0]
+                             [:gzip-then-deflate 0.0]
+                             [:identity 0.0]
+                             [:unspecified 0.0]]
+
+        "gzip,*;q=0" [[:gzip 1.0]
+                      [:deflate 0.0]
+                      [:gzip-then-deflate 0.0]
+                      [:identity 0.0]
+                      [:unspecified 0.0]])
 
     (are [accept-encoding-header expected-id]
         (=

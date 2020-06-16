@@ -149,7 +149,8 @@
   variant, if there are no more preferable variants and if returning one is
   preferable to returning a 406 status code."
 
-  ;; TODO: Improve this function by allowing multiple language tags
+  ;; TODO: Improve this function by allowing multiple language tags and using
+  ;; multiplication.
 
   [parsed-accept-language-fields parsed-language-tag]
 
@@ -158,6 +159,43 @@
    {:qvalue 0.0
     :language-tag parsed-language-tag}
    parsed-accept-language-fields))
+
+
+
+(defn select-best-encoding-match [accept-encoding-fields entry]
+  (reduce
+   (fn [acc {accept-coding :codings :as field}]
+
+     (cond
+       (= accept-coding (get entry :content-coding "identity"))
+       (cond-> acc
+         (< (get acc :precedence) 2)
+         (conj [:qvalue (get field :qvalue 1.0)]
+               [:precedence 2]
+               [:apex.debug/parsed-accept-encoding-field field]))
+
+       (= accept-coding "*")
+       (cond-> acc
+         (= (get acc :precedence) 0)
+         (conj [:qvalue (get field :qvalue 1.0)]
+               [:precedence 1]
+               [:apex.debug/parsed-accept-encoding-field field]))
+
+       :else acc))
+
+   {:precedence 0
+    :qvalue (if
+                ;; "If the representation has no content-coding, then it is
+                ;; acceptable by default unless specifically excluded by the
+                ;; Accept-Encoding field stating either 'identity;q=0' or
+                ;; '*;q=0' without a more specific entry for 'identity'."
+                ;;
+                ;; -- RFC 7231 Section 5.3.4
+                (= (get entry :content-coding "identity") "identity")
+              1.0
+              0.0)}
+
+   accept-encoding-fields))
 
 
 (defn acceptable-encoding-rating
@@ -181,11 +219,8 @@
     ;; qvalue 0.0, while if all qvalues are 1.0, the total will be 1.0.
     *
     (for [entry parsed-content-encoding]
-      (reduce
-       max 0.0
-       (for [{accept-coding :codings :as field} parsed-accept-encoding-fields
-             :when (or (= accept-coding (get entry :content-coding "identity")) (= accept-coding "*"))]
-         (get field :qvalue 1.0)))))))
+      (:qvalue
+       (select-best-encoding-match parsed-accept-encoding-fields entry))))))
 
 ;; Apache httpd Negotiation Algorithm -- http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
@@ -265,7 +300,9 @@
              (if accept-encoding-fields
                (acceptable-encoding-rating
                 accept-encoding-fields
-                (some-> variant :apex.http/content-encoding reap/content-encoding-when-string))
+                (reap/content-encoding-when-string
+                 (get variant :apex.http/content-encoding "identity")))
+
                ;; "If no Accept-Encoding field is in the request, any
                ;; content-coding is considered acceptable by the user agent."
                ;; -- RFC 7231 Section 5.3.4
@@ -301,9 +338,7 @@
      (reap/accept-encoding
       (get-in
        request
-       [:headers "accept-encoding"]
-       ;; TODO: Should we do the same as above and replace with * ?
-       ))))
+       [:headers "accept-encoding"]))))
 
    ;; TODO: Repeat for other dimensions. Short circuit, so if 0 variants left,
    ;; don't keep parsing headers! But with one left, keep parsing because maybe
