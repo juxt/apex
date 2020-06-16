@@ -325,24 +325,3 @@
 
         "gzip" :gzip
         "deflate" :deflate)))
-
-
-#_(select-most-acceptable-representation
-   (-> (request :get "/hello")
-       (update
-        :headers conj
-        ["accept-encoding" "deflate"]))
-   [{:id :gzip
-     :apex.http/content-encoding "gzip"}
-
-    {:id :deflate
-     :apex.http/content-encoding "deflate"}
-
-    {:id :gzip-then-deflate
-     :apex.http/content-encoding "gzip,deflate"}
-
-    {:id :identity
-     :apex.http/content-encoding "identity"}
-
-    ;; content-encoding defaults to 'identity'
-    {:id :unspecified}])
