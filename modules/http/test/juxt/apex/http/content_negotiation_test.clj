@@ -13,7 +13,7 @@
 
 ;; TODO: test for content-type-match?
 
-;; TODO: Refactor and polish these tests so they are consistent with each other.
+;; TODO: Refactor and polish these tests so they are consistent with each other. Try to write this tests in a way that references each part of Section 5.3
 
 ;; TODO: Test for nils, blank strings, negative qvalues, malformed strings -
 ;; when and how should a 400 be signalled?
