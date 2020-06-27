@@ -12,11 +12,13 @@ some attachments, and returns a Ring handler.
 
 PRE-ALPHA:
 
-Apex consists of a set of Ring-compatible middleware, configured with
-OpenAPI. Some of this middleware will be marked as ready for use prior
-to others. For now, this project is being developed in the open for
-the purposes of soliticing feedback from the community and not
-recommended for actual use in systems.
+Apex libraries are broadly applied as
+https://github.com/ring-clojure/ring[Ring] middleware, where possible.
+
+Some of these libraries will be marked as ready for use prior to
+others. For now, this project is being developed in the open for the
+purposes sharing ideas and code and *not recommended* for use in
+production systems.
 
 == Getting started
 
@@ -28,7 +30,6 @@ Individual modules are:
 params:: An implementation of OpenAPI parameter parsing.
 
 oauth2:: An implementation of OpenID Connect upon OAuth2 driven by OpenID Connect Discovery configuration.
-
 
 == Objective
 
@@ -59,7 +60,8 @@ the web looked a little different than today:
 * Prismatic Schema was firmly established as the way to specify
   constraints on data.
 
-In the past five years we've seen a number of developments:
+In the years since yada was conceived, designed and developed, there
+have been a number of external developments:
 
 * Ring now has a
   https://github.com/ring-clojure/ring/blob/master/SPEC[well thought
@@ -74,8 +76,22 @@ In the past five years we've seen a number of developments:
   it so much we've even written our own Clojure library,
   https://github.com/juxt/jinx[jinx])
 
-* Metosin has developed a very nice content negotiation and coercion
-  library called https://github.com/metosin/muuntaja[Muuntaja]
+* https://vertx.io/[Vert.x], an asynchronous networking library on the
+  JVM has emerged and stabilised. It is well maintained, with an
+  active community. It is also based on Netty, providing a suitable
+  and comprehensive replacement for
+  https://github.com/ztellman/aleph[Aleph], adopted by yada. In
+  addition, it provides robust support for asynchronous
+  `multipart/formdata` requests.
+
+* http://www.reactive-streams.org/[Reactive Streams] has matured and
+  found its way into the core JDK (as
+  `java.util.concurrent.Flow`). While
+  https://github.com/ztellman/manifold[manifold], used by yada, was
+  years ahead of its time, there are now other well-established
+  alternatives for asynchronous processing with
+  back-pressure. https://www.asyncapi.com/[AsyncAPI] is also emerging
+  as an asynchronous complement to OpenAPI.
 
 === OpenAPI: the missing piece of the web jigsaw
 
@@ -101,12 +117,24 @@ shame, as it degrades the web for everyone. Web libraries like Apex
 should encourage compliance due to the multiplier effect of multiple
 applications built on them.
 
-
-
 == References
 
-https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests
-https://apisyouwonthate.com/blog/
+* https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests
+* https://apisyouwonthate.com/blog/
+* https://developer.mozilla.org/en-US/docs/Web/HTTP/Content_negotiation
+* http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
+* https://tools.ietf.org/html/rfc3253
+* https://tools.ietf.org/html/rfc4918
+* https://tools.ietf.org/html/rfc7230
+* https://tools.ietf.org/html/rfc7231
+* https://tools.ietf.org/html/rfc7232
+* https://tools.ietf.org/html/rfc7233
+* https://tools.ietf.org/html/rfc7234
+* https://tools.ietf.org/html/rfc7235
+* https://tools.ietf.org/html/rfc7237
+* https://tools.ietf.org/html/rfc7617
+* https://tools.ietf.org/html/rfc7616
+
 
 == License
 
