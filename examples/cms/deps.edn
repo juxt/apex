@@ -1,0 +1,57 @@
+;; Copyright © 2020, JUXT LTD.
+
+{:paths ["src"]
+ :deps
+ {juxt.apex/params {:local/root "../../modules/params"}
+  juxt.apex/html {:local/root "../../modules/html"}
+
+  juxt.apex/http {:local/root "../../modules/http"}
+  ;; Until transitive bug is fixed in deps.edn
+  juxt/reap {:local/root "../../../reap"}
+
+  juxt.apex/webdav {:local/root "../../modules/webdav"}
+
+  ;; Use Vert.x adapter
+  juxt.apex/vertx {:local/root "../../modules/vertx"}
+}
+
+ :aliases
+ {:dev
+  {:extra-paths ["dev" "test"]
+   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
+   :override-deps {juxt.edge/logging.dev {:local/root "dev/logging"}}
+   :extra-deps
+   {
+    ;; TODO: Replace ../edge with a git dep with :deps/root
+    ;; of 'lib/edge.app.dev':
+    juxt.edge/lib.app.dev {:local/root "../../../edge/lib/edge.app.dev"}
+    juxt.edge/lib.app.logging {:local/root "../../../edge/lib/edge.app.logging"}
+
+    org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
+
+    metosin/jsonista {:mvn/version "0.2.5"}
+
+    criterium {:mvn/version "0.4.5"}
+
+    ;; Crux CMS
+    juxt/crux-core {:mvn/version "20.05-1.8.3-alpha"}
+    org.asciidoctor/asciidoctorj {:mvn/version "2.2.0"}
+    selmer {:mvn/version "1.12.2"}
+
+    spyscope/spyscope {:mvn/version "0.1.6"
+                       :exclusions [fipp/fipp]}
+    fipp/fipp {:mvn/version "0.6.14"}}}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps
+   {
+    com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                               :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}
+    criterium {:mvn/version "0.4.5"}
+    hiccup {:mvn/version "2.0.0-alpha2"}}
+   :main-opts ["-m" "cognitect.test-runner"]}
+
+  :lint
+  {:extra-deps {clj-kondo {:mvn/version "RELEASE"}}
+   :main-opts ["-m" "clj-kondo.main" "--lint" "src/juxt"]}}}

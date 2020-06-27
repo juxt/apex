@@ -1,0 +1,266 @@
+[
+
+ ;; http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
+
+ ;; https://developer.mozilla.org/en-US/docs/Web/HTTP/Content_negotiation
+ ;; The overall resource, as well as each of the representations, have
+ ;; a specific URL.
+
+
+ {:crux.db/id #crux/uri "https://juxt.pro/test.html"
+  :apex.http/content-type "text/html;charset=utf-8"
+  :apex.http/content-language "en"
+  :apex.http/content "<h1>Hello World!</h1>\n"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/"
+  :apex.http/description "Redirects a / path to the index page"
+  :apex.http/status 302
+  :apex.http/location #crux/uri "/index.html"}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/favicon.ico"
+  :apex.http/content-type "image/x-icon"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/favicon.ico"
+  :apex.http/content-coding :base64
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/favicon.png"
+  :apex.http/content-type "image/png"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/favicon-16x16.png"
+  :apex.http/content-coding :base64
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/index.html"
+  :apex.http/content-type "text/html;charset=utf-8"
+  :apex.http/content-language "en"
+  :apex.selmer/template #crux/uri "index3.html"
+  :apex.asciidoctor/source #crux/uri "https://juxt.pro/_sources/plan/site/index.adoc"
+  :apex.http/classification :public
+  :title "JUXT"}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/_sources/plan/site/index.adoc"
+  ;; See https://github.com/asciidoctor/asciidoctor/issues/2502
+  :apex.http/content-type "text/asciidoc;charset=utf-8;variant=\"asciidoctor\""
+  :apex.http/content-language "en"
+  :apex.http/content-source #crux.cms/file "juxt.website/resources/documents/index.adoc"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/frontpage3.css"
+  :apex.http/content-type "text/css;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/target/dev/frontpage3.css"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/braids.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/index3/braids.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/time.png"
+  :apex.http/content-type "image/png"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/index3/time.png"
+  :apex.http/content-coding :base64
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/data.png"
+  :apex.http/content-type "image/png"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/index3/data.png"
+  :apex.http/content-coding :base64
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/form.png"
+  :apex.http/content-type "image/png"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/index3/form.png"
+  :apex.http/content-coding :base64
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/index3/code.png"
+  :apex.http/content-type "image/png"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/index3/code.png"
+  :apex.http/content-coding :base64
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/static/font-awesome/css/font-awesome.min.css"
+  :apex.http/content-type "text/css;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/font-awesome-4.5.0/css/font-awesome.min.css"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/scripts/lazysizes.min.js"
+  :apex.http/content-type "text/javascript;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/scripts/lazysizes.min.js"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/logo.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/logo.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/rocks.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/source-image #crux/uri "https://juxt.pro/img/rocks.jpg"
+  :apex.http/transform :resize
+  :apex.http/width 400
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/rocks.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/rocks.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/arrow.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/arrow.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/scripts/smoothscroll.js"
+  :apex.http/content-type "text/javascript;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/scripts/smoothscroll.js"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/scripts/frontpage.js"
+  :apex.http/content-type "text/javascript;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/scripts/frontpage.js"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/scripts/background.js"
+  :apex.http/content-type "text/javascript;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/scripts/background.js"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/media.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/lq/media.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/media.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/media.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/finance.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/lq/finance.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/finance.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/finance.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/public-sector.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/lq/public-sector.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/public-sector.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/public-sector.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/leaders-one.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/leaders-one.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/leaders-one.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/source-image #crux/uri "https://juxt.pro/img/leaders-one.jpg"
+  :apex.http/transform :resize
+  :apex.http/width 200
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/leaders-two.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/leaders-two.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/leaders-two.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/source-image #crux/uri "https://juxt.pro/img/leaders-two.jpg"
+  :apex.http/transform :resize
+  :apex.http/width 200
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/leaders-three.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/leaders-three.jpg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/lq/leaders-three.jpg"
+  :apex.http/content-type "image/jpeg"
+  :apex.http/content-coding :base64
+  :apex.http/source-image #crux/uri "https://juxt.pro/img/leaders-three.jpg"
+  :apex.http/transform :resize
+  :apex.http/width 200
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/github.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/github.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/linkedin.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/linkedin.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/twitter.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/twitter.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/img/user-footer.svg"
+  :apex.http/content-type "image/svg+xml;charset=utf-8"
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/img/user-footer.svg"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Regular.woff2"
+  :apex.http/content-type "font/woff"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Regular.woff2"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Italic.woff2"
+  :apex.http/content-type "font/woff"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Italic.woff2"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Bold.woff2"
+  :apex.http/content-type "font/woff"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Bold.woff2"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Thin.woff2"
+  :apex.http/content-type "font/woff"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Thin.woff2"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-Light.woff2"
+  :apex.http/content-type "font/woff"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-Light.woff2"
+  :apex.http/classification :public}
+
+ {:crux.db/id #crux/uri "https://juxt.pro/fonts/Lato-LightItalic.woff2"
+  :apex.http/content-type "font/woff"
+  :apex.http/content-coding :base64
+  :apex.http/content-source #crux.cms/file "juxt.website/assets/fonts/Lato-LightItalic.woff2"
+  :apex.http/classification :public}
+
+
+ ]
