@@ -1,0 +1,3 @@
+= Pick
+
+Content negotiation algorithm.
