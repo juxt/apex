@@ -98,30 +98,30 @@
 (deftest basic-language-match-test
   (is
    (basic-language-match?
-    (:language-range (first (reap/accept-language "en")))
-    (:langtag (first (reap/content-language "en")))))
+    (:juxt.reap.alpha/language-range (first (reap/accept-language "en")))
+    (:juxt.reap.alpha/langtag (first (reap/content-language "en")))))
 
   (is
    (basic-language-match?
-    (:language-range (first (reap/accept-language "de-de")))
-    (:langtag (first (reap/content-language "de-DE-1996")))))
+    (:juxt.reap.alpha/language-range (first (reap/accept-language "de-de")))
+    (:juxt.reap.alpha/langtag (first (reap/content-language "de-DE-1996")))))
 
   (is
    (not
     (basic-language-match?
-     (:language-range (first (reap/accept-language "de-de")))
-     (:langtag (first (reap/content-language "de-Latn-DE"))))))
+     (:juxt.reap.alpha/language-range (first (reap/accept-language "de-de")))
+     (:juxt.reap.alpha/langtag (first (reap/content-language "de-Latn-DE"))))))
 
   (is
    (not
     (basic-language-match?
-     (:language-range (first (reap/accept-language "en-gb")))
-     (:langtag (first (reap/content-language "en"))))))
+     (:juxt.reap.alpha/language-range (first (reap/accept-language "en-gb")))
+     (:juxt.reap.alpha/langtag (first (reap/content-language "en"))))))
 
   (is
    (basic-language-match?
-    (:language-range (first (reap/accept-language "*")))
-    (:langtag (first (reap/content-language "de"))))))
+    (:juxt.reap.alpha/language-range (first (reap/accept-language "*")))
+    (:juxt.reap.alpha/langtag (first (reap/content-language "de"))))))
 
 (deftest accept-language-test
   (let [variants
