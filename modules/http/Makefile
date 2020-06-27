@@ -1,7 +1,7 @@
 .PHONY: test
 
 test:
-	clojure -Atest
+	clojure -Atest && echo "apex/http:PASS" > /tmp/apex-http-test-status || echo "<span foreground='red'>apex/http:FAIL</span>" > /tmp/apex-http-test-status
 
 watch:
 	find . -name "*.clj" | entr make
