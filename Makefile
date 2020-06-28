@@ -2,7 +2,10 @@
 
 .DEFAULT_GOAL := test
 
-.PHONY: test
+.PHONY: test watch
 
 test:
-	clojure -Atest
+	make -C modules/http test
+
+watch:
+	make -C modules/http watch
