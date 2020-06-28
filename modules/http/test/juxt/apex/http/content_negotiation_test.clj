@@ -72,16 +72,16 @@
                 ["accept" accept-header]))
 
            [{:id :html
-             :apex.http/content "<h1>Hello World!</h1>"
-             :apex.http/content-type "text/html;charset=utf-8"}
+             :juxt.http/content "<h1>Hello World!</h1>"
+             :juxt.http/content-type "text/html;charset=utf-8"}
 
             {:id :html-level-2
-             :apex.http/content "<h1>Hello World!</h1>"
-             :apex.http/content-type "text/html;level=2;charset=utf-8"}
+             :juxt.http/content "<h1>Hello World!</h1>"
+             :juxt.http/content-type "text/html;level=2;charset=utf-8"}
 
             {:id :plain-text
-             :apex.http/content "Hello World!"
-             :apex.http/content-type "text/plain;charset=utf-8"}])))
+             :juxt.http/content "Hello World!"
+             :juxt.http/content-type "text/plain;charset=utf-8"}])))
 
     "text/html" :html
     "TEXT/HTML" :html
@@ -126,19 +126,19 @@
 (deftest accept-language-test
   (let [variants
         [{:id :en
-          :apex.http/content "Hello!"
-          :apex.http/content-language "en"}
+          :juxt.http/content "Hello!"
+          :juxt.http/content-language "en"}
 
          {:id :en-us
-          :apex.http/content-language "en-US"
+          :juxt.http/content-language "en-US"
           ;; https://en.wikipedia.org/wiki/Howdy
           ;; Not everyone in the US uses 'Howdy!' but this is just a test...
-          :apex.http/content "Howdy!"}
+          :juxt.http/content "Howdy!"}
 
 
          {:id :ar-eg
-          :apex.http/content-language "ar-eg,en"
-          :apex.http/content "ألسّلام عليكم"}
+          :juxt.http/content-language "ar-eg,en"
+          :juxt.http/content "ألسّلام عليكم"}
 
          ;; TODO: Test for when no content-language is specified - what should
          ;; we default to?
@@ -148,7 +148,7 @@
         (=
          expected
          (map
-          (juxt :id :apex.http.content-negotiation/language-qvalue)
+          (juxt :id :juxt.http.content-negotiation/language-qvalue)
           (sequence
            (assign-language-quality accept-header)
            variants)))
@@ -163,7 +163,7 @@
 
     (are [accept-language-header expected-greeting]
         (= expected-greeting
-           (:apex.http/content
+           (:juxt.http/content
             (select-most-acceptable-representation
              (cond-> (request :get "/hello")
                accept-language-header
@@ -187,7 +187,7 @@
 
     ;; If no Accept-Language header, just pick the first variant.
     (is (= "Hello!"
-           (:apex.http/content
+           (:juxt.http/content
             (select-most-acceptable-representation
              (-> (request :get "/hello"))
              variants))))
@@ -197,7 +197,7 @@
     (is
      (=
       "Bonjour!"
-      (:apex.http/content
+      (:juxt.http/content
        (select-most-acceptable-representation
         (-> (request :get "/hello")
             (update
@@ -206,9 +206,9 @@
         (conj
          variants
          {:id :fr-fr
-          :apex.http/content "Bonjour!"
-          :apex.http/content-language "fr-FR"
-          :apex.http/language-quality-factor 2})))))))
+          :juxt.http/content "Bonjour!"
+          :juxt.http/content-language "fr-FR"
+          :juxt.http/language-quality-factor 2})))))))
 
 ;; See RFC 7231 5.3.4
 
@@ -237,25 +237,25 @@
 (deftest assign-encoding-quality-test
   (let [variants
         [{:id :gzip
-          :apex.http/content-encoding "gzip"}
+          :juxt.http/content-encoding "gzip"}
 
          {:id :deflate
-          :apex.http/content-encoding "deflate"}
+          :juxt.http/content-encoding "deflate"}
 
          {:id :gzip-then-deflate
-          :apex.http/content-encoding "gzip,deflate"}
+          :juxt.http/content-encoding "gzip,deflate"}
 
          {:id :identity
-          :apex.http/content-encoding "identity"}
+          :juxt.http/content-encoding "identity"}
 
-         ;; :apex.http/content-encoding defaults to 'identity'
+         ;; :juxt.http/content-encoding defaults to 'identity'
          {:id :unspecified}]]
 
     (are [accept-encoding-header expected]
         (=
          expected
          (map
-          (juxt :id :apex.http.content-negotiation/encoding-qvalue)
+          (juxt :id :juxt.http.content-negotiation/encoding-qvalue)
           (sequence
            (assign-encoding-quality accept-encoding-header)
            variants)))
@@ -369,38 +369,38 @@
 
       "gzip"
       [{:id :gzip
-        :apex.http/content-encoding "gzip"}]
+        :juxt.http/content-encoding "gzip"}]
       :gzip
 
       "deflate"
       [{:id :deflate
-        :apex.http/content-encoding "deflate"}]
+        :juxt.http/content-encoding "deflate"}]
       :deflate
 
       "gzip;q=0.8,deflate"
       [{:id :deflate
-        :apex.http/content-encoding "deflate"}
+        :juxt.http/content-encoding "deflate"}
        {:id :gzip
-        :apex.http/content-encoding "gzip"}]
+        :juxt.http/content-encoding "gzip"}]
       :deflate
 
       ;; Pick first acceptable variant as per variant order, rather than
       ;; accept-encoding header order.
       "gzip,deflate"
       [{:id :deflate
-        :apex.http/content-encoding "deflate"}
+        :juxt.http/content-encoding "deflate"}
        {:id :gzip
-        :apex.http/content-encoding "gzip"}]
+        :juxt.http/content-encoding "gzip"}]
       :deflate
 
       "gzip,deflate"
       [{:id :gzip-then-deflate
-        :apex.http/content-encoding "gzip,deflate"}]
+        :juxt.http/content-encoding "gzip,deflate"}]
       :gzip-then-deflate
 
       "gzip"
       [{:id :gzip-then-deflate
-        :apex.http/content-encoding "gzip,deflate"}
+        :juxt.http/content-encoding "gzip,deflate"}
        {:id :identity}]
       :identity
 
@@ -410,5 +410,5 @@
       ;; without any content-coding." -- RFC 7231 Section 5.3.4
       "br,compress"
       [{:id :identity}
-       {:id :gzip :apex.http/content-encoding "gzip"}]
+       {:id :gzip :juxt.http/content-encoding "gzip"}]
       :identity))

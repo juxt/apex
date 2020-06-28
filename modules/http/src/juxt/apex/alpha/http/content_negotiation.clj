@@ -254,13 +254,13 @@
     (keep
      (fn [variant]
        (let [qvalue
-             (when-let [content-type (:apex.http/content-type variant)]
+             (when-let [content-type (:juxt.http/content-type variant)]
                (:qvalue
                 (acceptable-content-type-rating
                  parsed-accept-fields
                  (reap/content-type-when-string content-type))))]
          (cond-> variant
-           qvalue (conj [:apex.http.content-negotiation/content-type-qvalue qvalue])))))))
+           qvalue (conj [:juxt.http.content-negotiation/content-type-qvalue qvalue])))))))
 
 ;; TODO: Support nil arg
 (defn assign-language-quality [accept-language-fields-or-header]
@@ -269,7 +269,7 @@
     (keep
      (fn [variant]
        (let [qvalue
-             (when-let [content-language (:apex.http/content-language variant)]
+             (when-let [content-language (:juxt.http/content-language variant)]
                (:qvalue
                 (acceptable-language-rating
                  parsed-accept-language-fields
@@ -284,7 +284,7 @@
                  (first
                   (reap/content-language-when-string content-language)))))]
          (cond-> variant
-           qvalue (conj [:apex.http.content-negotiation/language-qvalue qvalue])))))))
+           qvalue (conj [:juxt.http.content-negotiation/language-qvalue qvalue])))))))
 
 (defn assign-encoding-quality
   "Returns a transducer that will apply a rating on each of a collection of
@@ -301,14 +301,14 @@
                (acceptable-encoding-rating
                 accept-encoding-fields
                 (reap/content-encoding-when-string
-                 (get variant :apex.http/content-encoding "identity")))
+                 (get variant :juxt.http/content-encoding "identity")))
 
                ;; "If no Accept-Encoding field is in the request, any
                ;; content-coding is considered acceptable by the user agent."
                ;; -- RFC 7231 Section 5.3.4
                1.0)]
          (cond-> variant
-           qvalue (conj [:apex.http.content-negotiation/encoding-qvalue qvalue])))))))
+           qvalue (conj [:juxt.http.content-negotiation/encoding-qvalue qvalue])))))))
 
 (defn rate-variants [request variants]
   (sequence
@@ -398,17 +398,17 @@
         ;; the variants with the highest value."
         (select-max-by
          (fn [variant]
-           (* (get variant :apex.http.content-negotiation/content-type-qvalue 1.0)
-              (get variant :apex.http/quality-of-source 1.0)))
+           (* (get variant :juxt.http.content-negotiation/content-type-qvalue 1.0)
+              (get variant :juxt.http/quality-of-source 1.0)))
          variants))
 
       ;; Select the variants with the highest language quality factor.
       (fn [variants]
-        (select-max-by #(get % :apex.http/language-quality-factor 1.0) variants))
+        (select-max-by #(get % :juxt.http/language-quality-factor 1.0) variants))
 
       ;; Select the variants with the best language match
       (fn [variants]
-        (select-max-by :apex.http.content-negotiation/language-qvalue variants))
+        (select-max-by :juxt.http.content-negotiation/language-qvalue variants))
 
       ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
 
@@ -418,7 +418,7 @@
 
       ;; Select the variants with the best encoding.
       (fn [variants]
-        (select-max-by :apex.http.content-negotiation/encoding-qvalue variants))
+        (select-max-by :juxt.http.content-negotiation/encoding-qvalue variants))
 
       ;; TODO: Select the variants with the smallest content length.
 
