@@ -6,7 +6,7 @@
    [juxt.apex.alpha.http.content-negotiation
     :refer [acceptable-content-type-rating
             assign-language-quality basic-language-match?
-            acceptable-encoding-rating assign-encoding-quality
+            acceptable-encoding-qvalue assign-encoding-quality
             select-most-acceptable-representation]]
    [juxt.reap.alpha.api :as reap]
    [ring.mock.request :refer [request]]))
@@ -212,10 +212,10 @@
 
 ;; See RFC 7231 5.3.4
 
-(deftest acceptable-encoding-rating-test
+(deftest acceptable-encoding-qvalue-test
   (are [accept-encoding content-encoding expected-qvalue]
       (= (Math/rint (* 1000 expected-qvalue))
-         (Math/rint (* 1000 (acceptable-encoding-rating
+         (Math/rint (* 1000 (acceptable-encoding-qvalue
                              (reap/accept-encoding accept-encoding)
                              (reap/content-encoding content-encoding)))))
     "gzip" "gzip" 1.0

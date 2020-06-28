@@ -198,7 +198,7 @@
    accept-encoding-fields))
 
 
-(defn acceptable-encoding-rating
+(defn acceptable-encoding-qvalue
   "Determine the qvalue for the given parsed content-encoding according to the
   given parsed Accept-Encoding header fields.
 
@@ -298,7 +298,7 @@
      (fn [variant]
        (let [qvalue
              (if accept-encoding-fields
-               (acceptable-encoding-rating
+               (acceptable-encoding-qvalue
                 accept-encoding-fields
                 (reap/content-encoding-when-string
                  (get variant :juxt.http/content-encoding "identity")))
