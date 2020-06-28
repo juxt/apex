@@ -87,15 +87,6 @@
     :content-type parsed-content-type}
    parsed-accept-fields))
 
-(defn debug-acceptable-content-type-rating
-  "Same as acceptable-content-type-rating but with reductions, for debugging."
-  [parsed-accept-fields parsed-content-type]
-  (reductions
-   select-better-content-type-match
-   {:qvalue 0.0
-    :content-type parsed-content-type}
-   parsed-accept-fields))
-
 (defn basic-language-match?
   "Basic filtering as per RFC 4647 Section 3.3.1."
   [^String language-range ^String language-tag]
