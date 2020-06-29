@@ -4,7 +4,8 @@
   (:require
    [clojure.test :refer [deftest is are]]
    [juxt.apex.alpha.http.content-negotiation
-    :refer [acceptable-content-type-rating
+    :refer [match-parameters? acceptable-content-type-rating
+            acceptable-charset-rating
             assign-language-quality basic-language-match?
             acceptable-encoding-qvalue assign-encoding-quality
             select-most-acceptable-representation]]
@@ -18,16 +19,35 @@
 ;; TODO: Test for nils, blank strings, negative qvalues, malformed strings -
 ;; when and how should a 400 be signalled?
 
+(deftest match-parameters-test
+  (is (match-parameters? nil nil))
+  (is (match-parameters? {} {}))
+  (is (match-parameters? {} {"level" "1" "foo" "bar"}))
+  (is (match-parameters? {"LEVEL" "1"} {"level" "1" "foo" "bar"}))
+  (is (not (match-parameters? {"LEVEL" "1"} {"level" "2" "foo" "bar"})))
+  (is (match-parameters? {"LEVEL" "1" "foo" "bar"} {"level" "1" "foo" "bar"}))
+  (is (not (match-parameters? {"LEVEL" "1" "foo" "bar"} {"level" "1" "foo" "baz"}))))
+
 (deftest acceptable-content-type-rating-test
   (are [content-type expected]
-      (= (select-keys
+      (= expected
+         (select-keys
           (acceptable-content-type-rating
-           (reap/accept "text/html;q=0.1,text/html;level=2;q=0.4,text/html;level=3;q=0.5")
+           (reap/accept "text/html;q=0.1,text/html;level=2;q=0.4,text/html;LEVEL=3;q=0.5,text/*;q=0.02,*/*;q=0.01")
            (reap/content-type content-type))
-          [:qvalue :precedence])
-         expected)
-    "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
-    "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}))
+          [:qvalue :precedence]))
+      "application/json" {:precedence 1 :qvalue 0.01}
+      "text/html" {:precedence 3 :qvalue 0.1}
+      "text/HTML" {:precedence 3 :qvalue 0.1}
+      "text/plain" {:precedence 2 :qvalue 0.02}
+      "TEXT/PLAIN" {:precedence 2 :qvalue 0.02}
+      "Text/plain" {:precedence 2 :qvalue 0.02}
+      "TEXT/HTML" {:precedence 3 :qvalue 0.1} ; case-insensitive
+      "text/html;charset=utf-8" {:precedence 3 :qvalue 0.1}
+      "text/html;level=2;charset=utf-8" {:precedence 4 :qvalue 0.4}
+      "text/html;LEVEL=2;charset=utf-8" {:precedence 4 :qvalue 0.4}
+      "text/html;level=3;charset=utf-8" {:precedence 4 :qvalue 0.5}
+      "text/html;LEVEL=3;charset=utf-8" {:precedence 4 :qvalue 0.5}))
 
 ;; This test represents the table in RFC 7231 Section 5.3.2, where quality
 ;; values are determined from matching a variant's content-type according to
@@ -45,12 +65,12 @@
              accepts
              (reap/content-type content-type))))
 
-      "text/html;level=1" 1.0
-      "text/html" 0.7
-      "text/plain" 0.3
-      "image/jpeg" 0.5
-      "text/html;level=2" 0.4
-      "text/html;level=3" 0.7)))
+        "text/html;level=1" 1.0
+        "text/html" 0.7
+        "text/plain" 0.3
+        "image/jpeg" 0.5
+        "text/html;level=2" 0.4
+        "text/html;level=3" 0.7)))
 
 ;; RFC 7231 Section 5.3.5:
 ;; For example,
@@ -93,6 +113,40 @@
     "TEXT/HTML;level=2;text/html;q=0.8" :html-level-2))
 
 ;; TODO: Test quality-of-source
+
+
+;; Turn these into tests
+
+(acceptable-charset-rating
+ (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8")
+ (reap/content-type "text/plain;charset=iso-8859-5"))
+
+(acceptable-charset-rating
+ (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8")
+ (reap/content-type "text/plain;charset=unicode-1-1"))
+
+(acceptable-charset-rating
+ (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8")
+ (reap/content-type "text/plain;charset=utf-8"))
+
+(acceptable-charset-rating
+ (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8,*")
+ (reap/content-type "text/plain;charset=utf-8"))
+
+
+;; TODO: API should be:-
+{:variants []
+ :explain? false
+ }
+
+;; Result should be
+
+{:variants [] ; an ordered list of variants, callers can choose the first 1
+              ; acceptable, the first N acceptable (300) or an unacceptable.
+ :vary [] ; list of headers that were could influence the selection
+ :explain {} ; an explain, if requested (could be embedded in each of the variants)
+ }
+
 
 ;; This test represents the example in RFC 4647 Section 3.3.1.
 (deftest basic-language-match-test
