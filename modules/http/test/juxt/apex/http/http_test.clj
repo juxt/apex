@@ -76,11 +76,12 @@
 
               http/ContentNegotiation
               (best-representation [provider resource request]
-                (conneg/select-most-acceptable-representation
-                 {:juxt.http/request
-                  request
-                  :juxt.http/variants
-                  (map #(http/lookup-resource provider %) (:apex.http/variants resource))}))
+                (:juxt.http/variant
+                 (conneg/select-variant
+                  {:juxt.http/request
+                   request
+                   :juxt.http/variants
+                   (map #(http/lookup-resource provider %) (:apex.http/variants resource))})))
 
               http/ResponseBody
               (send-ok-response
