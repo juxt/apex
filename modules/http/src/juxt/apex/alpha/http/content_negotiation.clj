@@ -5,6 +5,8 @@
    [juxt.reap.alpha.api :as reap]
    [clojure.string :as str]))
 
+;; TODO: Re-order for consistency: content-type, charset, encoding, language
+
 (defn match-parameters?
   "Return true if all parameters in the accept parameters, are matched by values
   in the content map. Keys are case insensitive, but always lower-case in the
@@ -326,6 +328,7 @@
          (cond-> variant
            qvalue (conj [:juxt.http.content-negotiation/language-qvalue qvalue])))))))
 
+;; TODO: Support nil arg, meaning, accept-encoding header not sent
 (defn assign-encoding-quality
   "Returns a transducer that will apply a rating on each of a collection of
   variants, according to the given parsed Accept-Encoding fields. This argument
@@ -354,6 +357,9 @@
   (sequence
 
    (comp
+
+    ;; TODO: Below, support nil args rather than change the accept header -
+    ;; otherwise this will create ambiguity and confusion in the Explain.
 
     (assign-content-type-quality
      (get-in

@@ -12,6 +12,8 @@
    [juxt.reap.alpha.api :as reap]
    [ring.mock.request :refer [request]]))
 
+;; TODO: Re-order for consistency: content-type, charset, encoding, language
+
 ;; TODO: test for content-type-match?
 
 ;; TODO: Refactor and polish these tests so they are consistent with each other. Try to write this tests in a way that references each part of Section 5.3
