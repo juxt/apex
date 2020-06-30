@@ -23,15 +23,15 @@
   [parsed-accept-field parsed-content-type]
   (cond
     (and
-     (.equalsIgnoreCase (:juxt.reap.alpha/type parsed-accept-field) (:juxt.reap.alpha/type parsed-content-type))
-     (.equalsIgnoreCase (:juxt.reap.alpha/subtype parsed-accept-field) (:juxt.reap.alpha/subtype parsed-content-type))
+     (.equalsIgnoreCase (:juxt.http/type parsed-accept-field) (:juxt.http/type parsed-content-type))
+     (.equalsIgnoreCase (:juxt.http/subtype parsed-accept-field) (:juxt.http/subtype parsed-content-type))
      ;; Try to match on all the parameters asked for in the accept,
      ;; but discard all others in the content type.
-     (pos? (count (:juxt.reap.alpha/parameters parsed-accept-field)))
+     (pos? (count (:juxt.http/parameters parsed-accept-field)))
      ;; TODO:
      (match-parameters?
-      (:juxt.reap.alpha/parameters parsed-accept-field)
-      (:juxt.reap.alpha/parameter-map parsed-content-type)))
+      (:juxt.http/parameters parsed-accept-field)
+      (:juxt.http/parameter-map parsed-content-type)))
 
     ;; The precedence could be 3, plus the number of parameters in the
     ;; accept. For now, we don't include the count of the parameters
@@ -39,19 +39,19 @@
     4
 
     (and
-     (.equalsIgnoreCase (:juxt.reap.alpha/type parsed-accept-field) (:juxt.reap.alpha/type parsed-content-type))
-     (.equalsIgnoreCase (:juxt.reap.alpha/subtype parsed-accept-field) (:juxt.reap.alpha/subtype parsed-content-type))
-     (zero? (count (:juxt.reap.alpha/parameters parsed-accept-field))))
+     (.equalsIgnoreCase (:juxt.http/type parsed-accept-field) (:juxt.http/type parsed-content-type))
+     (.equalsIgnoreCase (:juxt.http/subtype parsed-accept-field) (:juxt.http/subtype parsed-content-type))
+     (zero? (count (:juxt.http/parameters parsed-accept-field))))
     3
 
     (and
-     (.equalsIgnoreCase (:juxt.reap.alpha/type parsed-accept-field) (:juxt.reap.alpha/type parsed-content-type))
-     (= "*" (:juxt.reap.alpha/subtype parsed-accept-field)))
+     (.equalsIgnoreCase (:juxt.http/type parsed-accept-field) (:juxt.http/type parsed-content-type))
+     (= "*" (:juxt.http/subtype parsed-accept-field)))
     2
 
     (and
-     (= "*" (:juxt.reap.alpha/type parsed-accept-field))
-     (= "*" (:juxt.reap.alpha/subtype parsed-accept-field)))
+     (= "*" (:juxt.http/type parsed-accept-field))
+     (= "*" (:juxt.http/subtype parsed-accept-field)))
     1))
 
 (defn- select-better-content-type-match
@@ -62,7 +62,7 @@
   [best-match parsed-accept-field]
 
   (let [precedence (content-type-match? parsed-accept-field (:content-type best-match))
-        qvalue (get parsed-accept-field :juxt.reap.alpha/qvalue 1.0)]
+        qvalue (get parsed-accept-field :juxt.http/qvalue 1.0)]
 
     (cond-> best-match
       (and
@@ -100,24 +100,22 @@
     :content-type parsed-content-type}
    parsed-accept-fields))
 
-;; TODO: Rename keyword ns from juxt.reap.alpha to juxt.http (in reap and in this code)
-
 (defn acceptable-charset-rating
   [parsed-accept-charset-fields parsed-content-type]
-  (when-let [charset (get-in parsed-content-type [:juxt.reap.alpha/parameter-map "charset"])]
+  (when-let [charset (get-in parsed-content-type [:juxt.http/parameter-map "charset"])]
     (reduce
      (fn [best-match field]
        (cond
-         (= charset (:juxt.reap.alpha/charset field))
+         (= charset (:juxt.http/charset field))
          (cond-> best-match
            (< (get best-match :precedence) 2)
-           (conj [:qvalue (get field :juxt.reap.alpha/qvalue 1.0)]
+           (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
                  [:precedence 2]
                  [:apex.debug/parsed-accept-charset-field field]))
-         (= "*" (:juxt.reap.alpha/charset field))
+         (= "*" (:juxt.http/charset field))
          (cond-> best-match
            (= (get best-match :precedence) 0)
-           (conj [:qvalue (get field :juxt.reap.alpha/qvalue 1.0)]
+           (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
                  [:precedence 1]
                  [:apex.debug/parsed-accept-charset-field field]))
          :else best-match))
@@ -151,13 +149,13 @@
 
 (defn- select-better-language-match
   [best-match parsed-accept-language-field]
-  (let [qvalue (get parsed-accept-language-field :juxt.reap.alpha/qvalue 1.0)]
+  (let [qvalue (get parsed-accept-language-field :juxt.http/qvalue 1.0)]
     (cond-> best-match
       (and
        (> qvalue (get best-match :qvalue 0.0))
        (basic-language-match?
-        (:juxt.reap.alpha/language-range parsed-accept-language-field)
-        (get-in best-match [:language-tag :juxt.reap.alpha/langtag])))
+        (:juxt.http/language-range parsed-accept-language-field)
+        (get-in best-match [:language-tag :juxt.http/langtag])))
       (conj
        [:qvalue qvalue]
        [:apex.debug/parsed-accept-language-field parsed-accept-language-field]))))
@@ -189,24 +187,22 @@
     :language-tag parsed-language-tag}
    parsed-accept-language-fields))
 
-
-
 (defn select-best-encoding-match [accept-encoding-fields entry]
   (reduce
-   (fn [best-match {accept-coding :juxt.reap.alpha/codings :as field}]
+   (fn [best-match {accept-coding :juxt.http/codings :as field}]
 
      (cond
-       (= accept-coding (get entry :juxt.reap.alpha/content-coding "identity"))
+       (= accept-coding (get entry :juxt.http/content-coding "identity"))
        (cond-> best-match
          (< (get best-match :precedence) 2)
-         (conj [:qvalue (get field :juxt.reap.alpha/qvalue 1.0)]
+         (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
                [:precedence 2]
                [:apex.debug/parsed-accept-encoding-field field]))
 
        (= accept-coding "*")
        (cond-> best-match
          (= (get best-match :precedence) 0)
-         (conj [:qvalue (get field :juxt.reap.alpha/qvalue 1.0)]
+         (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
                [:precedence 1]
                [:apex.debug/parsed-accept-encoding-field field]))
 
@@ -220,7 +216,7 @@
                 ;; '*;q=0' without a more specific entry for 'identity'."
                 ;;
                 ;; -- RFC 7231 Section 5.3.4
-                (= (get entry :juxt.reap.alpha/content-coding "identity") "identity")
+                (= (get entry :juxt.http/content-coding "identity") "identity")
               1.0
               0.0)}
 
