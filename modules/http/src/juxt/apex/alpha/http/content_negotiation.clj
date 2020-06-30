@@ -447,7 +447,7 @@
   "Implementation of the Apache httpd content-negotiation algorithm detailed at
   https://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm"
 
-  [request variants]
+  [{:juxt.http/keys [request variants]}]
 
   (let [representations (rate-variants request variants)]
 

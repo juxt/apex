@@ -86,31 +86,32 @@
       (= expected-content
          (:id
           (select-most-acceptable-representation
-           (-> (request :get "/hello")
-               (update
-                :headers conj
-                ["accept" accept-header]))
+           {:juxt.http/request
+            (-> (request :get "/hello")
+                (update
+                 :headers conj
+                 ["accept" accept-header]))
+            :juxt.http/variants
+            [{:id :html
+              :juxt.http/content "<h1>Hello World!</h1>"
+              :juxt.http/content-type "text/html;charset=utf-8"}
 
-           [{:id :html
-             :juxt.http/content "<h1>Hello World!</h1>"
-             :juxt.http/content-type "text/html;charset=utf-8"}
+             {:id :html-level-2
+              :juxt.http/content "<h1>Hello World!</h1>"
+              :juxt.http/content-type "text/html;level=2;charset=utf-8"}
 
-            {:id :html-level-2
-             :juxt.http/content "<h1>Hello World!</h1>"
-             :juxt.http/content-type "text/html;level=2;charset=utf-8"}
+             {:id :plain-text
+              :juxt.http/content "Hello World!"
+              :juxt.http/content-type "text/plain;charset=utf-8"}]})))
 
-            {:id :plain-text
-             :juxt.http/content "Hello World!"
-             :juxt.http/content-type "text/plain;charset=utf-8"}])))
+      "text/html" :html
+      "TEXT/HTML" :html
 
-    "text/html" :html
-    "TEXT/HTML" :html
+      "text/html;q=0.8,text/plain;q=0.7" :html
+      "text/plain" :plain-text
+      "text/html;q=0.8,text/plain" :plain-text
 
-    "text/html;q=0.8,text/plain;q=0.7" :html
-    "text/plain" :plain-text
-    "text/html;q=0.8,text/plain" :plain-text
-
-    "TEXT/HTML;level=2;text/html;q=0.8" :html-level-2))
+      "TEXT/HTML;level=2;text/html;q=0.8" :html-level-2))
 
 ;; TODO: Test quality-of-source
 
@@ -140,20 +141,6 @@
       "iso-8859-5, unicode-1-1;q=0.8,*"
       "text/plain;charset=utf-8"
       {:qvalue 1.0 :precedence 1}))
-
-;; TODO: API should be:-
-
-{:variants []
- :explain? false
- }
-
-;; Result should be
-
-{:variants [] ; an ordered list of variants, callers can choose the first 1
-              ; acceptable, the first N acceptable (300) or an unacceptable.
- :vary [] ; list of headers that were could influence the selection
- :explain {} ; an explain, if requested (could be embedded in each of the variants)
- }
 
 ;; See RFC 7231 Section 5.3.4: Accept-Encoding
 
@@ -305,12 +292,13 @@
       (=
        expected-id
        (:id (select-most-acceptable-representation
-             (cond-> (request :get "/hello")
-               accept-encoding-header
-               (update
-                :headers conj
-                ["accept-encoding" accept-encoding-header]))
-             variants)))
+             {:juxt.http/request
+              (cond-> (request :get "/hello")
+                accept-encoding-header
+                (update
+                 :headers conj
+                 ["accept-encoding" accept-encoding-header]))
+              :juxt.http/variants variants})))
 
       "gzip"
       [{:id :gzip
@@ -419,44 +407,45 @@
            (assign-language-quality accept-header)
            variants)))
 
-      "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
-      "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
-      "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
-      "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
-      "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
-      "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
+        "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
+        "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
+        "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
+        "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
+        "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
+        "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
 
 
     (are [accept-language-header expected-greeting]
         (= expected-greeting
            (:juxt.http/content
             (select-most-acceptable-representation
-             (cond-> (request :get "/hello")
-               accept-language-header
-               (update
-                :headers conj
-                ["accept-language" accept-language-header]))
-             variants)))
-      "en" "Hello!"
-      "en-us" "Howdy!"
-      "ar-eg" "ألسّلام عليكم"
-      "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
-      "*" "Hello!"
-      "en-us,*;q=0.1" "Howdy!"
-      ;; No rules of precedence apply to languages. If a '*' has greater
-      ;; qvalue than another more specific language, it is still
-      ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
-      ;; selected because it comes before ar-eg.
-      "en-us;q=0.8,*" "Hello!"
+             {:juxt.http/request
+              (cond-> (request :get "/hello")
+                accept-language-header
+                (update
+                 :headers conj
+                 ["accept-language" accept-language-header]))
+              :juxt.http/variants variants})))
+        "en" "Hello!"
+        "en-us" "Howdy!"
+        "ar-eg" "ألسّلام عليكم"
+        "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
+        "*" "Hello!"
+        "en-us,*;q=0.1" "Howdy!"
+        ;; No rules of precedence apply to languages. If a '*' has greater
+        ;; qvalue than another more specific language, it is still
+        ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
+        ;; selected because it comes before ar-eg.
+        "en-us;q=0.8,*" "Hello!"
 
-      nil "Hello!")
+        nil "Hello!")
 
     ;; If no Accept-Language header, just pick the first variant.
     (is (= "Hello!"
            (:juxt.http/content
             (select-most-acceptable-representation
-             (-> (request :get "/hello"))
-             variants))))
+             {:juxt.http/request (-> (request :get "/hello"))
+              :juxt.http/variants variants}))))
 
     ;; The language quality factor of a variant, if present, is used in
     ;; preference to an Accept-Language header.
@@ -465,13 +454,32 @@
       "Bonjour!"
       (:juxt.http/content
        (select-most-acceptable-representation
-        (-> (request :get "/hello")
-            (update
-             :headers conj
-             ["accept-language" "en"]))
-        (conj
-         variants
-         {:id :fr-fr
-          :juxt.http/content "Bonjour!"
-          :juxt.http/content-language "fr-FR"
-          :juxt.http/language-quality-factor 2})))))))
+        {:juxt.http/request
+         (-> (request :get "/hello")
+             (update
+              :headers conj
+              ["accept-language" "en"]))
+         :juxt.http/variants
+         (conj
+          variants
+          {:id :fr-fr
+           :juxt.http/content "Bonjour!"
+           :juxt.http/content-language "fr-FR"
+           :juxt.http/language-quality-factor 2})}))))))
+
+
+;; TODO: Write some tests for the expected Explain
+
+;; TODO: API should be:-
+
+{:variants []
+ :explain? false
+ }
+
+;; Result should be
+
+{:variants [] ; an ordered list of variants, callers can choose the first 1
+              ; acceptable, the first N acceptable (300) or an unacceptable.
+ :vary [] ; list of headers that were could influence the selection
+ :explain {} ; an explain, if requested (could be embedded in each of the variants)
+ }
