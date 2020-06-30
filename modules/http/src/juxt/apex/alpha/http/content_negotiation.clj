@@ -272,7 +272,7 @@
 ;;     The algorithm has now selected one 'best' variant, so return it as the response. The HTTP response header Vary is set to indicate the dimensions of negotiation (browsers and caches can use this information when caching the resource). End.
 ;;     To get here means no variant was selected (because none are acceptable to the browser). Return a 406 status (meaning "No acceptable representation") with a response body consisting of an HTML document listing the available variants. Also set the HTTP Vary header to indicate the dimensions of variance.
 
-;; TODO: Support nil arg
+;; TODO: Support nil arg, meaning, accept header not sent
 (defn assign-content-type-quality [accept-fields-or-header]
   (let [parsed-accept-fields
         (reap/accept-when-string accept-fields-or-header)]
@@ -287,7 +287,22 @@
          (cond-> variant
            qvalue (conj [:juxt.http.content-negotiation/content-type-qvalue qvalue])))))))
 
-;; TODO: Support nil arg
+;; TODO: Support nil arg, meaning, accept-charset header not sent
+(defn assign-charset-quality [accept-charset-fields-or-header]
+  (let [parsed-accept-charset-fields
+        (reap/accept-charset-when-string accept-charset-fields-or-header)]
+    (keep
+     (fn [variant]
+       (let [qvalue
+             (when-let [content-type (:juxt.http/content-type variant)]
+               (:qvalue
+                (acceptable-charset-rating
+                 parsed-accept-charset-fields
+                 (reap/content-type-when-string content-type))))]
+         (cond-> variant
+           qvalue (conj [:juxt.http.content-negotiation/charset-qvalue qvalue])))))))
+
+;; TODO: Support nil arg, meaning, accept-language header not sent
 (defn assign-language-quality [accept-language-fields-or-header]
   (let [parsed-accept-language-fields
         (reap/accept-language-when-string accept-language-fields-or-header)]
@@ -345,7 +360,7 @@
       request
       [:headers "accept"]
       ;; "A request without any Accept header field implies that the user
-      ;; agent will accept any media type in response". -- test for this
+      ;; agent will accept any media type in response". (TODO: test for this)
       ;; -- RFC 7231 Section 5.3.2
       "*/*"))
 
@@ -363,7 +378,23 @@
      (reap/accept-encoding
       (get-in
        request
-       [:headers "accept-encoding"]))))
+
+       ;; "A request without an Accept-Encoding header field implies that the
+       ;; user agent has no preferences regarding content-codings.  Although
+       ;; this allows the server to use any content-coding in a response, it
+       ;; does not imply that the user agent will be able to correctly process
+       ;; all encodings."
+       ;; -- RFC 7231 Section 5.3.4
+       [:headers "accept-encoding"])))
+
+    (assign-charset-quality
+     (get-in
+      request
+      [:headers "accept-charset"]
+      ;; "A request without any Accept-Charset header field implies that the
+      ;; user agent will accept any charset in response. ". (TODO: test for this)
+      ;; -- RFC 7231 Section 5.3.3
+      "*")))
 
    ;; TODO: Repeat for other dimensions. Short circuit, so if 0 variants left,
    ;; don't keep parsing headers! But with one left, keep parsing because maybe
@@ -437,7 +468,9 @@
 
       ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
 
-      ;; TODO: Select variants with the best charset media parameters, as given on the Accept-Charset header line.
+      ;; Select variants with the best charset media parameters, as given on the Accept-Charset header line.
+      (fn [variants]
+        (select-max-by :juxt.http.content-negotiation/charset-qvalue variants))
 
       ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
 
