@@ -114,27 +114,33 @@
 
 ;; TODO: Test quality-of-source
 
+(deftest acceptable-charset-rating-test
+  (are [accept-charset content-type expected]
+      (= expected
+         (->
+          (acceptable-charset-rating
+           (reap/accept-charset accept-charset)
+           (reap/content-type content-type))
+          (select-keys [:qvalue :precedence])))
 
-;; Turn these into tests
+      "iso-8859-5, unicode-1-1;q=0.8"
+      "text/plain;charset=iso-8859-5"
+      {:qvalue 1.0 :precedence 2}
 
-(acceptable-charset-rating
- (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8")
- (reap/content-type "text/plain;charset=iso-8859-5"))
+      "iso-8859-5, unicode-1-1;q=0.8"
+      "text/plain;charset=unicode-1-1"
+      {:qvalue 0.8 :precedence 2}
 
-(acceptable-charset-rating
- (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8")
- (reap/content-type "text/plain;charset=unicode-1-1"))
+      "iso-8859-5, unicode-1-1;q=0.8"
+      "text/plain;charset=utf-8"
+      {:qvalue 0.0 :precedence 0}
 
-(acceptable-charset-rating
- (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8")
- (reap/content-type "text/plain;charset=utf-8"))
-
-(acceptable-charset-rating
- (reap/accept-charset "iso-8859-5, unicode-1-1;q=0.8,*")
- (reap/content-type "text/plain;charset=utf-8"))
-
+      "iso-8859-5, unicode-1-1;q=0.8,*"
+      "text/plain;charset=utf-8"
+      {:qvalue 1.0 :precedence 1}))
 
 ;; TODO: API should be:-
+
 {:variants []
  :explain? false
  }
