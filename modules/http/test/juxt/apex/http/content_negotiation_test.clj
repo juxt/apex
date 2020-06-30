@@ -12,8 +12,6 @@
    [juxt.reap.alpha.api :as reap]
    [ring.mock.request :refer [request]]))
 
-;; TODO: Re-order for consistency: content-type, charset, encoding, language
-
 ;; TODO: test for content-type-match?
 
 ;; TODO: Refactor and polish these tests so they are consistent with each other. Try to write this tests in a way that references each part of Section 5.3
@@ -116,6 +114,8 @@
 
 ;; TODO: Test quality-of-source
 
+;; See RFC 7231 Section 5.3.3: Accept-Charset
+
 (deftest acceptable-charset-rating-test
   (are [accept-charset content-type expected]
       (= expected
@@ -155,124 +155,7 @@
  :explain {} ; an explain, if requested (could be embedded in each of the variants)
  }
 
-
-;; This test represents the example in RFC 4647 Section 3.3.1.
-(deftest basic-language-match-test
-  (is
-   (basic-language-match?
-    (:juxt.http/language-range (first (reap/accept-language "en")))
-    (:juxt.http/langtag (first (reap/content-language "en")))))
-
-  (is
-   (basic-language-match?
-    (:juxt.http/language-range (first (reap/accept-language "de-de")))
-    (:juxt.http/langtag (first (reap/content-language "de-DE-1996")))))
-
-  (is
-   (not
-    (basic-language-match?
-     (:juxt.http/language-range (first (reap/accept-language "de-de")))
-     (:juxt.http/langtag (first (reap/content-language "de-Latn-DE"))))))
-
-  (is
-   (not
-    (basic-language-match?
-     (:juxt.http/language-range (first (reap/accept-language "en-gb")))
-     (:juxt.http/langtag (first (reap/content-language "en"))))))
-
-  (is
-   (basic-language-match?
-    (:juxt.http/language-range (first (reap/accept-language "*")))
-    (:juxt.http/langtag (first (reap/content-language "de"))))))
-
-(deftest accept-language-test
-  (let [variants
-        [{:id :en
-          :juxt.http/content "Hello!"
-          :juxt.http/content-language "en"}
-
-         {:id :en-us
-          :juxt.http/content-language "en-US"
-          ;; https://en.wikipedia.org/wiki/Howdy
-          ;; Not everyone in the US uses 'Howdy!' but this is just a test...
-          :juxt.http/content "Howdy!"}
-
-
-         {:id :ar-eg
-          :juxt.http/content-language "ar-eg,en"
-          :juxt.http/content "ألسّلام عليكم"}
-
-         ;; TODO: Test for when no content-language is specified - what should
-         ;; we default to?
-         ]]
-
-    (are [accept-header expected]
-        (=
-         expected
-         (map
-          (juxt :id :juxt.http.content-negotiation/language-qvalue)
-          (sequence
-           (assign-language-quality accept-header)
-           variants)))
-
-      "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
-      "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
-      "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
-      "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
-      "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
-      "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
-
-
-    (are [accept-language-header expected-greeting]
-        (= expected-greeting
-           (:juxt.http/content
-            (select-most-acceptable-representation
-             (cond-> (request :get "/hello")
-               accept-language-header
-               (update
-                :headers conj
-                ["accept-language" accept-language-header]))
-             variants)))
-      "en" "Hello!"
-      "en-us" "Howdy!"
-      "ar-eg" "ألسّلام عليكم"
-      "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
-      "*" "Hello!"
-      "en-us,*;q=0.1" "Howdy!"
-      ;; No rules of precedence apply to languages. If a '*' has greater
-      ;; qvalue than another more specific language, it is still
-      ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
-      ;; selected because it comes before ar-eg.
-      "en-us;q=0.8,*" "Hello!"
-
-      nil "Hello!")
-
-    ;; If no Accept-Language header, just pick the first variant.
-    (is (= "Hello!"
-           (:juxt.http/content
-            (select-most-acceptable-representation
-             (-> (request :get "/hello"))
-             variants))))
-
-    ;; The language quality factor of a variant, if present, is used in
-    ;; preference to an Accept-Language header.
-    (is
-     (=
-      "Bonjour!"
-      (:juxt.http/content
-       (select-most-acceptable-representation
-        (-> (request :get "/hello")
-            (update
-             :headers conj
-             ["accept-language" "en"]))
-        (conj
-         variants
-         {:id :fr-fr
-          :juxt.http/content "Bonjour!"
-          :juxt.http/content-language "fr-FR"
-          :juxt.http/language-quality-factor 2})))))))
-
-;; See RFC 7231 5.3.4
+;; See RFC 7231 Section 5.3.4: Accept-Encoding
 
 (deftest acceptable-encoding-qvalue-test
   (are [accept-encoding content-encoding expected-qvalue]
@@ -294,7 +177,7 @@
     "gzip;q=0.9,deflate;q=0.5;compress;q=0.2" "gzip,deflate" 0.45
     "gzip;q=0.4,deflate;q=0.5,compress;q=0.2" "gzip,deflate,compress" 0.04))
 
-;; TODO: Quality factors for encodings
+;; TODO: Quality factors for encodings ("qs" parameter)
 
 (deftest assign-encoding-quality-test
   (let [variants
@@ -474,3 +357,121 @@
       [{:id :identity}
        {:id :gzip :juxt.http/content-encoding "gzip"}]
       :identity))
+
+;; See RFC 7231 Section 5.3.5: Accept-Language
+
+;; This test represents the example in RFC 4647 Section 3.3.1.
+(deftest basic-language-match-test
+  (is
+   (basic-language-match?
+    (:juxt.http/language-range (first (reap/accept-language "en")))
+    (:juxt.http/langtag (first (reap/content-language "en")))))
+
+  (is
+   (basic-language-match?
+    (:juxt.http/language-range (first (reap/accept-language "de-de")))
+    (:juxt.http/langtag (first (reap/content-language "de-DE-1996")))))
+
+  (is
+   (not
+    (basic-language-match?
+     (:juxt.http/language-range (first (reap/accept-language "de-de")))
+     (:juxt.http/langtag (first (reap/content-language "de-Latn-DE"))))))
+
+  (is
+   (not
+    (basic-language-match?
+     (:juxt.http/language-range (first (reap/accept-language "en-gb")))
+     (:juxt.http/langtag (first (reap/content-language "en"))))))
+
+  (is
+   (basic-language-match?
+    (:juxt.http/language-range (first (reap/accept-language "*")))
+    (:juxt.http/langtag (first (reap/content-language "de"))))))
+
+(deftest accept-language-test
+  (let [variants
+        [{:id :en
+          :juxt.http/content "Hello!"
+          :juxt.http/content-language "en"}
+
+         {:id :en-us
+          :juxt.http/content-language "en-US"
+          ;; https://en.wikipedia.org/wiki/Howdy
+          ;; Not everyone in the US uses 'Howdy!' but this is just a test...
+          :juxt.http/content "Howdy!"}
+
+
+         {:id :ar-eg
+          :juxt.http/content-language "ar-eg,en"
+          :juxt.http/content "ألسّلام عليكم"}
+
+         ;; TODO: Test for when no content-language is specified - what should
+         ;; we default to?
+         ]]
+
+    (are [accept-header expected]
+        (=
+         expected
+         (map
+          (juxt :id :juxt.http.content-negotiation/language-qvalue)
+          (sequence
+           (assign-language-quality accept-header)
+           variants)))
+
+      "en" [[:en 1.0][:en-us 1.0][:ar-eg 0.0]]
+      "en-us" [[:en 0.0][:en-us 1.0][:ar-eg 0.0]]
+      "ar-eg" [[:en 0.0][:en-us 0.0][:ar-eg 1.0]]
+      "en-us,en;q=0.8,ar-eg;q=0.2" [[:en 0.8][:en-us 1.0][:ar-eg 0.2]]
+      "*" [[:en 1.0][:en-us 1.0][:ar-eg 1.0]]
+      "en-us,*;q=0.1" [[:en 0.1][:en-us 1.0][:ar-eg 0.1]])
+
+
+    (are [accept-language-header expected-greeting]
+        (= expected-greeting
+           (:juxt.http/content
+            (select-most-acceptable-representation
+             (cond-> (request :get "/hello")
+               accept-language-header
+               (update
+                :headers conj
+                ["accept-language" accept-language-header]))
+             variants)))
+      "en" "Hello!"
+      "en-us" "Howdy!"
+      "ar-eg" "ألسّلام عليكم"
+      "en-us,en;q=0.8,ar-eg;q=0.2" "Howdy!"
+      "*" "Hello!"
+      "en-us,*;q=0.1" "Howdy!"
+      ;; No rules of precedence apply to languages. If a '*' has greater
+      ;; qvalue than another more specific language, it is still
+      ;; selected. Hence, en and ar-eg are preferred over en-us, and en is
+      ;; selected because it comes before ar-eg.
+      "en-us;q=0.8,*" "Hello!"
+
+      nil "Hello!")
+
+    ;; If no Accept-Language header, just pick the first variant.
+    (is (= "Hello!"
+           (:juxt.http/content
+            (select-most-acceptable-representation
+             (-> (request :get "/hello"))
+             variants))))
+
+    ;; The language quality factor of a variant, if present, is used in
+    ;; preference to an Accept-Language header.
+    (is
+     (=
+      "Bonjour!"
+      (:juxt.http/content
+       (select-most-acceptable-representation
+        (-> (request :get "/hello")
+            (update
+             :headers conj
+             ["accept-language" "en"]))
+        (conj
+         variants
+         {:id :fr-fr
+          :juxt.http/content "Bonjour!"
+          :juxt.http/content-language "fr-FR"
+          :juxt.http/language-quality-factor 2})))))))

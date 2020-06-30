@@ -5,7 +5,7 @@
    [juxt.reap.alpha.api :as reap]
    [clojure.string :as str]))
 
-;; TODO: Re-order for consistency: content-type, charset, encoding, language
+;; Content types
 
 (defn match-parameters?
   "Return true if all parameters in the accept parameters, are matched by values
@@ -30,7 +30,6 @@
      ;; Try to match on all the parameters asked for in the accept,
      ;; but discard all others in the content type.
      (pos? (count (:juxt.http/parameters parsed-accept-field)))
-     ;; TODO:
      (match-parameters?
       (:juxt.http/parameters parsed-accept-field)
       (:juxt.http/parameter-map parsed-content-type)))
@@ -102,6 +101,8 @@
     :content-type parsed-content-type}
    parsed-accept-fields))
 
+;; Charsets
+
 (defn acceptable-charset-rating
   [parsed-accept-charset-fields parsed-content-type]
   (when-let [charset (get-in parsed-content-type [:juxt.http/parameter-map "charset"])]
@@ -124,6 +125,69 @@
      {:qvalue 0.0
       :precedence 0}
      parsed-accept-charset-fields)))
+
+;; Encodings
+
+(defn select-best-encoding-match [accept-encoding-fields entry]
+  (reduce
+   (fn [best-match {accept-coding :juxt.http/codings :as field}]
+
+     (cond
+       (= accept-coding (get entry :juxt.http/content-coding "identity"))
+       (cond-> best-match
+         (< (get best-match :precedence) 2)
+         (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
+               [:precedence 2]
+               [:apex.debug/parsed-accept-encoding-field field]))
+
+       (= accept-coding "*")
+       (cond-> best-match
+         (= (get best-match :precedence) 0)
+         (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
+               [:precedence 1]
+               [:apex.debug/parsed-accept-encoding-field field]))
+
+       :else best-match))
+
+   {:precedence 0
+    :qvalue (if
+                ;; "If the representation has no content-coding, then it is
+                ;; acceptable by default unless specifically excluded by the
+                ;; Accept-Encoding field stating either 'identity;q=0' or
+                ;; '*;q=0' without a more specific entry for 'identity'."
+                ;;
+                ;; -- RFC 7231 Section 5.3.4
+                (= (get entry :juxt.http/content-coding "identity") "identity")
+              1.0
+              0.0)}
+
+   accept-encoding-fields))
+
+(defn acceptable-encoding-qvalue
+  "Determine the qvalue for the given parsed content-encoding according to the
+  given parsed Accept-Encoding header fields.
+
+  The content-encoding can be nil.
+
+  > If the representation has no content-coding, then it is acceptable by
+  default unless specifically excluded by the Accept-Encoding field stating
+  either 'identity;q=0' or '*;q=0' without a more specific entry for 'identity'.
+  -- RFC 7231 Section 5.3.4
+
+  "
+  [parsed-accept-encoding-fields parsed-content-encoding]
+
+  (double
+   (reduce
+    ;; For content-encodings with multiple codings, it feels sensible to
+    ;; multiply the qvalues together. Any unsupported coding will yield a total
+    ;; qvalue 0.0, while if all qvalues are 1.0, the total will be 1.0.
+    *
+    (for [entry parsed-content-encoding]
+      (:qvalue
+       (select-best-encoding-match parsed-accept-encoding-fields entry))))))
+
+;; Languages
 
 (defn basic-language-match?
   "Basic filtering as per RFC 4647 Section 3.3.1."
@@ -189,65 +253,6 @@
     :language-tag parsed-language-tag}
    parsed-accept-language-fields))
 
-(defn select-best-encoding-match [accept-encoding-fields entry]
-  (reduce
-   (fn [best-match {accept-coding :juxt.http/codings :as field}]
-
-     (cond
-       (= accept-coding (get entry :juxt.http/content-coding "identity"))
-       (cond-> best-match
-         (< (get best-match :precedence) 2)
-         (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
-               [:precedence 2]
-               [:apex.debug/parsed-accept-encoding-field field]))
-
-       (= accept-coding "*")
-       (cond-> best-match
-         (= (get best-match :precedence) 0)
-         (conj [:qvalue (get field :juxt.http/qvalue 1.0)]
-               [:precedence 1]
-               [:apex.debug/parsed-accept-encoding-field field]))
-
-       :else best-match))
-
-   {:precedence 0
-    :qvalue (if
-                ;; "If the representation has no content-coding, then it is
-                ;; acceptable by default unless specifically excluded by the
-                ;; Accept-Encoding field stating either 'identity;q=0' or
-                ;; '*;q=0' without a more specific entry for 'identity'."
-                ;;
-                ;; -- RFC 7231 Section 5.3.4
-                (= (get entry :juxt.http/content-coding "identity") "identity")
-              1.0
-              0.0)}
-
-   accept-encoding-fields))
-
-
-(defn acceptable-encoding-qvalue
-  "Determine the qvalue for the given parsed content-encoding according to the
-  given parsed Accept-Encoding header fields.
-
-  The content-encoding can be nil.
-
-  > If the representation has no content-coding, then it is acceptable by
-  default unless specifically excluded by the Accept-Encoding field stating
-  either 'identity;q=0' or '*;q=0' without a more specific entry for 'identity'.
-  -- RFC 7231 Section 5.3.4
-
-  "
-  [parsed-accept-encoding-fields parsed-content-encoding]
-
-  (double
-   (reduce
-    ;; For content-encodings with multiple codings, it feels sensible to
-    ;; multiply the qvalues together. Any unsupported coding will yield a total
-    ;; qvalue 0.0, while if all qvalues are 1.0, the total will be 1.0.
-    *
-    (for [entry parsed-content-encoding]
-      (:qvalue
-       (select-best-encoding-match parsed-accept-encoding-fields entry))))))
 
 ;; Apache httpd Negotiation Algorithm -- http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
@@ -355,6 +360,8 @@
 
 (defn rate-variants [request variants]
   (sequence
+
+   ;; Ordering of dimensions is as per description here: http://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm
 
    (comp
 
