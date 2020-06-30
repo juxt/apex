@@ -2,7 +2,7 @@
 
 (ns juxt.apex.http.content-negotiation-test
   (:require
-   [clojure.test :refer [deftest is are]]
+   [clojure.test :refer [deftest is are testing]]
    [juxt.apex.alpha.http.content-negotiation
     :refer [match-parameters? acceptable-content-type-rating
             acceptable-charset-rating
@@ -10,7 +10,8 @@
             acceptable-encoding-qvalue assign-encoding-quality
             select-variant]]
    [juxt.reap.alpha.api :as reap]
-   [ring.mock.request :refer [request]]))
+   [ring.mock.request :refer [request]]
+   [juxt.reap.alpha.regex :as re]))
 
 ;; TODO: test for content-type-match?
 
@@ -471,7 +472,63 @@
           (get-in [:juxt.http/variant :juxt.http/content]))))))
 
 
-#_(select-most-acceptable-representation
- {:juxt.http/request {:headers {"accept" "text/plain"}}
-  :juxt.http/variants [{:id :html :juxt.http/content-type "text/html"}
-                       {:id :plain :juxt.http/content-type "text/plain"}]})
+(deftest integrated-test
+  (is
+   (select-variant
+    {:juxt.http/request {:headers {"accept" "text/html"}}
+     :juxt.http/variants [{:id :html :juxt.http/content-type (reap/content-type "text/html")}
+                          {:id :plain :juxt.http/content-type (reap/content-type "text/plain")}]
+     :juxt.http/explain? false})))
+
+
+(deftest explain-test
+  (let [request
+        {:headers {"accept" "text/plain,text/html;q=0.1"
+                   "accept-encoding" "gzip;q=0.8,deflate"
+                   "accept-language" "en;q=0.2,en-US"}}
+        variants
+        [{:id :html
+          :juxt.http/content-type (reap/content-type "text/html;charset=utf-8")}
+         {:id :html-old
+          :juxt.http/content-type (reap/content-type "text/html;charset=usascii")}
+         {:id :plain-gzip
+          :juxt.http/content-type (reap/content-type "text/plain")
+          :juxt.http/content-encoding (reap/content-encoding "gzip")}
+         {:id :plain-deflate-it
+          :juxt.http/content-type (reap/content-type "text/plain")
+          :juxt.http/content-encoding (reap/content-encoding "deflate")
+          :juxt.http/content-language (reap/content-language "it")}
+         {:id :plain-deflate-en
+          :juxt.http/content-type (reap/content-type "text/plain")
+          :juxt.http/content-encoding (reap/content-encoding "deflate")
+          :juxt.http/content-language (reap/content-language "en")}]
+
+        select-explain
+        (select-variant
+         {:juxt.http/request request
+          :juxt.http/variants variants
+          :juxt.http/explain? true})
+
+        explain
+        (:juxt.http/explain select-explain)]
+
+    (testing "disable explain"
+      (is
+       (nil?
+        (find
+         (select-variant
+          {:juxt.http/request request
+           :juxt.http/variants variants
+           :juxt.http/explain? false})
+         :juxt.http/explain))))
+
+    (testing "no explain by default"
+      (is
+       (nil?
+        (find
+         (select-variant
+          {:juxt.http/request request
+           :juxt.http/variants variants})
+         :juxt.http/explain))))
+
+    (testing (is (map? explain)))))

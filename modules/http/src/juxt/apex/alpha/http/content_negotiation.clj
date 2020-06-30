@@ -419,87 +419,111 @@
 
    variants))
 
-(defn select-max-by
-  "Return the items in the collection that share the maximum numeric value
-  returned by calling the given 1-arity keyfn function with the item as the
-  argument. This is commonly used when negotiating representations based on
+(defn- segment-by
+  "Return a map containing a :variants entry containing a collection of variants
+  which match the highest score, and :rejects containing a collection of
+  variants with a lower score. The score is determined by the scorer function
+  which is called with the variant as a single argument.
+
+  This function is commonly used when negotiating representations based on
   process-of-elimination techniques."
-  [keyfn coll]
-  (:items
-   (reduce
-    (fn [acc item]
-      (let [val (or (keyfn item) 0)
-            current-max (:val acc)]
-        (cond
-          (> val current-max)
-          (assoc acc
-                 :items [item]
-                 :val val)
+  [variants scorer comparator]
+  (reduce
+   (fn [acc variant]
+     (let [score (or (scorer variant) 0)
+           max-score-so-far (get acc :max-score-so-far 0)
+           variant (assoc variant :score score)]
+       (cond
+         (comparator score max-score-so-far)
+         (-> acc
+             (assoc
+              :variants [variant]
+              :max-score-so-far score)
+             (update :rejects into (:variants acc)))
 
-          (= val current-max)
-          (update acc :items conj item)
+         (= score max-score-so-far)
+         (update acc :variants conj variant)
 
-          :else acc)))
-    {:items [] :val 0} coll)))
+         :else
+         (update acc :rejects conj variant))))
+   {:variants [] :rejects []}
+   variants))
 
 (defn select-variant
-
   "Implementation of the Apache httpd content-negotiation algorithm detailed at
   https://httpd.apache.org/docs/current/en/content-negotiation.html#algorithm"
-
-  [{:juxt.http/keys [request variants]}]
-
-  (let [representations (rate-variants request variants)
-        best
+  [{:juxt.http/keys [request variants explain?]}]
+  (let [rated-variants (rate-variants request variants)
+        explain
         (reduce
-         (fn [variants step]
+         (fn [acc step]
            ;; Short-circuit the algorithm when 0 or 1 representation remains.
-           (if (< (count variants) 2)
-             (reduced (first variants))
-             (step variants)))
+           (if (< (count (:variants acc)) 2)
+             (reduced acc)
+             (-> acc :variants step (assoc :prev acc))))
 
-         representations
+         {:variants (vec rated-variants)
+          :rejects []
+          :phase "init"}
 
          ;; Algorithm steps
          [(fn [variants]
-            ;; "Multiply the quality factor from the Accept header with the
-            ;; quality-of-source factor for this variants media type, and select
-            ;; the variants with the highest value."
-            (select-max-by
-             (fn [variant]
-               (* (get variant :juxt.http.content-negotiation/content-type-qvalue 1.0)
-                  (get variant :juxt.http/quality-of-source 1.0)))
-             variants))
+            (let [result
+                  (segment-by
+                   variants
+                   #(* (get % :juxt.http.content-negotiation/content-type-qvalue 1.0)
+                       (get % :juxt.http/quality-of-source 1.0))
+                   >)]
+              (assoc result :phase "select highest content type quality factor")))
 
-          ;; Select the variants with the highest language quality factor.
           (fn [variants]
-            (select-max-by #(get % :juxt.http/language-quality-factor 1.0) variants))
+            (let [result (segment-by variants #(get % :juxt.http/language-quality-factor 1.0) >)]
+              (assoc result :phase "select highest language quality factor")))
 
-          ;; Select the variants with the best language match
           (fn [variants]
-            (select-max-by :juxt.http.content-negotiation/language-qvalue variants))
+            (let [result
+                  (segment-by variants :juxt.http.content-negotiation/language-qvalue >)]
+              (assoc result :phase "select best language match")))
 
-          ;; TODO: Select the variants with the highest 'level' media parameter (used to give the version of text/html media types).
+          ;; TODO: Select the variants with the highest 'level' media
+          ;; parameter (used to give the version of text/html media types).
 
-          ;; Select variants with the best charset media parameters, as given on the Accept-Charset header line.
           (fn [variants]
-            (select-max-by :juxt.http.content-negotiation/charset-qvalue variants))
+            (let [result (segment-by variants :juxt.http.content-negotiation/charset-qvalue >)]
+              (assoc result :phase "select best charset media parameters")))
 
-          ;; TODO: Select those variants which have associated charset media parameters that are not ISO-8859-1.
+          ;; TODO: Select those variants which have associated charset media
+          ;; parameters that are not ISO-8859-1.
 
-          ;; Select the variants with the best encoding.
           (fn [variants]
-            (select-max-by :juxt.http.content-negotiation/encoding-qvalue variants))
+            (let [result
+                  (segment-by variants :juxt.http.content-negotiation/encoding-qvalue >)]
+              (assoc result :phase "select best encoding")))
 
-          ;; TODO: Select the variants with the smallest content length.
+          (fn [variants]
+            (-> variants
+                (segment-by :juxt.http/content-length <)
+                (assoc :phase "select smallest content length")))
 
           ;; Select the first variant of those remaining
-          first])]
+          (fn [variants]
+            {:phase "select first variant"
+             :variants [(first variants)]
+             :rejects (next variants)})])]
 
-    {:juxt.http/variant best
-     :juxt.http/vary nil
-     :juxt.http/explain {}
-     }))
+    (cond->
+        {:juxt.http/variant (first (:variants explain))
+         :juxt.http/vary
+         (cond-> []
+           (> (count (distinct (keep :juxt.http/content-type variants))) 1)
+           (conj {:juxt.http/field-name "accept"})
+           (> (count (distinct (keep :juxt.http/content-encoding variants))) 1)
+           (conj {:juxt.http/field-name "accept-encoding"})
+           (> (count (distinct (keep :juxt.http/content-language variants))) 1)
+           (conj {:juxt.http/field-name "accept-language"})
+           (> (count (distinct (keep (comp #(get % "charset") :juxt.http/parameter-map :juxt.http/content-type) variants))) 1)
+           (conj {:juxt.http/field-name "accept-charset"}))}
+      explain? (assoc :juxt.http/explain explain))))
 
 ;; TODO: Produce an 'explain' for each content negotiation that can be
 ;; logged/response on a 406 (and to support debugging). Perhaps as a 406 body
