@@ -1,0 +1,15 @@
+;; Copyright © 2020, JUXT LTD.
+
+{
+
+ :ig/system
+ {:juxt.apex.examples.tutorial.server/vertx
+  {}
+
+  :juxt.apex.examples.tutorial.server/http-server
+  {:port 8000
+   :vertx #ig/ref :juxt.apex.examples.tutorial.server/vertx
+   :handler #ig/ref :juxt.apex.examples.tutorial.core/handler}
+
+  :juxt.apex.examples.tutorial.core/handler {}
+  }}

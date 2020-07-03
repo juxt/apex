@@ -3,3 +3,4 @@
 /dev/log
 target/
 examples/petstore/dev/log/*.log
+examples/tutorial/dev/log/*.log
