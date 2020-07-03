@@ -8,20 +8,26 @@
 ;; TODO: OpenAPI in Apex support should be written in terms of these
 ;; interfaces.
 
-(defprotocol ^:apex.http/required ResourceLocator
+(defprotocol ResourceLocator
+  :extend-via-metadata true
+  :apex.http/required true
   (locate-resource
     [_ uri]
     "Return the resource identified with the given URI. Return nil if not
     found."))
 
-(defprotocol ^:apex.http/required ResponseBody
+(defprotocol ResponseBody
+  :extend-via-metadata true
+  :apex.http/required true
   (send-ok-response
     [_ resource response request respond raise]
     "Call the given respond function with a map containing the body and any
     explicit status override and additional headers. The given response argument
     contains pre-determined status and headers."))
 
-(defprotocol ^:apex.http/optional ContentNegotiation
+(defprotocol ContentNegotiation
+  :extend-via-metadata true
+  :apex.http/required false
   (best-representation
     [_ resource request]
     "For a given resource, return the resource (or resources) corresponding to
@@ -30,36 +36,49 @@
     negotiation is up to the provider (proactive, reactive, transparent,
     etc.)."))
 
-(defprotocol ^:apex.http/optional MultipleRepresentations
+(defprotocol MultipleRepresentations
+  :extend-via-metadata true
+  :apex.http/required false
   (send-300-response
     [_ representations request respond raise]
     "Satisfy this protocol if you want to support reactive
     negotation."))
 
-(defprotocol ^:apex.http/optional LastModified
+(defprotocol LastModified
+  :extend-via-metadata true
+  :apex.http/required false
   (last-modified
     [_ representation]
     "Return the date that the given representation was last modified."))
 
-(defprotocol ^:apex.http/optional EntityTag
+(defprotocol EntityTag
+  :extend-via-metadata true
+  :apex.http/required false
   (entity-tag
     [_ representation]
     "Return the current entity-tag for the given representation."))
 
-(defprotocol ^:apex.http/optional ResourceUpdate
+(defprotocol ResourceUpdate
+  :extend-via-metadata true
+  :apex.http/required false
   (post-resource
     [_ ctx request respond raise]
     "Update the resource to the new state."))
 
-(defprotocol ^:apex.http/optional ServerOptions
+(defprotocol ServerOptions
+  :extend-via-metadata true
+  :apex.http/required false
   (server-header [_]
     "Return the value for server header, or nil to avoid setting it.")
   (server-options [_]))
 
-(defprotocol ^:apex.http/optional ResourceOptions
+(defprotocol ResourceOptions
+  :extend-via-metadata true
+  :apex.http/required false
   (resource-options-headers [_ resource]))
 
 (defprotocol ^:apex.http/optional ReactiveStreaming
+  :extend-via-metadata true
   (request-body-as-stream [_ req callback]
     "Async streaming adapters only (e.g. Vert.x). Call the callback
     with a Ring-compatible request containing a :body
