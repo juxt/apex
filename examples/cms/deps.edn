@@ -13,7 +13,7 @@
 
   ;; Use Vert.x adapter
   juxt.apex/vertx {:local/root "../../modules/vertx"}
-}
+  }
 
  :aliases
  {:dev
@@ -21,11 +21,15 @@
    :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
    :override-deps {juxt.edge/logging.dev {:local/root "dev/logging"}}
    :extra-deps
-   {
-    ;; TODO: Replace ../edge with a git dep with :deps/root
-    ;; of 'lib/edge.app.dev':
-    juxt.edge/lib.app.dev {:local/root "../../../edge/lib/edge.app.dev"}
-    juxt.edge/lib.app.logging {:local/root "../../../edge/lib/edge.app.logging"}
+   {juxt.edge/lib.app.dev
+    {:git/url "https://github.com/juxt/edge.git"
+     :sha "b5f853ad71743382462f7e06f144687523211bc7"
+     :deps/root "lib/edge.app.dev"}
+
+    juxt.edge/lib.app2.logging
+    {:git/url "https://github.com/juxt/edge.git"
+     :sha "b5f853ad71743382462f7e06f144687523211bc7"
+     :deps/root "lib/edge.app.logging"}
 
     org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
 
