@@ -5,9 +5,8 @@
    [integrant.core :as ig]
    [juxt.apex.alpha.http.core :as yada2]))
 
-
-
 (defrecord Provider [site-map]
+
   yada2/ResourceLocator
   (locate-resource [this uri]
     (get site-map (.getPath uri)))

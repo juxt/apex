@@ -118,11 +118,11 @@
 
       ;; Determine status: 200 (or 206, partial content)
 
-      (let [conneg? (satisfies? ContentNegotiation provider)
-            representations
-            (if conneg?
+      (let [{:juxt.http/keys [variants vary]}
+            (if (satisfies? ContentNegotiation provider)
               (best-representation provider resource request)
-              resource)]
+              {:juxt.http/variants [resource]})
+            representations variants]
 
         (cond
           (or
@@ -161,8 +161,11 @@
 
                 headers
                 (cond-> {"date" (rfc1123-date orig-date)}
+                  last-modified
+                  (conj ["last-modified" (rfc1123-date last-modified)])
                   (not= (:apex.http/uri representation) uri)
-                  (conj ["content-location" (str (:apex.http/uri representation))]))
+                  (conj ["content-location" (str (:apex.http/uri representation))])
+                  )
 
                 response
                 {:status status

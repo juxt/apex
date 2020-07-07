@@ -3,7 +3,6 @@
 (ns juxt.apex.http.http-test
   (:require
    [ring.mock.request :refer [request]]
-   [juxt.apex.alpha.http.content-negotiation :as conneg]
    [juxt.apex.alpha.http.core :as http]
    [clojure.test :refer [deftest is]]
    [juxt.apex.alpha.http.header-names :refer [wrap-headers-normalize-case]]))
@@ -54,7 +53,7 @@
           :headers {}}
          (h (request :get "/not-exists"))))))
 
-(deftest content-negotiation-test
+#_(deftest content-negotiation-test
   (let [h (->
            (http/handler
             (reify
