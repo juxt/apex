@@ -3,15 +3,16 @@
 (ns juxt.apex.examples.tutorial.core
   (:require
    [integrant.core :as ig]
-   [juxt.apex.alpha.http.core :as yada2]))
+   [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.handler :as handler]))
 
 (defrecord Provider [site-map]
 
-  yada2/ResourceLocator
+  http/ResourceLocator
   (locate-resource [this uri]
     (get site-map (.getPath uri)))
 
-  yada2/ResponseBody
+  http/ResponseBody
   (send-ok-response
     [this resource response request respond raise]
     (respond
@@ -26,7 +27,7 @@
   {"/hello" {:juxt.http/content "Hello World!"}})
 
 (defn handler [req respond raise]
-  (let [h (yada2/handler (->Provider site-map))]
+  (let [h (handler/handler (->Provider site-map))]
     (h req respond raise)))
 
 (defmethod ig/init-key ::handler [_ _]

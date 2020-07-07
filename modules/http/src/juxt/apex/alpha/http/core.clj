@@ -84,10 +84,10 @@
 
 (defn lookup-resource
   "Return the map corresponding to the resource identified by the given URI. Add
-  the URI to the map as the :apex.http/uri entry. Return nil if not found."
+  the URI to the map as the :juxt.http/uri entry. Return nil if not found."
   [provider ^java.net.URI uri]
   (when-let [resource (locate-resource provider uri)]
-    (conj resource [:apex.http/uri uri])))
+    (conj resource [:juxt.http/uri uri])))
 
 (defn rfc1123-date [inst]
   (.
@@ -102,7 +102,7 @@
 (defmethod http-method :default [provider resource request respond raise]
   (respond {:status 501}))
 
-;; TODO: Most :apex ns keywords should be in :apex.http ns. Refactor!
+;; TODO: Most :apex ns keywords should be in :juxt.http ns. Refactor!
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
@@ -111,7 +111,9 @@
 (defn- get-or-head-method [provider resource request respond raise]
   (let [{:juxt.http/keys [variants vary]}
         (if (satisfies? ContentNegotiation provider)
-          (best-representation provider resource request)
+          (best-representation
+           provider
+           resource request)
           {:juxt.http/variants [resource]})
         representations variants]
 

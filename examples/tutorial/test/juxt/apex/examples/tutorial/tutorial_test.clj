@@ -6,8 +6,7 @@
    [juxt.apex.alpha.http.handler :as handler]
    [juxt.apex.alpha.http.core :as http]
    [juxt.reap.alpha.decoders :as reap]
-   [juxt.pick.alpha.core :refer [pick]]
-   [juxt.pick.alpha.apache :refer [using-apache-algo]]))
+   [juxt.apex.examples.tutorial.util :refer [pick-variants]]))
 
 ;; TODO: Make a better response equality check better for testing, possibly
 ;; exploiting clojure.test/assert-predicate
@@ -17,31 +16,38 @@
      (h req)
      (update :headers dissoc header))))
 
-#_(deftest locate-resource-test
-  (let [h (-> (http/handler
-               (reify
-                 http/ResourceLocator
-                 (locate-resource [_ uri]
-                   (when (= (.getPath uri) "/hello.txt")
-                     {:apex.http/content "Hello World!"}))
-                 http/ResponseBody
-                 (send-ok-response
-                     [_ resource response request respond raise]
-                     (respond
-                      (conj response [:body (:apex.http/content resource)])))))
+;; Resource location
+
+(deftest locate-resource-test
+  (let [provider
+        (reify
+          http/ResourceLocator
+          (locate-resource [_ uri]
+            (when (= (.getPath uri) "/hello.txt")
+              {:apex.http/content "Hello World!"}))
+          http/ResponseBody
+          (send-ok-response
+              [_ resource response request respond raise]
+              (respond
+               (conj response [:body (:apex.http/content resource)]))))
+        h (-> (handler/handler provider)
               (wrap-remove-header "date"))]
     (is (=
          {:status 200
           :headers {}
           :body "Hello World!"}
-         (h (request :get "/hello.txt"))))
+         (h {:request-method :get
+             :uri "/hello.txt"
+             :scheme :https})))
 
     (is (=
          {:status 404
           :headers {}}
-         (h (request :get "/not-exists"))))))
+         (h {:request-method :get
+             :uri "/not-exists"
+             :scheme :https})))))
 
-(deftest response-body
+(deftest response-body-test
   (is
    (=
     "Hello World!"
@@ -57,43 +63,56 @@
                 [:body (:juxt.http/content resource)]))))
           h (handler/handler provider)]
       (:body
-       (h {:scheme :https
+       (h {:request-method :get
            :uri "/"
-           :request-method :get}))))))
+           :scheme :https}))))))
 
 ;; Content negotiation
 
-(deftest content-negotiation
-  (is
-   (=
-    "Hello World!"
-    (let [provider
-          (reify
-            http/ResourceLocator
-            (locate-resource [this uri] {})
+(deftest content-negotiation-test
+  (let [provider
+        (reify
+          http/ResourceLocator
+          (locate-resource [_ uri]
+            (->
+             {"/hello"
+              {:juxt.http/variant-locations
+               [(java.net.URI. "/hello.html")
+                (java.net.URI. "/hello.txt")]}
+              "/hello.html"
+              {:juxt.http/content "<h1>Hello World!</h1>"
+               :juxt.http/content-type
+               (reap/content-type "text/html;charset=utf-8")}
+              "/hello.txt"
+              {:juxt.http/content "Hello World!"
+               :juxt.http/content-type
+               (reap/content-type "text/plain;charset=utf-8")}}
+             (get (. uri getPath))))
 
-            http/ContentNegotiation
-            (best-representation [_ resource request]
-              {:juxt.http/variants
-               [{:juxt.http/content "Hello World!"
-                 :juxt.http/content-language (reap/content-type "text/plain")}]})
+          http/ContentNegotiation
+          (best-representation [provider resource request]
+            (pick-variants provider resource request))
 
-            http/ResponseBody
-            (send-ok-response [this resource response request respond raise]
+          http/ResponseBody
+          (send-ok-response
+              [_ resource response request respond raise]
               (respond
-               (conj
-                response
-                [:body (:juxt.http/content resource)]))))
-          h (handler/handler provider)]
-      (:body
-       (h {:scheme :https
-           :uri "/"
-           :request-method :get}))))))
+               (conj response [:body (:juxt.http/content resource)]))))
+        h (-> (handler/handler provider)
+              (wrap-remove-header "date"))]
+
+    (is (=
+         {:status 200
+          :headers {"content-location" "/hello.html"}
+          :body "<h1>Hello World!</h1>"}
+         (h {:request-method :get
+             :scheme :https
+             :uri "/hello"
+             :headers {"accept" "text/html"}})))))
 
 ;; Conditional requests
 
-
-(deftest conditional-request-with-last-modified
+(deftest conditional-request-with-last-modified-test
   (let [provider
         (reify
           http/ResourceLocator
@@ -126,47 +145,3 @@
 
     (is (= 200 (:status first-response)))
     (is (= 304 (:status second-response)))))
-
-#_(deftest content-negotiation-test
-  (let [h (->
-           (http/handler
-            (reify
-              http/ResourceLocator
-              (locate-resource [_ uri]
-                (case (.getPath uri)
-                  "/hello"
-                  {:apex.http/variants
-                   [(java.net.URI. "/hello.html")
-                    (java.net.URI. "/hello.txt")]}
-                  "/hello.html"
-                  {:apex.http/content "<h1>Hello World!</h1>"
-                   :apex.http/content-type "text/html;charset=utf-8"}
-                  "/hello.txt"
-                  {:apex.http/content "Hello World!"
-                   :apex.http/content-type "text/plain;charset=utf-8"}
-                  ;; else not found
-                  nil))
-
-              http/ContentNegotiation
-              (best-representation [provider resource request]
-                (:juxt.http/variant
-                 (conneg/select-variant
-                  {:juxt.http/request
-                   request
-                   :juxt.http/variants
-                   (map #(http/lookup-resource provider %) (:apex.http/variants resource))})))
-
-              http/ResponseBody
-              (send-ok-response
-                  [_ resource response request respond raise]
-                  (respond
-                   (conj response [:body (:apex.http/content resource)])))))
-           ;; Help with fixed comparisons
-           (wrap-remove-header "date"))]
-    (is (=
-         {:status 200
-          :headers {"content-location" "/hello.html"}
-          :body "<h1>Hello World!</h1>"}
-         (h (update
-             (request :get "/hello")
-             :headers conj ["accept" "text/html"]))))))

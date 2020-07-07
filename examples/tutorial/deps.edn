@@ -9,8 +9,9 @@
 
   juxt.apex/http {:local/root "../../modules/http"}
 
-  juxt/reap {:git/url "https://github.com/juxt/reap.git"
-             :sha "21e8f057e313d0bee1961d69d18d75d8e1d970fd"}
+  juxt/reap {:local/root "../../../reap"}
+  #_{:git/url "https://github.com/juxt/reap.git"
+                  :sha "21e8f057e313d0bee1961d69d18d75d8e1d970fd"}
 
   juxt/pick {:git/url "https://github.com/juxt/pick.git"
              :sha "cc5f85fbfcd88af090cd8418fb1b8f7db289f4f6"}
