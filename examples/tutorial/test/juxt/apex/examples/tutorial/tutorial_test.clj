@@ -3,6 +3,7 @@
 (ns juxt.apex.examples.tutorial.tutorial-test
   (:require
    [clojure.test :refer [deftest is]]
+   [juxt.apex.alpha.http.handler :as handler]
    [juxt.apex.alpha.http.core :as http]
    [juxt.reap.alpha.decoders :as reap]
    [juxt.pick.alpha.core :refer [pick]]
@@ -54,7 +55,7 @@
                (conj
                 response
                 [:body (:juxt.http/content resource)]))))
-          h (http/handler provider)]
+          h (handler/handler provider)]
       (:body
        (h {:scheme :https
            :uri "/"
@@ -83,7 +84,7 @@
                (conj
                 response
                 [:body (:juxt.http/content resource)]))))
-          h (http/handler provider)]
+          h (handler/handler provider)]
       (:body
        (h {:scheme :https
            :uri "/"
@@ -111,7 +112,7 @@
               response
               [:body (:juxt.http/content resource)]))))
 
-        h (http/handler provider)
+        h (handler/handler provider)
         first-response (h {:scheme :https
                            :uri "/"
                            :request-method :get})
@@ -125,10 +126,6 @@
 
     (is (= 200 (:status first-response)))
     (is (= 304 (:status second-response)))))
-
-
-
-
 
 #_(deftest content-negotiation-test
   (let [h (->
