@@ -4,6 +4,7 @@
   (:require
    [clojure.string :as str]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.conditional :refer [wrap-precondition-evalution]]
    [juxt.apex.alpha.http.ring :as ring]
    [ring.util.request :refer [request-url]]))
 
@@ -61,5 +62,6 @@
 
 
    (wrap-lookup-resource provider)
+   (wrap-precondition-evalution provider)
    ring/sync-adapt
    ))

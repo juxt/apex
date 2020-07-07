@@ -2,10 +2,15 @@
 
 (ns juxt.apex.alpha.http.conditional)
 
-(defmulti evaluate-precondition (fn [header provider resource request respond raise] header))
+(defmulti evaluate-precondition (fn [header provider request respond raise] header))
+
+(defmethod evaluate-precondition "if-modified-since"
+  [header provider request respond raise]
+  false
+  )
 
 (defn wrap-precondition-evalution
-  [provider resource]
+  [h provider]
   (fn [request respond raise]
 
     (let [method (:request-method request)]
@@ -21,24 +26,25 @@
 
       ;; TODO: 3. "When If-None-Match is present, evaluate the If-None-Match precondition"
 
-      (if-let [if-none-match (get-in request [:headers "if-none-match"])]
+      (when-let [if-none-match (get-in request [:headers "if-none-match"])]
+
         ;; TODO: replace this with evaluation of if-none-match
-        (continue)
+        (h request respond raise))
 
-        ;; "4. When the method is GET or HEAD, If-None-Match is not present, and
-        ;; If-Modified-Since is present, evaluate the If-Modified-Since
-        ;; precondition, if true, continue to step 5, if false, respond 304 (Not
-        ;; Modified)"
-        (if (or (= method :get) (= method :head))
-          (if-let [if-modified-since (get-in request [:headers "if-modified-since"])]
-            (if-not (evaluate-precondition "if-modified-since")
-              (respond {:status 304})
-              ))
+      ;; "4. When the method is GET or HEAD, If-None-Match is not present, and
+      ;; If-Modified-Since is present, evaluate the If-Modified-Since
+      ;; precondition, if true, continue to step 5, if false, respond 304 (Not
+      ;; Modified)"
+      (when (or (= method :get) (= method :head))
+        (when-let [if-modified-since (get-in request [:headers "if-modified-since"])]
+          (when-not (evaluate-precondition "if-modified-since" provider request respond raise)
+            (respond {:status 304}))
+          (h request respond raise))
+        )
 
 
-          )
-        )))
+      (h request respond raise)))
 
-  ;; TODO: 5. "When the method is GET and both Range and If-Range are present, evaluate the If-Range precondition"
+
 
   )
