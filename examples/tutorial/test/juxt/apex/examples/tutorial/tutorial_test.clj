@@ -132,25 +132,28 @@
               [:body (:juxt.http/content resource)]))))
 
         h (handler/handler provider)
-        first-response (h {:scheme :https
+
+        response (h {:scheme :https
                            :uri "/"
-                           :request-method :get})
+                           :request-method :get})]
 
-        last-modified (get-in first-response [:headers "last-modified"])
+    (is (= 200 (:status response)))
 
-        second-response (h {:scheme :https
-                            :uri "/"
-                            :request-method :get
-                            :headers {"if-modified-since" last-modified}})
+    (let [last-modified (get-in response [:headers "last-modified"])
 
-        before-last-modified
-        (-> last-modified http/decode-date (.minusSeconds 2) http/encode-date)
+          response (h {:scheme :https
+                              :uri "/"
+                              :request-method :get
+                              :headers {"if-modified-since" last-modified}})]
 
-        third-response (h {:scheme :https
-                           :uri "/"
-                           :request-method :get
-                           :headers {"if-modified-since" before-last-modified}})]
+      (is (= 304 (:status response)))
 
-    (is (= 200 (:status first-response)))
-    (is (= 304 (:status second-response)))
-    (is (= 200 (:status third-response)))))
+      (let [last-modified
+          (-> last-modified http/decode-date (.minusSeconds 2) http/encode-date)
+
+          response (h {:scheme :https
+                             :uri "/"
+                             :request-method :get
+                             :headers {"if-modified-since" last-modified}})]
+
+        (is (= 200 (:status response)))))))
