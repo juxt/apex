@@ -98,9 +98,9 @@
     (. HTTP_DATE_FORMATTER format inst)))
 
 (defn decode-date [s]
-  (when s
-    (java.time.Instant/from
-     (java.time.ZonedDateTime/parse s java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME))))
+  (some-> s
+          (java.time.ZonedDateTime/parse HTTP_DATE_FORMATTER)
+          (java.time.Instant/from)))
 
 (defmulti http-method (fn [provider resource request respond raise] (:request-method request)))
 

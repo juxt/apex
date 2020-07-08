@@ -67,6 +67,4 @@
               (respond {:status 304})))
           (h request respond raise)))
 
-      (h request respond raise)))
-
-)
+      (h request respond raise))))
