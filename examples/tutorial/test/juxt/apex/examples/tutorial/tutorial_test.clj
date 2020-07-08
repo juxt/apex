@@ -118,7 +118,7 @@
           http/ResourceLocator
           (locate-resource [this uri]
             {:juxt.http/content "Hello World!"
-             :juxt.http/last-modified (java.time.ZonedDateTime/parse "2020-07-04T10:00:00.000+01:00[Europe/London]")})
+             :juxt.http/last-modified (http/decode-date "Wed, 8 Jul 2020 22:00:00 GMT")})
 
           http/LastModified
           (last-modified [_ representation]
@@ -141,7 +141,16 @@
         second-response (h {:scheme :https
                             :uri "/"
                             :request-method :get
-                            :headers {"if-modified-since" last-modified}})]
+                            :headers {"if-modified-since" last-modified}})
+
+        before-last-modified
+        (-> last-modified http/decode-date (.minusSeconds 2) http/encode-date)
+
+        third-response (h {:scheme :https
+                           :uri "/"
+                           :request-method :get
+                           :headers {"if-modified-since" before-last-modified}})]
 
     (is (= 200 (:status first-response)))
-    (is (= 304 (:status second-response)))))
+    (is (= 304 (:status second-response)))
+    (is (= 200 (:status third-response)))))

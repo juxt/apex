@@ -43,9 +43,7 @@
        :protocol http/ResponseBody})))
 
   (->
-
    (fn [request respond raise]
-
      (try
        (http/http-method
         provider
@@ -59,7 +57,6 @@
              (cond-> response
                server (assoc-in [:headers "server"] server)))))
         raise)
-
        (catch Throwable t
          (raise
           (ex-info
@@ -70,8 +67,6 @@
            {:request request}
            t)))))
 
-
-   (wrap-lookup-resource provider)
    (wrap-precondition-evalution provider)
-   ring/sync-adapt
-   ))
+   (wrap-lookup-resource provider)
+   ring/sync-adapt))

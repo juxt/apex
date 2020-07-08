@@ -46,7 +46,7 @@
   :apex.http/required false
   (last-modified
     [_ representation]
-    "Return the date that the given representation was last modified."))
+    "Return the java.time.Instant that the given representation was last modified."))
 
 (defprotocol EntityTag
   :extend-via-metadata true
@@ -74,8 +74,9 @@
   :apex.http/required false
   (resource-options-headers [_ resource]))
 
-(defprotocol ^:apex.http/optional ReactiveStreaming
+(defprotocol ReactiveStreaming
   :extend-via-metadata true
+  :apex.http/required false
   (request-body-as-stream [_ req callback]
     "Async streaming adapters only (e.g. Vert.x). Call the callback
     with a Ring-compatible request containing a :body
@@ -89,13 +90,17 @@
   (when-let [resource (locate-resource provider uri)]
     (conj resource [:juxt.http/uri uri])))
 
-(defn rfc1123-date [inst]
-  (.
-   (java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME)
-   format
-   inst))
+(def HTTP_DATE_FORMATTER
+  (.withZone java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME (java.time.ZoneId/of "GMT")))
 
+(defn encode-date [inst]
+  (when inst
+    (. HTTP_DATE_FORMATTER format inst)))
 
+(defn decode-date [s]
+  (when s
+    (java.time.Instant/from
+     (java.time.ZonedDateTime/parse s java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME))))
 
 (defmulti http-method (fn [provider resource request respond raise] (:request-method request)))
 
@@ -154,9 +159,9 @@
             (java.time.ZonedDateTime/now)
 
             headers
-            (cond-> {"date" (rfc1123-date orig-date)}
+            (cond-> {"date" (encode-date orig-date)}
               last-modified
-              (conj ["last-modified" (rfc1123-date last-modified)])
+              (conj ["last-modified" (encode-date last-modified)])
               (not= (:juxt.http/uri representation) (:juxt.http/uri resource))
               (conj ["content-location" (str (:juxt.http/uri representation))]))
 

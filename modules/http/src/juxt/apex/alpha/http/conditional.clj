@@ -1,13 +1,38 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.http.conditional)
+(ns juxt.apex.alpha.http.conditional
+  (:require
+   [juxt.apex.alpha.http.core :as http])
+  )
+
+(defn if-modified-since? [this other]
+  (.isAfter this other))
 
 (defmulti evaluate-precondition (fn [header provider request respond raise] header))
 
 (defmethod evaluate-precondition "if-modified-since"
   [header provider request respond raise]
-  false
-  )
+  (if (satisfies? http/LastModified provider)
+    (let [last-modified (http/last-modified provider (:juxt.http/resource request))
+          if-modified-since
+          (some-> (get-in request [:headers "if-modified-since"])
+                  http/decode-date)]
+
+      (if (and last-modified if-modified-since)
+        (if-modified-since? last-modified if-modified-since)
+        true))
+    ;; Default is to assume there's a modification, we don't know there isn't
+    ;; one!
+    true))
+
+;; From RFC 7232:
+;; "(an) origin server MUST evaluate received request preconditions after it has
+;; successfully performed its normal request checks and just before it would
+;; perform the action associated with the request method.  A server MUST ignore
+;; all received preconditions if its response to the same request without those
+;; conditions would have been a status code other than a 2xx (Successful) or 412
+;; (Precondition Failed).  In other words, redirects and failures take
+;; precedence over the evaluation of preconditions in conditional requests. "
 
 (defn wrap-precondition-evalution
   [h provider]
@@ -36,15 +61,12 @@
       ;; precondition, if true, continue to step 5, if false, respond 304 (Not
       ;; Modified)"
       (when (or (= method :get) (= method :head))
-        (when-let [if-modified-since (get-in request [:headers "if-modified-since"])]
-          (when-not (evaluate-precondition "if-modified-since" provider request respond raise)
-            (respond {:status 304}))
-          (h request respond raise))
-        )
-
+        (when (get-in request [:headers "if-modified-since"])
+          (let [result (evaluate-precondition "if-modified-since" provider request respond raise)]
+            (when-not result
+              (respond {:status 304})))
+          (h request respond raise)))
 
       (h request respond raise)))
 
-
-
-  )
+)
