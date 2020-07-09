@@ -7,7 +7,7 @@
    [clojure.xml :as xml]
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
-   [juxt.apex.alpha.http.core :as apex]
+   [juxt.apex.alpha.http.core :as http]
    [juxt.apex.alpha.webdav.xml :as x]))
 
 (defprotocol WebDav
@@ -47,7 +47,7 @@
    #{}
    candidates))
 
-(defmethod apex/http-method :propfind [backend req respond raise]
+(defmethod http/http-method :propfind [backend req respond raise]
 
   ;; Unless public, we need to know who is accessing this resource (TODO)
 
@@ -73,7 +73,7 @@
                         {:content [(xml/parse (java.io.ByteArrayInputStream. (.getBytes body-str)))]}
                         :propfind :prop x/content)
                        (map (juxt :tag :content)))
-                resource (apex/locate-resource backend uri)]
+                resource (http/locate-resource backend uri)]
 
             (respond
              (let [body
@@ -83,7 +83,7 @@
                      (xml-declaration "utf-8")
                      [:multistatus {"xmlns" "DAV:"}
                       (for [[uri ent] members
-                            :let [authorized? (= (:apex/classification resource) :public)]]
+                            :let [authorized? (= (:http/classification resource) :public)]]
                         (when true
                           [:response
                            [:href (str uri)]
@@ -104,17 +104,14 @@
 
                                  :getcontentlength
                                  (when
-                                     (:apex/content resource)
-                                     [:getcontentlength (.length (:apex/content resource))])
+                                     (:juxt.http/content resource)
+                                     [:getcontentlength (.length (:juxt.http/content resource))])
 
                                  :getlastmodified
                                  ;; Hmm, not sure it's resources that are 'last modified', more like representations
-                                 (when-let [last-modified (:apex/last-modified resource)]
+                                 (when-let [last-modified (:juxt.http/last-modified resource)]
                                    [:getlastmodified
-                                    (apex/rfc1123-date
-                                     (java.time.ZonedDateTime/ofInstant
-                                      (.toInstant last-modified)
-                                      (java.time.ZoneId/systemDefault)))])
+                                    (http/encode-date last-modified)])
 
                                  ;; Anything else, ignore
                                  nil))]
@@ -131,4 +128,4 @@
 
     (if (:body req)
       (cb req)
-      (apex/request-body-as-stream backend req cb))))
+      (http/request-body-as-stream backend req cb))))
