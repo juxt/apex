@@ -2,8 +2,7 @@
 
 (ns juxt.apex.alpha.http.conditional
   (:require
-   [juxt.apex.alpha.http.core :as http])
-  )
+   [juxt.apex.alpha.http.core :as http]))
 
 (defn if-modified-since? [this other]
   (.isAfter this other))
