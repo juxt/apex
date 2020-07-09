@@ -28,6 +28,31 @@
         (h (assoc request :juxt.http/resource resource) respond raise)
         (respond {:status 404 :headers {}})))))
 
+(defn invoke-method [provider]
+  (fn [request respond raise]
+    (try
+      (http/http-method
+       provider
+       (:juxt.http/resource request)
+       request
+       (fn [response]
+         (let [server
+               (when (satisfies? http/ServerOptions provider)
+                 (http/server-header provider))]
+           (respond
+            (cond-> response
+              server (assoc-in [:headers "server"] server)))))
+       raise)
+      (catch Throwable t
+        (raise
+         (ex-info
+          (format
+           "Error on %s of %s"
+           (str/upper-case (name (:request-method request)))
+           (:uri request))
+          {:request request}
+          t))))))
+
 (defn handler [provider]
   (when-not (satisfies? http/ResourceLocator provider)
     (throw
@@ -43,30 +68,7 @@
        :protocol http/ResponseBody})))
 
   (->
-   (fn [request respond raise]
-     (try
-       (http/http-method
-        provider
-        (:juxt.http/resource request)
-        request
-        (fn [response]
-          (let [server
-                (when (satisfies? http/ServerOptions provider)
-                  (http/server-header provider))]
-            (respond
-             (cond-> response
-               server (assoc-in [:headers "server"] server)))))
-        raise)
-       (catch Throwable t
-         (raise
-          (ex-info
-           (format
-            "Error on %s of %s"
-            (str/upper-case (name (:request-method request)))
-            (:uri request))
-           {:request request}
-           t)))))
-
+   (invoke-method provider)
    (wrap-precondition-evalution provider)
    (wrap-lookup-resource provider)
    ring/sync-adapt))
