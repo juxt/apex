@@ -2,14 +2,7 @@
 
 {:paths ["src"]
  :deps
- {
-  ;; Core
-  ;; juxt.apex/auth-digest {:local/root "../auth-digest"}
-  ring/ring-core {:mvn/version "1.8.0"}
-
-  juxt/reap
-  {:git/url "https://github.com/juxt/reap.git"
-   :sha "28cf8273f55df793097ea7358e800be5cc4c47e4"}}
+ {}
 
  :aliases
  {:dev
