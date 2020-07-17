@@ -21,3 +21,13 @@
     [:juxt.http/variants
      (->> (:juxt.http/variant-locations resource)
           (map #(http/lookup-resource provider %)))])))
+
+(defn hexdigest
+  "Returns the hex digest of an object. Expects a string as input."
+  ([input] (hexdigest input "SHA-256"))
+  ([input hash-algo]
+   (assert (string? input))
+   (let [hash (java.security.MessageDigest/getInstance hash-algo)]
+     (. hash update (.getBytes input))
+     (let [digest (.digest hash)]
+       (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))))
