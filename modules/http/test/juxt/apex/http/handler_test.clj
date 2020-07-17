@@ -1,12 +1,15 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.examples.tutorial.tutorial-test
+(ns juxt.apex.http.handler-test
   (:require
-   [clojure.test :refer [deftest is]]
-   [juxt.apex.alpha.http.handler :as handler]
+   [juxt.reap.alpha.ring :refer [decode-accept-headers]]
+   [ring.mock.request :refer [request]]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.handler :as handler]
+   [clojure.test :refer [deftest is]]
    [juxt.reap.alpha.decoders :as reap]
-   [juxt.apex.examples.tutorial.util :refer [pick-variants]]))
+   [juxt.pick.alpha.core :refer [pick]]
+   [juxt.pick.alpha.apache :refer [using-apache-algo]]))
 
 ;; TODO: Make a better response equality check better for testing, possibly
 ;; exploiting clojure.test/assert-predicate
@@ -16,7 +19,18 @@
      (h req)
      (update :headers dissoc header))))
 
-;; Resource location
+(defn pick-variants
+  "A convenience wrapper upon pick that resolves variants according to the URIs in
+  the :juxt.http/variant-locations entry of the resource."
+  [provider resource request]
+  (pick
+   using-apache-algo
+   (conj
+    {}
+    (decode-accept-headers request)
+    [:juxt.http/variants
+     (->> (:juxt.http/variant-locations resource)
+          (map #(http/lookup-resource provider %)))])))
 
 (deftest locate-resource-test
   (let [provider
@@ -66,6 +80,7 @@
        (h {:request-method :get
            :uri "/"
            :scheme :https}))))))
+
 
 ;; Content negotiation
 
@@ -157,3 +172,51 @@
                              :headers {"if-modified-since" last-modified}})]
 
         (is (= 200 (:status response)))))))
+
+
+(deftest conditional-request-with-etag-test
+  (let [provider
+        (reify
+          http/ResourceLocator
+          (locate-resource [this uri]
+            {:juxt.http/content "Hello World!"})
+
+          http/EntityTag
+          (entity-tag [this representation]
+            (hash (:juxt.http/content representation)))
+
+          http/ResponseBody
+          (send-ok-response [this resource response request respond raise]
+            (respond
+             (conj
+              response
+              [:body (:juxt.http/content resource)]))))
+
+        h (handler/handler provider)
+
+        response (h {:scheme :https
+                     :uri "/"
+                     :request-method :get})]
+
+    (is (= 200 (:status response)))
+
+    (let [etag (get-in response [:headers "etag"])
+
+          response (h {:scheme :https
+                       :uri "/"
+                       :request-method :get
+                       :headers {"if-none-match" etag}})]
+
+      (is (= (hash "Hello World!") etag))
+
+      ;;(is (= 304 (:status response)))
+
+      #_(let [last-modified
+              (-> last-modified http/decode-date (.minusSeconds 2) http/encode-date)
+
+              response (h {:scheme :https
+                           :uri "/"
+                           :request-method :get
+                           :headers {"if-modified-since" last-modified}})]
+
+          (is (= 200 (:status response)))))))

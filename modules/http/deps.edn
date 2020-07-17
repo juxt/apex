@@ -7,12 +7,19 @@
  :aliases
  {:dev
   {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
-   :extra-deps {ring/ring-mock {:mvn/version "0.4.0"}}}
+   :extra-deps
+   {ring/ring-mock {:mvn/version "0.4.0"}
+    juxt/reap
+    {:local/root "../../../reap"}
+    juxt/pick
+    {:git/url "https://github.com/juxt/pick.git"
+     :sha "cc5f85fbfcd88af090cd8418fb1b8f7db289f4f6"}}}
+
   :test
   {:extra-paths ["test"]
    :extra-deps
-   {ring/ring-mock {:mvn/version "0.4.0"}
-    com.cognitect/test-runner
+   {com.cognitect/test-runner
     {:git/url "https://github.com/cognitect-labs/test-runner.git"
-     :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
+     :sha "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}
+    }
    :main-opts ["-m" "cognitect.test-runner"]}}}

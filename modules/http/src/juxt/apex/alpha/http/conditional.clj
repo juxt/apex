@@ -4,6 +4,17 @@
   (:require
    [juxt.apex.alpha.http.core :as http]))
 
+(defn hexdigest
+  "Returns the hex digest of an object. Expects a string as input. Useful for
+  computing entity-tags."
+  ([input] (hexdigest input "SHA-256"))
+  ([input hash-algo]
+   (assert (string? input))
+   (let [hash (java.security.MessageDigest/getInstance hash-algo)]
+     (. hash update (.getBytes input))
+     (let [digest (.digest hash)]
+       (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))))
+
 (defn if-modified-since? [this other]
   (.isAfter this other))
 
