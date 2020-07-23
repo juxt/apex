@@ -1,6 +1,8 @@
 ;; Copyright © 2020, JUXT LTD.
 
-(ns juxt.apex.alpha.http.core)
+(ns juxt.apex.alpha.http.core
+  (:require
+   [juxt.apex.alpha.http.util :as util]))
 
 ;; TODO: OpenAPI in Apex support should be written in terms of these
 ;; interfaces.
@@ -46,7 +48,7 @@
   :apex.http/required false
   (last-modified
     [_ representation]
-    "Return the java.time.Instant that the given representation was last modified."))
+    "Return the java.util.Date that the given representation was last modified."))
 
 (defprotocol EntityTag
   :extend-via-metadata true
@@ -90,18 +92,6 @@
   (when-let [resource (locate-resource provider uri)]
     (conj resource [:juxt.http/uri uri])))
 
-(def HTTP_DATE_FORMATTER
-  (.withZone java.time.format.DateTimeFormatter/RFC_1123_DATE_TIME (java.time.ZoneId/of "GMT")))
-
-(defn encode-date [inst]
-  (when inst
-    (. HTTP_DATE_FORMATTER format inst)))
-
-(defn decode-date [s]
-  (some-> s
-          (java.time.ZonedDateTime/parse HTTP_DATE_FORMATTER)
-          (java.time.Instant/from)))
-
 (defmulti http-method (fn [provider resource request respond raise] (:request-method request)))
 
 (defmethod http-method :default [provider resource request respond raise]
@@ -141,12 +131,10 @@
             (cond-> representations
               (sequential? representations) first)
 
-
             last-modified
             (when (satisfies? LastModified provider)
               (last-modified provider representation))
 
-            ;; TODO: Get entity tag of representation
             entity-tag
             (when (satisfies? EntityTag provider)
               (entity-tag provider representation))
@@ -156,12 +144,14 @@
             ;; "In theory, the date ought to represent the moment just before
             ;; the payload is generated."
             orig-date
-            (java.time.ZonedDateTime/now)
+            (new java.util.Date)
 
             headers
-            (cond-> {"date" (encode-date orig-date)}
+            (cond-> {"date" (util/format-http-date orig-date)}
               last-modified
-              (conj ["last-modified" (encode-date last-modified)])
+              (conj ["last-modified" (util/format-http-date last-modified)])
+              entity-tag
+              (conj ["etag" entity-tag])
               (not= (:juxt.http/uri representation) (:juxt.http/uri resource))
               (conj ["content-location" (str (:juxt.http/uri representation))]))
 

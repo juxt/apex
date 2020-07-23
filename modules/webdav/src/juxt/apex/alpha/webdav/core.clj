@@ -2,7 +2,7 @@
 
 (ns juxt.apex.alpha.webdav.core
   (:require
-   [ring.util.request :refer [request-url]]
+   [juxt.apex.alpha.http.handler :refer [request-url]]
    [clojure.string :as str]
    [clojure.xml :as xml]
    [hiccup2.core :refer [html]]

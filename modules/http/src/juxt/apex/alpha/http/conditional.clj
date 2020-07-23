@@ -2,7 +2,10 @@
 
 (ns juxt.apex.alpha.http.conditional
   (:require
-   [juxt.apex.alpha.http.core :as http]))
+   [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.util :as util])
+  (:import
+   (java.util Date)))
 
 (defn hexdigest
   "Returns the hex digest of an object. Expects a string as input. Useful for
@@ -15,8 +18,8 @@
      (let [digest (.digest hash)]
        (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))))
 
-(defn if-modified-since? [this other]
-  (.isAfter this other))
+(defn if-modified-since? [^Date this ^Date other]
+  (.isAfter (.toInstant this) (.toInstant other)))
 
 (defmulti evaluate-precondition (fn [header provider request respond raise] header))
 
@@ -26,7 +29,22 @@
     (let [last-modified (http/last-modified provider (:juxt.http/resource request))
           if-modified-since
           (some-> (get-in request [:headers "if-modified-since"])
-                  http/decode-date)]
+                  util/parse-http-date)]
+
+      (if (and last-modified if-modified-since)
+        (if-modified-since? last-modified if-modified-since)
+        true))
+    ;; Default is to assume there's a modification, we don't know there isn't
+    ;; one!
+    true))
+
+(defmethod evaluate-precondition "if-none-match"
+  [header provider request respond raise]
+  (if (satisfies? http/LastModified provider)
+    (let [last-modified (http/last-modified provider (:juxt.http/resource request))
+          if-modified-since
+          (some-> (get-in request [:headers "if-modified-since"])
+                  util/parse-http-date)]
 
       (if (and last-modified if-modified-since)
         (if-modified-since? last-modified if-modified-since)
@@ -62,6 +80,13 @@
       ;; TODO: 3. "When If-None-Match is present, evaluate the If-None-Match precondition"
 
       (when-let [if-none-match (get-in request [:headers "if-none-match"])]
+        (let [result (evaluate-precondition "if-none-match" provider request respond raise)]
+          (when-not result
+            (respond
+             (case (:request-method request)
+               (:get :head) {:status 304} {:status 412}))
+
+            (respond {:status 304})))
 
         ;; TODO: replace this with evaluation of if-none-match
         (h request respond raise))

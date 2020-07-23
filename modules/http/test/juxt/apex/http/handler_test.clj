@@ -5,6 +5,7 @@
    [juxt.reap.alpha.ring :refer [decode-accept-headers]]
    [ring.mock.request :refer [request]]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.util :as util]
    [juxt.apex.alpha.http.handler :as handler]
    [clojure.test :refer [deftest is]]
    [juxt.reap.alpha.decoders :as reap]
@@ -133,7 +134,7 @@
           http/ResourceLocator
           (locate-resource [this uri]
             {:juxt.http/content "Hello World!"
-             :juxt.http/last-modified (http/decode-date "Wed, 8 Jul 2020 22:00:00 GMT")})
+             :juxt.http/last-modified (util/parse-http-date "Wed, 08 Jul 2020 22:00:00 GMT")})
 
           http/LastModified
           (last-modified [_ representation]
@@ -149,30 +150,36 @@
         h (handler/handler provider)
 
         response (h {:scheme :https
-                           :uri "/"
-                           :request-method :get})]
+                     :uri "/"
+                     :request-method :get})]
 
     (is (= 200 (:status response)))
 
     (let [last-modified (get-in response [:headers "last-modified"])
 
           response (h {:scheme :https
-                              :uri "/"
-                              :request-method :get
-                              :headers {"if-modified-since" last-modified}})]
+                       :uri "/"
+                       :request-method :get
+                       :headers {"if-modified-since" last-modified}})]
 
       (is (= 304 (:status response)))
 
-      (let [last-modified
-          (-> last-modified http/decode-date (.minusSeconds 2) http/encode-date)
+      ;;(prn (-> last-modified))
 
-          response (h {:scheme :https
-                             :uri "/"
-                             :request-method :get
-                             :headers {"if-modified-since" last-modified}})]
+      (let [last-modified
+            (-> last-modified
+                util/parse-http-date
+                (.toInstant)
+                (.minusSeconds 2)
+                java.util.Date/from
+                util/format-http-date)
+
+            response (h {:scheme :https
+                         :uri "/"
+                         :request-method :get
+                         :headers {"if-modified-since" last-modified}})]
 
         (is (= 200 (:status response)))))))
-
 
 (deftest conditional-request-with-etag-test
   (let [provider
