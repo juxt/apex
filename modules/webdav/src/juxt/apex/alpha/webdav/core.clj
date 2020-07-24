@@ -8,6 +8,7 @@
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.util :as util]
    [juxt.apex.alpha.webdav.xml :as x]))
 
 (defprotocol WebDav
@@ -111,7 +112,7 @@
                                  ;; Hmm, not sure it's resources that are 'last modified', more like representations
                                  (when-let [last-modified (:juxt.http/last-modified resource)]
                                    [:getlastmodified
-                                    (http/encode-date last-modified)])
+                                    (util/format-http-date last-modified)])
 
                                  ;; Anything else, ignore
                                  nil))]
