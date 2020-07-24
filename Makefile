@@ -7,6 +7,7 @@
 test:
 	make -C modules/http test
 	make -C examples/tutorial test
+	make -C examples/cms test
 
 watch:
 	find . -name "*.clj" | entr make
