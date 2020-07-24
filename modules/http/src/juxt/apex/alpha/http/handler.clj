@@ -43,12 +43,19 @@
     (h
      request
      (fn [response]
-       (let [server
-             (when (satisfies? http/ServerOptions provider)
-               (http/server-header provider))]
-         (respond
-          (cond-> response
-            server (assoc-in [:headers "server"] server)))))
+       (try
+         (let [server
+               (when (satisfies? http/ServerOptions provider)
+                 (http/server-header provider))]
+           (respond
+            (cond-> response
+              server (assoc-in [:headers "server"] server))))
+         (catch Throwable t
+           (raise
+            (ex-info
+             "Error in server-header function"
+             {}
+             t)))))
      raise)))
 
 (defn invoke-method [provider]

@@ -33,5 +33,4 @@
          :body "post foo"}))
 
      http/ServerOptions
-     (server-header [_] "Apex")
-     )))
+     (server-header [_] "Apex"))))
