@@ -61,7 +61,7 @@
   :extend-via-metadata true
   :apex.http/required false
   (POST
-    [_ ctx request respond raise]
+    [_ resource request respond raise]
     "Post to the resource."))
 
 (defprotocol ServerOptions

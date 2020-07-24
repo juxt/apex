@@ -17,6 +17,13 @@
     [this resource response request respond raise]
     (respond
      {:status 200
+      :body (:juxt.http/content resource)}))
+
+  http/PostMethod
+  (POST
+    [_ ctx request respond raise]
+    (respond
+     {:status 200
       :body (:juxt.http/content resource)})
     )
   )

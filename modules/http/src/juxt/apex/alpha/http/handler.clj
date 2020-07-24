@@ -38,6 +38,19 @@
       (catch Exception e
         (raise e)))))
 
+(defn wrap-server-options [h provider]
+  (fn [request respond raise]
+    (h
+     request
+     (fn [response]
+       (let [server
+             (when (satisfies? http/ServerOptions provider)
+               (http/server-header provider))]
+         (respond
+          (cond-> response
+            server (assoc-in [:headers "server"] server)))))
+     raise)))
+
 (defn invoke-method [provider]
   (fn [request respond raise]
     (try
@@ -45,13 +58,7 @@
        provider
        (:juxt.http/resource request)
        request
-       (fn [response]
-         (let [server
-               (when (satisfies? http/ServerOptions provider)
-                 (http/server-header provider))]
-           (respond
-            (cond-> response
-              server (assoc-in [:headers "server"] server)))))
+       respond
        raise)
       (catch Throwable t
         (raise
@@ -66,6 +73,7 @@
 (defn handler [provider]
   (->
    (invoke-method provider)
+   (wrap-server-options provider)
    (wrap-precondition-evalution provider)
    (wrap-lookup-resource provider)
    ring/sync-adapt))
