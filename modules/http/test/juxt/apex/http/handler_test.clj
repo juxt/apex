@@ -40,11 +40,13 @@
           (locate-resource [_ uri]
             (when (= (.getPath uri) "/hello.txt")
               {:apex.http/content "Hello World!"}))
-          http/OkResponse
-          (send-ok-response
+          http/Resource
+          (invoke-method
               [_ resource response request respond raise]
-              (respond
-               (conj response [:body (:apex.http/content resource)]))))
+              (case (:request-method request)
+                :head (respond response)
+                :get (respond
+                      (conj response [:body (:apex.http/content resource)])))))
         h (-> (handler/handler provider)
               (wrap-remove-header "date"))]
     (is (=
@@ -70,12 +72,14 @@
           (reify
             http/ResourceLocator
             (locate-resource [this uri] {:juxt.http/content "Hello World!"})
-            http/OkResponse
-            (send-ok-response [this resource response request respond raise]
-              (respond
-               (conj
-                response
-                [:body (:juxt.http/content resource)]))))
+            http/Resource
+            (invoke-method [this resource response request respond raise]
+              (case (:request-method request)
+                :head (respond response)
+                :get (respond
+                      (conj
+                       response
+                       [:body (:juxt.http/content resource)])))))
           h (handler/handler provider)]
       (:body
        (h {:request-method :get
@@ -109,11 +113,13 @@
           (best-representation [provider resource request]
             (pick-variants provider resource request))
 
-          http/OkResponse
-          (send-ok-response
+          http/Resource
+          (invoke-method
               [_ resource response request respond raise]
-              (respond
-               (conj response [:body (:juxt.http/content resource)]))))
+              (case (:request-method request)
+                :head (respond response)
+                :get (respond
+                      (conj response [:body (:juxt.http/content resource)])))))
         h (-> (handler/handler provider)
               (wrap-remove-header "date"))]
 
@@ -140,12 +146,14 @@
           (last-modified [_ representation]
             (:juxt.http/last-modified representation))
 
-          http/OkResponse
-          (send-ok-response [this resource response request respond raise]
-            (respond
-             (conj
-              response
-              [:body (:juxt.http/content resource)]))))
+          http/Resource
+          (invoke-method [this resource response request respond raise]
+            (case (:request-method request)
+              :head (respond response)
+              :get (respond
+                    (conj
+                     response
+                     [:body (:juxt.http/content resource)])))))
 
         h (handler/handler provider)
 
@@ -192,12 +200,14 @@
           (entity-tag [this representation]
             (hash (:juxt.http/content representation)))
 
-          http/OkResponse
-          (send-ok-response [this resource response request respond raise]
-            (respond
-             (conj
-              response
-              [:body (:juxt.http/content resource)]))))
+          http/Resource
+          (invoke-method [this resource response request respond raise]
+            (case (:request-method request)
+              :head (respond response)
+              :get (respond
+                    (conj
+                     response
+                     [:body (:juxt.http/content resource)])))))
 
         h (handler/handler provider)
 

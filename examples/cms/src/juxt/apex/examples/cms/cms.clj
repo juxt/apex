@@ -275,27 +275,28 @@
       (locate-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
-      http/OkResponse
-      (send-ok-response [this resource response request respond raise]
+      http/Resource
+      (invoke-method [this resource response request respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
-        (let [request (params-request request)
-              debug (get-in request [:query-params "debug"])]
-          (if debug
-            (respond-resource this resource request respond raise)
-            (respond-resource-response opts this resource request respond raise))))
-
-      http/PostMethod
-      (POST [_ resource req respond raise]
-        (let [body (slurp (:body req))]
-          (crux/submit-tx
-           crux-node
-           [[:crux.tx/put
-             {:crux.db/id (java.net.URI. "https://juxt.pro/frontpage3.css")
-              :apex.http/content-type "text/css;charset=utf-8"
-              :apex.http/content body
-              :apex.http/classification :public}]])
-          (respond {:status 201 :body "Uploaded!\n"})))
+        (case (:request-method request)
+          :head (respond response)
+          :get
+          (let [request (params-request request)
+                debug (get-in request [:query-params "debug"])]
+            (if debug
+              (respond-resource this resource request respond raise)
+              (respond-resource-response opts this resource request respond raise)))
+          :post
+          (let [body (slurp (:body request))]
+            (crux/submit-tx
+             crux-node
+             [[:crux.tx/put
+               {:crux.db/id (java.net.URI. "https://juxt.pro/frontpage3.css")
+                :apex.http/content-type "text/css;charset=utf-8"
+                :apex.http/content body
+                :apex.http/classification :public}]])
+            (respond {:status 201 :body "Uploaded!\n"}))))
 
       http/ResourceOptions
       (resource-options-headers [_ resource]

@@ -15,10 +15,12 @@
               (locate-resource [_ uri]
                 (when (= (.getPath uri) "/hello.txt")
                   {:apex.http/content "Hello World!"}))
-              http/OkResponse
-              (send-ok-response
+              http/Resource
+              (invoke-method
                   [_ resource response request respond raise]
-                (respond
-                 (conj response [:body (:apex.http/content resource)])))))
+                  (case (:request-method request)
+                    :head (respond response)
+                    :get (respond
+                          (conj response [:body (:apex.http/content resource)]))))))
            wrap-headers-normalize-case)]
     (h (request :get "/hello.txt"))))

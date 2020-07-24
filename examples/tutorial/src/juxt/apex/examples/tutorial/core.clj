@@ -12,12 +12,15 @@
   (locate-resource [this uri]
     (get site-map (.getPath uri)))
 
-  http/OkResponse
-  (send-ok-response
+  http/Resource
+  (invoke-method
     [this resource response request respond raise]
-    (respond
-     {:status 200
-      :body (:juxt.http/content resource)}))
+    (case (:request-method request)
+      :head (respond response)
+      :get
+      (respond
+       {:status 200
+        :body (:juxt.http/content resource)})))
 
   http/PostMethod
   (POST

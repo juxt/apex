@@ -29,7 +29,7 @@
           ;; Continue the chain, but with the resource assoc'd
           (h (assoc request :juxt.http/resource resource) respond raise)
           ;; The resource was not found, we exit the middleware chain with a 404
-          (respond {:status 404 :headers {}}))
+          (respond {:status 404}))
         ;; The will be no assoc'd resource on the request, we continue and let
         ;; the provider determine the response. It is unlikely, outside of
         ;; testing and simple demos, that a provider will not satisfy
@@ -60,27 +60,27 @@
 
 (defn invoke-method [provider]
   (fn [request respond raise]
-    (try
-      (http/http-method
-       provider
-       (:juxt.http/resource request)
-       request
-       respond
-       raise)
-      (catch Throwable t
-        (raise
-         (ex-info
-          (format
-           "Error on %s of %s"
-           (str/upper-case (name (:request-method request)))
-           (:uri request))
-          {:request request}
-          t))))))
+    (let [resource (:juxt.http/resource request)
+          method (:request-method request)]
+      (if ((or (:juxt.http/methods resource) #{:get :head}) method)
+        (try
+          (http/http-method provider resource request respond raise)
+          (catch Throwable t
+            (raise
+             (ex-info
+              (format
+               "Error on %s of %s"
+               (str/upper-case (name method))
+               (:uri request))
+              {:request request}
+              t))))
+        (respond
+         {:status 405})))))
 
 (defn handler [provider]
   (->
    (invoke-method provider)
-   (wrap-server-options provider)
    (wrap-precondition-evalution provider)
+   (wrap-server-options provider)
    (wrap-lookup-resource provider)
    ring/sync-adapt))

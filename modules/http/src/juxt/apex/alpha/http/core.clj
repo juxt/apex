@@ -15,10 +15,10 @@
     "Return the resource identified with the given URI. Return nil if not
     found."))
 
-(defprotocol OkResponse
+(defprotocol Resource
   :extend-via-metadata true
   :apex.http/required false
-  (send-ok-response
+  (invoke-method
     [_ resource response request respond raise]
     "Call the given respond function with a map containing the body and any
     explicit status override and additional headers. The given response argument
@@ -56,13 +56,6 @@
   (entity-tag
     [_ representation]
     "Return the current entity-tag for the given representation."))
-
-(defprotocol PostMethod
-  :extend-via-metadata true
-  :apex.http/required false
-  (POST
-    [_ resource request respond raise]
-    "Post to the resource."))
 
 (defprotocol ServerOptions
   :extend-via-metadata true
@@ -162,17 +155,9 @@
         ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
 
         (cond
-          (= (:request-method request) :head)
-          (respond (select-keys response [:status :headers]))
-
-          (satisfies? OkResponse provider)
-          (send-ok-response provider representation response request respond raise)
-
-          :else
-          (throw
-           (ex-info
-            "Unable to produce response"
-            response)))))))
+          (satisfies? Resource provider)
+          (invoke-method provider representation response request respond raise)
+          :else (respond response))))))
 
 ;; Section 4.3.1
 (defmethod http-method :get [provider resource request respond raise]
@@ -183,16 +168,16 @@
   (GET-or-HEAD provider resource request respond raise))
 
 ;; Section 4.3.3
-(defmethod http-method :post [provider resource req respond raise]
-  (POST provider {} req respond raise))
+(defmethod http-method :post [provider resource request respond raise]
+  (invoke-method provider resource {:status 201} request respond raise))
 
 ;; Section 4.3.4
-#_(defmethod http-method :put [provider resource req respond raise]
-    )
+(defmethod http-method :put [provider resource request respond raise]
+  (invoke-method provider resource {} request respond raise))
 
 ;; Section 4.3.5
-#_(defmethod http-method :delete [provider resource req respond raise]
-  )
+(defmethod http-method :delete [provider resource request respond raise]
+  (invoke-method provider resource {} request respond raise))
 
 ;; 4.3.7
 (defmethod http-method :options [provider resource request respond raise]
