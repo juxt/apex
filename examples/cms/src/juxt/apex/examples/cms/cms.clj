@@ -285,8 +285,8 @@
             (respond-resource this resource request respond raise)
             (respond-resource-response opts this resource request respond raise))))
 
-      http/ResourceUpdate
-      (post-resource [_ ctx req respond raise]
+      http/PostMethod
+      (POST [_ ctx req respond raise]
         (let [body (slurp (:body req))]
           (crux/submit-tx
            crux-node
