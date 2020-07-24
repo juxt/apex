@@ -15,7 +15,7 @@
               (locate-resource [_ uri]
                 (when (= (.getPath uri) "/hello.txt")
                   {:apex.http/content "Hello World!"}))
-              http/ResponseBody
+              http/OkResponse
               (send-ok-response
                   [_ resource response request respond raise]
                 (respond

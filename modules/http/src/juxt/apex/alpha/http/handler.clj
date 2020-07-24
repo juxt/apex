@@ -23,17 +23,20 @@
 
 (defn wrap-lookup-resource [h provider]
   (fn [request respond raise]
-    (if (satisfies? http/ResourceLocator provider)
-      (if-let [resource (http/lookup-resource provider (effective-uri request))]
-        ;; Continue the chain, but with the resource assoc'd
-        (h (assoc request :juxt.http/resource resource) respond raise)
-        ;; The resource was not found, we exit the middleware chain with a 404
-        (respond {:status 404 :headers {}}))
-      ;; The will be no assoc'd resource on the request, we continue and let
-      ;; the provider determine the response. It is unlikely, outside of
-      ;; testing and simple demos, that a provider will not satisfy
-      ;; http/ResourceLocator
-      (h request respond raise))))
+    (try
+      (if (satisfies? http/ResourceLocator provider)
+        (if-let [resource (http/lookup-resource provider (effective-uri request))]
+          ;; Continue the chain, but with the resource assoc'd
+          (h (assoc request :juxt.http/resource resource) respond raise)
+          ;; The resource was not found, we exit the middleware chain with a 404
+          (respond {:status 404 :headers {}}))
+        ;; The will be no assoc'd resource on the request, we continue and let
+        ;; the provider determine the response. It is unlikely, outside of
+        ;; testing and simple demos, that a provider will not satisfy
+        ;; http/ResourceLocator
+        (h request respond raise))
+      (catch Exception e
+        (raise e)))))
 
 (defn invoke-method [provider]
   (fn [request respond raise]

@@ -275,7 +275,7 @@
       (locate-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
-      http/ResponseBody
+      http/OkResponse
       (send-ok-response [this resource response request respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.

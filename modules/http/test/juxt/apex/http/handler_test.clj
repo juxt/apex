@@ -40,7 +40,7 @@
           (locate-resource [_ uri]
             (when (= (.getPath uri) "/hello.txt")
               {:apex.http/content "Hello World!"}))
-          http/ResponseBody
+          http/OkResponse
           (send-ok-response
               [_ resource response request respond raise]
               (respond
@@ -70,7 +70,7 @@
           (reify
             http/ResourceLocator
             (locate-resource [this uri] {:juxt.http/content "Hello World!"})
-            http/ResponseBody
+            http/OkResponse
             (send-ok-response [this resource response request respond raise]
               (respond
                (conj
@@ -109,7 +109,7 @@
           (best-representation [provider resource request]
             (pick-variants provider resource request))
 
-          http/ResponseBody
+          http/OkResponse
           (send-ok-response
               [_ resource response request respond raise]
               (respond
@@ -140,7 +140,7 @@
           (last-modified [_ representation]
             (:juxt.http/last-modified representation))
 
-          http/ResponseBody
+          http/OkResponse
           (send-ok-response [this resource response request respond raise]
             (respond
              (conj
@@ -192,7 +192,7 @@
           (entity-tag [this representation]
             (hash (:juxt.http/content representation)))
 
-          http/ResponseBody
+          http/OkResponse
           (send-ok-response [this resource response request respond raise]
             (respond
              (conj

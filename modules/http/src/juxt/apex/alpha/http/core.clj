@@ -15,7 +15,7 @@
     "Return the resource identified with the given URI. Return nil if not
     found."))
 
-(defprotocol ResponseBody
+(defprotocol OkResponse
   :extend-via-metadata true
   :apex.http/required false
   (send-ok-response
@@ -57,12 +57,12 @@
     [_ representation]
     "Return the current entity-tag for the given representation."))
 
-(defprotocol ResourceUpdate
+(defprotocol PostMethod
   :extend-via-metadata true
   :apex.http/required false
-  (post-resource
+  (POST
     [_ ctx request respond raise]
-    "Update the resource to the new state."))
+    "Post to the resource."))
 
 (defprotocol ServerOptions
   :extend-via-metadata true
@@ -101,9 +101,7 @@
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
-
-
-(defn- get-or-head-method [provider resource request respond raise]
+(defn- GET-or-HEAD [provider resource request respond raise]
   (let [{:juxt.http/keys [variants vary]}
         (if (satisfies? ContentNegotiation provider)
           (best-representation
@@ -167,7 +165,7 @@
           (= (:request-method request) :head)
           (respond (select-keys response [:status :headers]))
 
-          (satisfies? ResponseBody provider)
+          (satisfies? OkResponse provider)
           (send-ok-response provider representation response request respond raise)
 
           :else
@@ -178,15 +176,15 @@
 
 ;; Section 4.3.1
 (defmethod http-method :get [provider resource request respond raise]
-  (get-or-head-method provider resource request respond raise))
+  (GET-or-HEAD provider resource request respond raise))
 
 ;; Section 4.3.2
 (defmethod http-method :head [provider resource request respond raise]
-  (get-or-head-method provider resource request respond raise))
+  (GET-or-HEAD provider resource request respond raise))
 
 ;; Section 4.3.3
 (defmethod http-method :post [provider resource req respond raise]
-  (post-resource provider {} req respond raise))
+  (POST provider {} req respond raise))
 
 ;; Section 4.3.4
 #_(defmethod http-method :put [provider resource req respond raise]

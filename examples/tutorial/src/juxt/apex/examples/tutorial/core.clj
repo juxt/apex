@@ -12,7 +12,7 @@
   (locate-resource [this uri]
     (get site-map (.getPath uri)))
 
-  http/ResponseBody
+  http/OkResponse
   (send-ok-response
     [this resource response request respond raise]
     (respond
