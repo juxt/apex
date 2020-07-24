@@ -3,6 +3,7 @@
 (ns juxt.apex.examples.cms.router
   (:require
    [juxt.apex.examples.cms.cache :as cache]
+   [juxt.apex.examples.cms.graphql.graphql :as graphql]
    [juxt.apex.examples.cms.flowables :as flowables]
    [juxt.apex.examples.cms.upload :as upload]
    [juxt.apex.examples.cms.rs :as rs]
@@ -30,6 +31,8 @@
         #"/sse" (sse/sse-example req respond raise)
 
         #"/ticker" (flowables/ticker-example req respond raise)
+
+        #"/.*" ((graphql/graphql-router) req respond raise)
 
         (cms-router req respond raise)))))
 
