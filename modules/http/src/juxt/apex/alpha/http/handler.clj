@@ -21,12 +21,19 @@
 (defn effective-uri [request]
   (java.net.URI. (request-url request)))
 
-(defn wrap-lookup-resource [h resource-locator]
+(defn wrap-lookup-resource [h provider]
   (fn [request respond raise]
-    (let [resource (http/lookup-resource resource-locator (effective-uri request))]
-      (if resource
+    (if (satisfies? http/ResourceLocator provider)
+      (if-let [resource (http/lookup-resource provider (effective-uri request))]
+        ;; Continue the chain, but with the resource assoc'd
         (h (assoc request :juxt.http/resource resource) respond raise)
-        (respond {:status 404 :headers {}})))))
+        ;; The resource was not found, we exit the middleware chain with a 404
+        (respond {:status 404 :headers {}}))
+      ;; The will be no assoc'd resource on the request, we continue and let
+      ;; the provider determine the response. It is unlikely, outside of
+      ;; testing and simple demos, that a provider will not satisfy
+      ;; http/ResourceLocator
+      (h request respond raise))))
 
 (defn invoke-method [provider]
   (fn [request respond raise]
@@ -54,19 +61,6 @@
           t))))))
 
 (defn handler [provider]
-  (when-not (satisfies? http/ResourceLocator provider)
-    (throw
-     (ex-info
-      "Provider must satisfy mandatory ResourceLocator protocol"
-      {:provider provider
-       :protocol http/ResourceLocator})))
-  (when-not (satisfies? http/ResponseBody provider)
-    (throw
-     (ex-info
-      "Provider must satisfy mandatory ResponseBody protocol"
-      {:provider provider
-       :protocol http/ResponseBody})))
-
   (->
    (invoke-method provider)
    (wrap-precondition-evalution provider)

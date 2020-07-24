@@ -9,7 +9,7 @@
 
 (defprotocol ResourceLocator
   :extend-via-metadata true
-  :apex.http/required true
+  :apex.http/required false
   (locate-resource
     [_ uri]
     "Return the resource identified with the given URI. Return nil if not
@@ -17,7 +17,7 @@
 
 (defprotocol ResponseBody
   :extend-via-metadata true
-  :apex.http/required true
+  :apex.http/required false
   (send-ok-response
     [_ resource response request respond raise]
     "Call the given respond function with a map containing the body and any
