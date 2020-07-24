@@ -6,7 +6,8 @@
    [clojure.string :as str]
    [crux.api :as crux]
    [integrant.core :as ig]
-   [juxt.apex.alpha.http.core :as apex]
+   [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.handler :refer [handler]]
    [juxt.apex.alpha.vertx.helpers :as a]
    [juxt.apex.alpha.webdav.core :as webdav]
    [juxt.apex.examples.cms.images :as images]
@@ -44,7 +45,7 @@
           (str/replace "<" "&lt;"))
          "</pre>\n")))
 
-(defn respond-resource [_ {:keys [apex/resource] :as ctx} req respond raise]
+(defn respond-resource [_ resource request respond raise]
   ;; TODO: Might need authorization to see resource metadata
   ;; (for protected resources)
   (respond
@@ -73,14 +74,14 @@
         (adoc/template-model
          asciidoctor-engine
          (:apex.http/content
-          (apex/locate-resource backend (:apex.asciidoctor/source resource))))))
+          (http/locate-resource backend (:apex.asciidoctor/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
 (defn respond-resource-response
   "Return the response for a GET request targetting a resource backed by
   a CMS entity."
-  [{:keys [vertx engine]} backend {:keys [apex.http/head? apex.http/resource]} req respond raise]
+  [{:keys [vertx engine]} backend resource request respond raise]
 
   (assert resource)
 
@@ -120,7 +121,7 @@
               (:apex.http/entity-tag resource)
               (conj ["etag" (str \" (:apex.http/entity-tag resource) \")]))}
 
-           (not head?)
+           (not= (:request-method request) :head)
            (assoc
             :body
             (case (:apex.http/content-coding resource)
@@ -129,7 +130,7 @@
               (:apex.http/content resource)))))
 
       (:apex.selmer/template resource)
-      (let [source-ent (apex/locate-resource backend (:apex.asciidoctor/source resource))
+      (let [source-ent (http/locate-resource backend (:apex.asciidoctor/source resource))
             _ (when-not source-ent
                 (throw (ex-info "Expected source entity not found" {:source-entity (:apex.asciidoctor/source resource)})))
             headers
@@ -159,7 +160,7 @@
 
               ;; No content-length, this will be chunked
               )]
-        (if head?
+        (if (= (:request-method request) :head)
           (respond
            {:status 200
             :headers headers})
@@ -183,8 +184,8 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:apex.http/source-image resource) (apex/locate-resource backend (:apex.http/source-image resource)))
-      (let [source-resource (apex/locate-resource backend (:apex.http/source-image resource))]
+      (and (:apex.http/source-image resource) (http/locate-resource backend (:apex.http/source-image resource)))
+      (let [source-resource (http/locate-resource backend (:apex.http/source-image resource))]
         (case (:apex.http/content-coding source-resource)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
@@ -199,23 +200,23 @@
                 :headers (cond->
                              {"content-length" (str (count body))}
 
-                           (:apex.http/last-modified source-resource)
-                           (assoc
-                            "last-modified"
-                            (rfc1123-date
-                             (java.time.ZonedDateTime/ofInstant
-                              (.toInstant (:apex.http/last-modified source-resource))
-                              (java.time.ZoneId/systemDefault))))
+                             (:apex.http/last-modified source-resource)
+                             (assoc
+                              "last-modified"
+                              (rfc1123-date
+                               (java.time.ZonedDateTime/ofInstant
+                                (.toInstant (:apex.http/last-modified source-resource))
+                                (java.time.ZoneId/systemDefault))))
 
-                           (:apex.http/entity-tag source-resource)
-                           (assoc "etag" (str \" (:apex.http/entity-tag source-resource) \")))
+                             (:apex.http/entity-tag source-resource)
+                             (assoc "etag" (str \" (:apex.http/entity-tag source-resource) \")))
                 ;; Not Ring complaint, but awaiting an adapter from InputStream in my Ring/vertx adapter.
                 :body body})))))
 
       :else
       (respond
        (cond-> {:status 500}
-         (not head?)
+         (not= (:request-method request) :head)
          (assoc :body
                 (str
                  "<body><h2>ERROR - Not handled</h2>"
@@ -223,7 +224,7 @@
                  "</body>")))))
 
     (catch Throwable t
-      (raise (ex-info (format "Error with path: %s" (:uri req)) {:request req} t)))))
+      (raise (ex-info (format "Error with path: %s" (:uri request)) {:request request} t)))))
 
 ;; Promote?
 
@@ -268,23 +269,23 @@
 
 (defmethod ig/init-key ::router [_ {:keys [vertx engine crux-node] :as opts}]
   (->
-   (apex/handler
+   (handler
     (reify
-      apex/ResourceLocator
+      http/ResourceLocator
       (locate-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
-      apex/ResponseBody
+      http/ResponseBody
       (send-ok-response [this resource response request respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
         (let [request (params-request request)
               debug (get-in request [:query-params "debug"])]
           (if debug
-            (respond-resource this ctx request respond raise)
-            (respond-resource-response opts this ctx request respond raise))))
+            (respond-resource this resource request respond raise)
+            (respond-resource-response opts this resource request respond raise))))
 
-      apex/ResourceUpdate
+      http/ResourceUpdate
       (post-resource [_ ctx req respond raise]
         (let [body (slurp (:body req))]
           (crux/submit-tx
@@ -296,19 +297,19 @@
               :apex.http/classification :public}]])
           (respond {:status 201 :body "Uploaded!\n"})))
 
-      apex/ResourceOptions
+      http/ResourceOptions
       (resource-options-headers [_ resource]
         ;; TODO: Not all resources are webdavable, e.g. index.html, so
         ;; don't return a WebDav compliance header in this case.
         {"DAV" (webdav/compliance-value)})
 
-      apex/ServerOptions
+      http/ServerOptions
       ;; The reason for adding JUXT is to make it easier to search for
       ;; the Apex repo and documentation.
       (server-header [_] "JUXT Apex (Vert.x)")
       (server-options [_] {})
 
-      apex/ReactiveStreaming
+      http/ReactiveStreaming
       (request-body-as-stream [_ req callback]
         (.
          (:apex.vertx/request req)
@@ -333,7 +334,7 @@
            {}
            (for [uri
                  (webdav/find-members uri depth uris)]
-             [uri (apex/locate-resource this uri)]))))))
+             [uri (http/locate-resource this uri)]))))))
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.

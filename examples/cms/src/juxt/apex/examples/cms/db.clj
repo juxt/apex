@@ -19,7 +19,7 @@
   (let [node
         (crux/start-node
          {:crux.node/topology '[crux.standalone/topology]
-          :crux.kv/db-dir (str DB_DIR)
+          ;;:crux.kv/db-dir (str DB_DIR)
           :crux.standalone/event-log-sync? false})]
 
     node))

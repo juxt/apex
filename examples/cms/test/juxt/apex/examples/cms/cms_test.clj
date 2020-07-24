@@ -2,7 +2,8 @@
 
 (ns juxt.apex.examples.cms.cms-test
   (:require
-   [juxt.apex.alpha.http.core :as apex]
+   [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.handler :refer [handler]]
    [juxt.apex.alpha.webdav.core :as webdav]
    [clojure.test :refer [deftest is]])
   (:import
@@ -20,17 +21,21 @@
    (into {})))
 
 (defrecord TestProvider [store vertx]
-  apex/ResourceLocator
+  http/ResourceLocator
   (locate-resource [_ uri]
     (get entities uri))
+
   webdav/WebDav
   (propfind [this uri depth]
     (into {}
           (for [uri
                 (webdav/find-members uri depth (keys entities))]
-            [uri (apex/locate-resource this uri)]))))
+            [uri (http/locate-resource this uri)]))))
 
-(deftest get-test
+;; These tests should be promoted into their modules.
+;; Note, we no longer need a provider to satisfy the http/ResourceLocator protocol
+
+#_(deftest get-test
   (let [req
         {:request-method :get
          :scheme :https
@@ -39,13 +44,13 @@
          }]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (apex/handler
+            (handler
              (->TestProvider nil vertx))
             response (handler req)]
         (is (= 200 (:status response)))
         (is (= "123" (:body response)))))))
 
-(deftest propfind-test
+#_(deftest propfind-test
   (let [req
         {:request-method :propfind
          :scheme :https
@@ -67,7 +72,7 @@
                 </propfind>"))}]
     (with-open [vertx (Vertx/vertx)]
       (let [handler
-            (apex/handler
+            (handler
              (->TestProvider nil vertx))
             response (handler req)]
         (is (= 207 (:status response)))

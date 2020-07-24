@@ -14,6 +14,9 @@
 
   ;; Use Vert.x adapter
   juxt.apex/vertx {:local/root "../../modules/vertx"}
+
+  ;; ring-middleware-params
+  ring/ring-core {:mvn/version "1.8.1"}
   }
 
  :aliases

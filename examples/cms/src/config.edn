@@ -11,8 +11,8 @@
    :vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
    :vertx/log-activity #profile {:dev true :prod false}
 
-   :juxt-feed #ig/ref [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
-   :crux-feed #ig/ref [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/crux]
+   ;;:juxt-feed #ig/ref [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
+   ;;:crux-feed #ig/ref [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/crux]
    :router #ig/ref :juxt.apex.examples.cms.router/router}
 
   :juxt.apex.examples.cms.router/router
@@ -24,22 +24,22 @@
    :crux-node #ig/ref :juxt.apex.examples.cms.db/node
    }
 
-  [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
-  {
+  #_[:juxt.apex.examples.cms.events/stock-feed-publisher :stock/juxt]
+  #_{
    :vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
    :topic "JUXT"
    :freq 500
    }
 
-  [:juxt.apex.examples.cms.events/stock-feed-publisher :stock/crux]
-  {
+  #_[:juxt.apex.examples.cms.events/stock-feed-publisher :stock/crux]
+  #_{
    :vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx
    :topic "CRUX"
    :freq 1200
    }
 
-  :juxt.apex.examples.cms.populate/seeder
-  {:node #ig/ref :juxt.apex.examples.cms.db/node}
+  #_:juxt.apex.examples.cms.populate/seeder
+  #_{:node #ig/ref :juxt.apex.examples.cms.db/node}
 
   :juxt.apex.examples.cms.db/node
   {}
