@@ -60,7 +60,7 @@
              t)))))
      raise)))
 
-(defn invoke-method [resource-provider server]
+(defn- invoke-method [resource-provider server]
   (fn [request respond raise]
     (let [resource (:juxt.http/resource request)
           method (:request-method request)]

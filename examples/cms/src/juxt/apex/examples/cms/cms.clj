@@ -278,7 +278,7 @@
         (crux/entity (crux/db crux-node) uri))
 
       resource/Resource
-      (invoke-method [this resource server response request respond raise]
+      (invoke-method [resource-provider server-provider resource response request respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
         (case (:request-method request)
@@ -287,8 +287,8 @@
           (let [request (params-request request)
                 debug (get-in request [:query-params "debug"])]
             (if debug
-              (respond-resource this resource request respond raise)
-              (respond-resource-response opts this resource request respond raise)))
+              (respond-resource resource-provider resource request respond raise)
+              (respond-resource-response opts resource-provider resource request respond raise)))
           :post
           (let [body (slurp (:body request))]
             (crux/submit-tx

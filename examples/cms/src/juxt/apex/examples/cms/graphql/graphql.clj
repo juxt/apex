@@ -25,7 +25,8 @@
          nil))
 
      resource/Resource
-     (invoke-method [_ server-provider resource response request respond raise]
+     (invoke-method [resource-provider server-provider
+                     resource response request respond raise]
        (case (:request-method request)
          :head (respond {:status 200})
          :get (respond {:status 200

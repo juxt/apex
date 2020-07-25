@@ -15,7 +15,7 @@
 (defprotocol Resource
   :extend-via-metadata true
   (invoke-method
-    [_ resource server response request respond raise]
+    [_ server resource response request respond raise]
     "Call the given respond function with a map containing the body and any
     explicit status override and additional headers. The given response argument
     contains pre-determined status and headers."))

@@ -5,6 +5,7 @@
    [juxt.reap.alpha.ring :refer [decode-accept-headers]]
    [ring.mock.request :refer [request]]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.resource :as resource]
    [juxt.apex.alpha.http.util :as util]
    [juxt.apex.alpha.http.handler :as handler]
    [clojure.test :refer [deftest is]]
@@ -34,15 +35,17 @@
           (map #(http/lookup-resource provider %)))])))
 
 (deftest locate-resource-test
-  (let [provider
+  (let [resource-provider
         (reify
-          http/ResourceLocator
+          resource/ResourceLocator
           (locate-resource [_ uri]
             (when (= (.getPath uri) "/hello.txt")
               {:apex.http/content "Hello World!"}))
-          http/Resource
+          resource/Resource
           (invoke-method
-              [_ resource response request respond raise]
+              [resource-provider
+               server-provider
+               resource response request respond raise]
               (case (:request-method request)
                 :head (respond response)
                 :get (respond
@@ -69,9 +72,9 @@
     "Hello World!"
     (let [provider
           (reify
-            http/ResourceLocator
+            resource/ResourceLocator
             (locate-resource [this uri] {:juxt.http/content "Hello World!"})
-            http/Resource
+            resource/Resource
             (invoke-method [this resource response request respond raise]
               (case (:request-method request)
                 :head (respond response)
@@ -91,7 +94,7 @@
 (deftest content-negotiation-test
   (let [provider
         (reify
-          http/ResourceLocator
+          resource/ResourceLocator
           (locate-resource [_ uri]
             (->
              {"/hello"
@@ -112,7 +115,7 @@
           (best-representation [provider resource request]
             (pick-variants provider resource request))
 
-          http/Resource
+          resource/Resource
           (invoke-method
               [_ resource response request respond raise]
               (case (:request-method request)
@@ -136,7 +139,7 @@
 (deftest conditional-request-with-last-modified-test
   (let [provider
         (reify
-          http/ResourceLocator
+          resource/ResourceLocator
           (locate-resource [this uri]
             {:juxt.http/content "Hello World!"
              :juxt.http/last-modified (util/parse-http-date "Wed, 08 Jul 2020 22:00:00 GMT")})
@@ -145,7 +148,7 @@
           (last-modified [_ representation]
             (:juxt.http/last-modified representation))
 
-          http/Resource
+          resource/Resource
           (invoke-method [this resource response request respond raise]
             (case (:request-method request)
               :head (respond response)
@@ -191,15 +194,15 @@
 (deftest conditional-request-with-etag-test
   (let [provider
         (reify
-          http/ResourceLocator
+          resource/ResourceLocator
           (locate-resource [this uri]
             {:juxt.http/content "Hello World!"})
 
-          http/EntityTag
+          resource/EntityTag
           (entity-tag [this representation]
             (hash (:juxt.http/content representation)))
 
-          http/Resource
+          resource/Resource
           (invoke-method [this resource response request respond raise]
             (case (:request-method request)
               :head (respond response)
