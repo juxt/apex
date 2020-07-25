@@ -60,31 +60,40 @@
              t)))))
      raise)))
 
-(defn- invoke-method [resource-provider server]
+(defn- invoke-method [resource-provider server known-methods]
   (fn [request respond raise]
     (let [resource (:juxt.http/resource request)
           method (:request-method request)]
-      (if-not (contains? (or (some-> (keys (:juxt.http/methods resource)) set) #{:get :head}) method)
-        ;; Method Not Allowed!
-        (respond {:status 405})
-        ;; Proceed to invoke method...
-        (try
-          (http/http-method resource-provider server resource request respond raise)
-          (catch Throwable t
-            (raise
-             (ex-info
-              (format
-               "Error on %s of %s"
-               (str/upper-case (name method))
-               (:uri request))
-              {:request request}
-              t))))
-        ))))
+
+      (if (contains? known-methods method)
+
+        (let [allow (some-> (keys (:juxt.http/methods resource)) set)]
+          (if-not (contains? (or allow #{:get :head}) method)
+            ;; Method Not Allowed!
+            (respond (cond-> {:status 405}
+                       allow (conj [:headers
+                                    {"allow" (str/join ", " (map (comp str/upper-case name) allow))}])))
+            ;; Proceed to invoke method...
+            (try
+              (http/http-method resource-provider server resource request respond raise)
+              (catch Throwable t
+                (raise
+                 (ex-info
+                  (format
+                   "Error on %s of %s"
+                   (str/upper-case (name method))
+                   (:uri request))
+                  {:request request}
+                  t))))))
+
+        ;; Method Not Implemented!
+        (respond {:status 501})))))
 
 (defn handler [resource-provider server]
-  (->
-   (invoke-method resource-provider server)
-   (wrap-precondition-evalution resource-provider)
-   (wrap-lookup-resource resource-provider)
-   (wrap-server-options server)
-   ring/sync-adapt))
+  (let [known-methods (set (keys (methods http/http-method)))]
+    (->
+     (invoke-method resource-provider server known-methods)
+     (wrap-precondition-evalution resource-provider)
+     (wrap-lookup-resource resource-provider)
+     (wrap-server-options server)
+     ring/sync-adapt)))
