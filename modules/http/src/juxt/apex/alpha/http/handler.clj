@@ -42,23 +42,29 @@
 
 (defn wrap-server-options [h server]
   (fn [request respond raise]
-    (h
-     request
-     (fn [response]
-       (try
-         (let [server
-               (when (satisfies? server/ServerOptions server)
-                 (server/server-header server))]
-           (respond
-            (cond-> response
-              server (assoc-in [:headers "server"] server))))
-         (catch Throwable t
-           (raise
-            (ex-info
-             "Error in server-header function"
-             {}
-             t)))))
-     raise)))
+    (if (= (:uri request) "*")
+      ;; Test me with:
+      ;; curl -i --request-target "*" -X OPTIONS http://localhost:8000
+      (respond
+       (cond-> {:status 200}
+         (satisfies? server/ServerOptions server) (assoc :headers (server/server-options server))))
+      (h
+       request
+       (fn [response]
+         (try
+           (let [server
+                 (when (satisfies? server/ServerOptions server)
+                   (server/server-header server))]
+             (respond
+              (cond-> response
+                server (assoc-in [:headers "server"] server))))
+           (catch Throwable t
+             (raise
+              (ex-info
+               "Error in server-header function"
+               {}
+               t)))))
+       raise))))
 
 (defn- invoke-method [resource-provider server known-methods]
   (fn [request respond raise]
@@ -67,8 +73,13 @@
 
       (if (contains? known-methods method)
 
-        (let [allow (some-> (keys (:juxt.http/methods resource)) set)]
-          (if-not (contains? (or allow #{:get :head}) method)
+        (let [allow (or
+                     (some-> (keys (:juxt.http/methods resource)) set)
+                     #{:get :options})
+              allow (cond-> allow
+                        (contains? allow :get) (conj :head)
+                        (satisfies? resource/ResourceOptions resource-provider) (conj :options))]
+          (if-not (contains? allow method)
             ;; Method Not Allowed!
             (respond (cond-> {:status 405}
                        allow (conj [:headers

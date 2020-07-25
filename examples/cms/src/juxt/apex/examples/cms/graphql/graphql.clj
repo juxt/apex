@@ -66,6 +66,7 @@
          (raise (ex-info "Failed to parse request body as json" {} t)))))))
 
 (defn graphql-router [server]
+  (assert server)
   (handler
    (reify
      resource/ResourceLocator
@@ -134,6 +135,10 @@
        (graphql-invoke-method
         resource-provider
         server-provider
-        resource response request respond raise)))
+        resource response request respond raise))
+
+
+     resource/ResourceOptions
+     (resource-options-headers [_ resource] {}))
 
    server))

@@ -115,17 +115,8 @@
 (defmethod http-method :delete [resource-provider server-provider resource request respond raise]
   (invoke-method resource-provider server-provider resource {} request respond raise))
 
-;; 4.3.7
+;; Section 4.3.7
 (defmethod http-method :options [resource-provider server-provider resource request respond raise]
-  (cond
-    ;; Test me with:
-    ;; curl -i --request-target "*" -X OPTIONS http://localhost:8000
-    (= (:uri request) "*")
-    (respond
-     {:status 200
-      :headers (server-options server-provider)})
-
-    :else
-    (respond
-     {:status 200
-      :headers (resource-options-headers resource-provider resource)})))
+  (respond
+   {:status 200
+    :headers (resource-options-headers resource-provider resource)}))
