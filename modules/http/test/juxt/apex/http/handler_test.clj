@@ -17,14 +17,15 @@
 ;; exploiting clojure.test/assert-predicate
 (defn wrap-remove-header [h header]
   (fn [req]
-    (->
-     (h req)
-     (update :headers dissoc header))))
+    (let [result (h req)]
+      (if (:headers result)
+        (update result :headers dissoc header)
+        result))))
 
 (defn pick-variants
   "A convenience wrapper upon pick that resolves variants according to the URIs in
   the :juxt.http/variant-locations entry of the resource."
-  [provider resource request]
+  [resource-provider resource request]
   (pick
    using-apache-algo
    (conj
@@ -32,7 +33,7 @@
     (decode-accept-headers request)
     [:juxt.http/variants
      (->> (:juxt.http/variant-locations resource)
-          (map #(http/lookup-resource provider %)))])))
+          (map #(http/lookup-resource resource-provider %)))])))
 
 (deftest locate-resource-test
   (let [resource-provider
@@ -50,7 +51,7 @@
                 :head (respond response)
                 :get (respond
                       (conj response [:body (:apex.http/content resource)])))))
-        h (-> (handler/handler provider)
+        h (-> (handler/handler resource-provider nil)
               (wrap-remove-header "date"))]
     (is (=
          {:status 200
@@ -70,19 +71,19 @@
   (is
    (=
     "Hello World!"
-    (let [provider
+    (let [resource-provider
           (reify
             resource/ResourceLocator
             (locate-resource [this uri] {:juxt.http/content "Hello World!"})
             resource/Resource
-            (invoke-method [this resource response request respond raise]
+            (invoke-method [resource-provider server resource response request respond raise]
               (case (:request-method request)
                 :head (respond response)
                 :get (respond
                       (conj
                        response
                        [:body (:juxt.http/content resource)])))))
-          h (handler/handler provider)]
+          h (handler/handler resource-provider nil)]
       (:body
        (h {:request-method :get
            :uri "/"
@@ -111,18 +112,18 @@
                (reap/content-type "text/plain;charset=utf-8")}}
              (get (. uri getPath))))
 
-          http/ContentNegotiation
+          resource/ContentNegotiation
           (best-representation [provider resource request]
             (pick-variants provider resource request))
 
           resource/Resource
           (invoke-method
-              [_ resource response request respond raise]
+              [resource-provider server-provider resource response request respond raise]
               (case (:request-method request)
                 :head (respond response)
                 :get (respond
                       (conj response [:body (:juxt.http/content resource)])))))
-        h (-> (handler/handler provider)
+        h (-> (handler/handler provider nil)
               (wrap-remove-header "date"))]
 
     (is (=
@@ -144,12 +145,12 @@
             {:juxt.http/content "Hello World!"
              :juxt.http/last-modified (util/parse-http-date "Wed, 08 Jul 2020 22:00:00 GMT")})
 
-          http/LastModified
+          resource/LastModified
           (last-modified [_ representation]
             (:juxt.http/last-modified representation))
 
           resource/Resource
-          (invoke-method [this resource response request respond raise]
+          (invoke-method [resource-provider server-provider resource response request respond raise]
             (case (:request-method request)
               :head (respond response)
               :get (respond
@@ -157,7 +158,7 @@
                      response
                      [:body (:juxt.http/content resource)])))))
 
-        h (handler/handler provider)
+        h (handler/handler provider nil)
 
         response (h {:scheme :https
                      :uri "/"
@@ -203,7 +204,7 @@
             (hash (:juxt.http/content representation)))
 
           resource/Resource
-          (invoke-method [this resource response request respond raise]
+          (invoke-method [resource-provider server-provider resource response request respond raise]
             (case (:request-method request)
               :head (respond response)
               :get (respond
@@ -211,7 +212,7 @@
                      response
                      [:body (:juxt.http/content resource)])))))
 
-        h (handler/handler provider)
+       h (handler/handler provider nil)
 
         response (h {:scheme :https
                      :uri "/"
