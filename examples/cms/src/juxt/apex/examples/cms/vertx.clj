@@ -4,6 +4,7 @@
   (:require
    [integrant.core :as ig]
    [juxt.apex.alpha.vertx.helpers :refer [h]]
+   [juxt.apex.alpha.http.server :as server]
    [clojure.string :as string]
    [juxt.apex.alpha.http.header-names :refer [header-canonical-case]]
    [org.reactivestreams.flow :as rs])
@@ -239,3 +240,16 @@
 #_(reflect io.reactivex.functions.Consumer)
 
 #_(reflect io.vertx.reactivex.WriteStreamSubscriber)
+
+
+(defmethod ig/init-key ::server
+  [_ {:keys [vertx] :as opts}]
+  (reify
+    server/ServerOptions
+    (server-header [server] "Apex Server")
+    server/RequestBody
+    (request-body-as-stream [_ request cb]
+      (.bodyHandler
+       (:apex.vertx/request request)
+       (h (fn [buffer]
+            (cb (new java.io.ByteArrayInputStream (.getBytes buffer)))))))))

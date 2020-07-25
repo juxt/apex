@@ -2,7 +2,7 @@
 
 (ns juxt.apex.alpha.http.conditional
   (:require
-   [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.resource :as resource]
    [juxt.apex.alpha.http.util :as util])
   (:import
    (java.util Date)))
@@ -25,8 +25,8 @@
 
 (defmethod evaluate-precondition "if-modified-since"
   [header provider request respond raise]
-  (if (satisfies? http/LastModified provider)
-    (let [last-modified (http/last-modified provider (:juxt.http/resource request))
+  (if (satisfies? resource/LastModified provider)
+    (let [last-modified (resource/last-modified provider (:juxt.http/resource request))
           if-modified-since
           (some-> (get-in request [:headers "if-modified-since"])
                   util/parse-http-date)]
@@ -40,8 +40,8 @@
 
 (defmethod evaluate-precondition "if-none-match"
   [header provider request respond raise]
-  (if (satisfies? http/LastModified provider)
-    (let [last-modified (http/last-modified provider (:juxt.http/resource request))
+  (if (satisfies? resource/LastModified provider)
+    (let [last-modified (resource/last-modified provider (:juxt.http/resource request))
           if-modified-since
           (some-> (get-in request [:headers "if-modified-since"])
                   util/parse-http-date)]

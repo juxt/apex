@@ -58,8 +58,7 @@
              :scheme :https})))
 
     (is (=
-         {:status 404
-          :headers {}}
+         {:status 404}
          (h {:request-method :get
              :uri "/not-exists"
              :scheme :https})))))

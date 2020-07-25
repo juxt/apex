@@ -8,6 +8,7 @@
    [hiccup2.core :refer [html]]
    [hiccup.page :refer [xml-declaration]]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.resource :as resource]
    [juxt.apex.alpha.http.util :as util]
    [juxt.apex.alpha.webdav.xml :as x]))
 
@@ -74,7 +75,7 @@
                         {:content [(xml/parse (java.io.ByteArrayInputStream. (.getBytes body-str)))]}
                         :propfind :prop x/content)
                        (map (juxt :tag :content)))
-                resource (http/locate-resource backend uri)]
+                resource (http/lookup-resource backend uri)]
 
             (respond
              (let [body
@@ -129,4 +130,4 @@
 
     (if (:body req)
       (cb req)
-      (http/request-body-as-stream backend req cb))))
+      (resource/request-body-as-stream backend req cb))))

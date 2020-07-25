@@ -3,6 +3,7 @@
 (ns juxt.apex.examples.cms.cms-test
   (:require
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.resource :as resource]
    [juxt.apex.alpha.http.handler :refer [handler]]
    [juxt.apex.alpha.webdav.core :as webdav]
    [clojure.test :refer [deftest is]])
@@ -21,7 +22,7 @@
    (into {})))
 
 (defrecord TestProvider [store vertx]
-  http/ResourceLocator
+  resource/ResourceLocator
   (locate-resource [_ uri]
     (get entities uri))
 
@@ -30,7 +31,7 @@
     (into {}
           (for [uri
                 (webdav/find-members uri depth (keys entities))]
-            [uri (http/locate-resource this uri)]))))
+            [uri (http/lookup-resource this uri)]))))
 
 ;; These tests should be promoted into their modules.
 ;; Note, we no longer need a provider to satisfy the http/ResourceLocator protocol

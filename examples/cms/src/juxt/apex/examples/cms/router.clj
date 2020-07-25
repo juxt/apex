@@ -10,7 +10,7 @@
    [juxt.apex.examples.cms.sse :as sse]
    [integrant.core :as ig]))
 
-(defn make-router [cms-router]
+(defn make-router [cms-router server]
   (let [flowables-example-handler (flowables/flow-example {})]
     (fn [req respond raise]
       (condp re-matches (:uri req)
@@ -32,10 +32,10 @@
 
         #"/ticker" (flowables/ticker-example req respond raise)
 
-        #"/.*" ((graphql/graphql-router) req respond raise)
+        #"/.*" ((graphql/graphql-router server) req respond raise)
 
         (cms-router req respond raise)))))
 
-(defmethod ig/init-key ::router [_ {:keys [cms-router]}]
+(defmethod ig/init-key ::router [_ {:keys [cms-router server]}]
   (assert cms-router)
-  (make-router cms-router))
+  (make-router cms-router server))

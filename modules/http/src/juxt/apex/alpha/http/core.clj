@@ -2,81 +2,17 @@
 
 (ns juxt.apex.alpha.http.core
   (:require
-   [juxt.apex.alpha.http.util :as util]))
-
-;; TODO: OpenAPI in Apex support should be written in terms of these
-;; interfaces.
-
-(defprotocol ResourceLocator
-  :extend-via-metadata true
-  :apex.http/required false
-  (locate-resource
-    [_ uri]
-    "Return the resource identified with the given URI. Return nil if not
-    found."))
-
-(defprotocol Resource
-  :extend-via-metadata true
-  :apex.http/required false
-  (invoke-method
-    [_ resource response request respond raise]
-    "Call the given respond function with a map containing the body and any
-    explicit status override and additional headers. The given response argument
-    contains pre-determined status and headers."))
-
-(defprotocol ContentNegotiation
-  :extend-via-metadata true
-  :apex.http/required false
-  (best-representation
-    [_ resource request]
-    "For a given resource, return the resource (or resources) corresponding to
-    the best representation (with respect to the request). If a collection
-    containing multiple values are returned, a 300 will result. The pattern of
-    negotiation is up to the provider (proactive, reactive, transparent,
-    etc.)."))
-
-(defprotocol MultipleRepresentations
-  :extend-via-metadata true
-  :apex.http/required false
-  (send-300-response
-    [_ representations request respond raise]
-    "Satisfy this protocol if you want to support reactive
-    negotation."))
-
-(defprotocol LastModified
-  :extend-via-metadata true
-  :apex.http/required false
-  (last-modified
-    [_ representation]
-    "Return the java.util.Date that the given representation was last modified."))
-
-(defprotocol EntityTag
-  :extend-via-metadata true
-  :apex.http/required false
-  (entity-tag
-    [_ representation]
-    "Return the current entity-tag for the given representation."))
-
-(defprotocol ServerOptions
-  :extend-via-metadata true
-  :apex.http/required false
-  (server-header [_]
-    "Return the value for server header, or nil to avoid setting it.")
-  (server-options [_]))
-
-(defprotocol ResourceOptions
-  :extend-via-metadata true
-  :apex.http/required false
-  (resource-options-headers [_ resource]))
-
-(defprotocol ReactiveStreaming
-  :extend-via-metadata true
-  :apex.http/required false
-  (request-body-as-stream [_ req callback]
-    "Async streaming adapters only (e.g. Vert.x). Call the callback
-    with a Ring-compatible request containing a :body
-    InputStream. This must be called in the request thread, otherwise
-    the body may have already begun to be read."))
+   [juxt.apex.alpha.http.util :as util]
+   [juxt.apex.alpha.http.resource
+    :refer [locate-resource
+            ContentNegotiation best-representation
+            MultipleRepresentations send-300-response
+            LastModified last-modified
+            EntityTag entity-tag
+            Resource invoke-method
+            resource-options-headers]]
+   [juxt.apex.alpha.http.server
+    :refer [server-options]]))
 
 (defn lookup-resource
   "Return the map corresponding to the resource identified by the given URI. Add
@@ -85,20 +21,20 @@
   (when-let [resource (locate-resource provider uri)]
     (conj resource [:juxt.http/uri uri])))
 
-(defmulti http-method (fn [provider resource request respond raise] (:request-method request)))
+(defmulti http-method (fn [resource-provider server-provider resource request respond raise] (:request-method request)))
 
-(defmethod http-method :default [provider resource request respond raise]
+(defmethod http-method :default [resource-provider server-provider resource request respond raise]
   (respond {:status 501}))
 
 ;; TODO: Most :apex ns keywords should be in :juxt.http ns. Refactor!
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
-(defn- GET-or-HEAD [provider resource request respond raise]
+(defn- GET-or-HEAD [resource-provider server-provider resource request respond raise]
   (let [{:juxt.http/keys [variants vary]}
-        (if (satisfies? ContentNegotiation provider)
+        (if (satisfies? ContentNegotiation resource-provider)
           (best-representation
-           provider
+           resource-provider
            resource request)
           {:juxt.http/variants [resource]})
         representations variants]
@@ -112,9 +48,9 @@
 
       (and (sequential? representations)
            (>= (count representations) 2))
-      (if (satisfies? MultipleRepresentations provider)
-        (send-300-response provider (filter uri? representations) request respond raise)
-        (throw (ex-info "negotiate-content of juxt.apex.alpha.http.ContentNegotiation protocol returned multiple representations but provider does not satisfy juxt.apex.alpha.http.MultipleRepresentations protocol"
+      (if (satisfies? MultipleRepresentations resource-provider)
+        (send-300-response resource-provider (filter uri? representations) request respond raise)
+        (throw (ex-info "negotiate-content of juxt.apex.alpha.http.ContentNegotiation protocol returned multiple representations but resource-provider does not satisfy juxt.apex.alpha.http.MultipleRepresentations protocol"
                         {})))
 
       :else
@@ -123,12 +59,12 @@
               (sequential? representations) first)
 
             last-modified
-            (when (satisfies? LastModified provider)
-              (last-modified provider representation))
+            (when (satisfies? LastModified resource-provider)
+              (last-modified resource-provider representation))
 
             entity-tag
-            (when (satisfies? EntityTag provider)
-              (entity-tag provider representation))
+            (when (satisfies? EntityTag resource-provider)
+              (entity-tag resource-provider representation))
 
             status 200
 
@@ -155,41 +91,41 @@
         ;; TODO: Handle errors (by responding with error response, with appropriate re-negotiation)
 
         (cond
-          (satisfies? Resource provider)
-          (invoke-method provider representation response request respond raise)
+          (satisfies? Resource resource-provider)
+          (invoke-method resource-provider server-provider representation response request respond raise)
           :else (respond response))))))
 
 ;; Section 4.3.1
-(defmethod http-method :get [provider resource request respond raise]
-  (GET-or-HEAD provider resource request respond raise))
+(defmethod http-method :get [resource-provider server-provider resource request respond raise]
+  (GET-or-HEAD resource-provider server-provider resource request respond raise))
 
 ;; Section 4.3.2
-(defmethod http-method :head [provider resource request respond raise]
-  (GET-or-HEAD provider resource request respond raise))
+(defmethod http-method :head [resource-provider server-provider resource request respond raise]
+  (GET-or-HEAD resource-provider server-provider resource request respond raise))
 
 ;; Section 4.3.3
-(defmethod http-method :post [provider resource request respond raise]
-  (invoke-method provider resource {:status 201} request respond raise))
+(defmethod http-method :post [resource-provider server-provider resource request respond raise]
+  (invoke-method resource-provider server-provider resource {:status 201} request respond raise))
 
 ;; Section 4.3.4
-(defmethod http-method :put [provider resource request respond raise]
-  (invoke-method provider resource {} request respond raise))
+(defmethod http-method :put [resource-provider server-provider resource request respond raise]
+  (invoke-method resource-provider server-provider resource {} request respond raise))
 
 ;; Section 4.3.5
-(defmethod http-method :delete [provider resource request respond raise]
-  (invoke-method provider resource {} request respond raise))
+(defmethod http-method :delete [resource-provider server-provider resource request respond raise]
+  (invoke-method resource-provider server-provider resource {} request respond raise))
 
 ;; 4.3.7
-(defmethod http-method :options [provider resource request respond raise]
+(defmethod http-method :options [resource-provider server-provider resource request respond raise]
   (cond
     ;; Test me with:
     ;; curl -i --request-target "*" -X OPTIONS http://localhost:8000
     (= (:uri request) "*")
     (respond
      {:status 200
-      :headers (server-options provider)})
+      :headers (server-options server-provider)})
 
     :else
     (respond
      {:status 200
-      :headers (resource-options-headers provider resource)})))
+      :headers (resource-options-headers resource-provider resource)})))

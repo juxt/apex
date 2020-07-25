@@ -7,6 +7,8 @@
    [crux.api :as crux]
    [integrant.core :as ig]
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.alpha.http.resource :as resource]
+   [juxt.apex.alpha.http.server :as server]
    [juxt.apex.alpha.http.handler :refer [handler]]
    [juxt.apex.alpha.vertx.helpers :as a]
    [juxt.apex.alpha.webdav.core :as webdav]
@@ -74,7 +76,7 @@
         (adoc/template-model
          asciidoctor-engine
          (:apex.http/content
-          (http/locate-resource backend (:apex.asciidoctor/source resource))))))
+          (http/lookup-resource backend (:apex.asciidoctor/source resource))))))
 
      :custom-resource-path (. templates-source-uri toURL))))
 
@@ -130,7 +132,7 @@
               (:apex.http/content resource)))))
 
       (:apex.selmer/template resource)
-      (let [source-ent (http/locate-resource backend (:apex.asciidoctor/source resource))
+      (let [source-ent (http/lookup-resource backend (:apex.asciidoctor/source resource))
             _ (when-not source-ent
                 (throw (ex-info "Expected source entity not found" {:source-entity (:apex.asciidoctor/source resource)})))
             headers
@@ -184,8 +186,8 @@
                 t)))})))
 
       ;; TODO: Refactor me!
-      (and (:apex.http/source-image resource) (http/locate-resource backend (:apex.http/source-image resource)))
-      (let [source-resource (http/locate-resource backend (:apex.http/source-image resource))]
+      (and (:apex.http/source-image resource) (http/lookup-resource backend (:apex.http/source-image resource)))
+      (let [source-resource (http/lookup-resource backend (:apex.http/source-image resource))]
         (case (:apex.http/content-coding source-resource)
           :base64
           (let [baos (new java.io.ByteArrayOutputStream)]
@@ -267,16 +269,16 @@
         (println "Error raised:" t)
         (raise t))))))
 
-(defmethod ig/init-key ::router [_ {:keys [vertx engine crux-node] :as opts}]
+(defmethod ig/init-key ::router [_ {:keys [vertx server engine crux-node] :as opts}]
   (->
    (handler
     (reify
-      http/ResourceLocator
+      resource/ResourceLocator
       (locate-resource [_ uri]
         (crux/entity (crux/db crux-node) uri))
 
-      http/Resource
-      (invoke-method [this resource response request respond raise]
+      resource/Resource
+      (invoke-method [this resource server response request respond raise]
         ;; To get the debug query parameter.  Arguably we could use Apex's
         ;; OpenAPI-compatible replacement.
         (case (:request-method request)
@@ -298,20 +300,21 @@
                 :apex.http/classification :public}]])
             (respond {:status 201 :body "Uploaded!\n"}))))
 
-      http/ResourceOptions
+      resource/ResourceOptions
       (resource-options-headers [_ resource]
         ;; TODO: Not all resources are webdavable, e.g. index.html, so
         ;; don't return a WebDav compliance header in this case.
         {"DAV" (webdav/compliance-value)})
 
-      http/ServerOptions
+      server/ServerOptions
       ;; The reason for adding JUXT is to make it easier to search for
       ;; the Apex repo and documentation.
       (server-header [_] "JUXT Apex (Vert.x)")
       (server-options [_] {})
 
-      http/ReactiveStreaming
-      (request-body-as-stream [_ req callback]
+      ;; TODO: This should be on a per-resource per-method basis
+      #_resource/ReactiveStreaming
+      #_(request-body-as-stream [_ req callback]
         (.
          (:apex.vertx/request req)
          bodyHandler
@@ -335,7 +338,8 @@
            {}
            (for [uri
                  (webdav/find-members uri depth uris)]
-             [uri (http/locate-resource this uri)]))))))
+             [uri (http/lookup-resource this uri)])))))
+    server)
 
    ;; Dev only, removed on production. Definitely a good example of
    ;; middleware.
