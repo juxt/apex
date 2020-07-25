@@ -306,12 +306,6 @@
         ;; don't return a WebDav compliance header in this case.
         {"DAV" (webdav/compliance-value)})
 
-      server/ServerOptions
-      ;; The reason for adding JUXT is to make it easier to search for
-      ;; the Apex repo and documentation.
-      (server-header [_] "JUXT Apex (Vert.x)")
-      (server-options [_] {})
-
       ;; TODO: This should be on a per-resource per-method basis
       #_resource/ReactiveStreaming
       #_(request-body-as-stream [_ req callback]

@@ -246,7 +246,10 @@
   [_ {:keys [vertx] :as opts}]
   (reify
     server/ServerOptions
-    (server-header [server] "Apex Server")
+    ;; The reason for adding JUXT is to make it easier to search for
+    ;; the Apex repo and documentation.
+    (server-header [server] "JUXT Crux/CMS, Vert.x")
+    (server-options [_] {})
     server/RequestBody
     (request-body-as-stream [_ request cb]
       (.bodyHandler

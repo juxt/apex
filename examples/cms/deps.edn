@@ -7,8 +7,10 @@
 
   juxt.apex/http {:local/root "../../modules/http"}
   ;; Until transitive bug is fixed in deps.edn
-  juxt/reap {:git/url "https://github.com/juxt/reap.git"
-             :sha "75002f43c6679182d27d7aa0eb782e06c43aac64"}
+  juxt/reap
+  {:local/root "../../../reap"}
+  #_{:git/url "https://github.com/juxt/reap.git"
+     :sha "75002f43c6679182d27d7aa0eb782e06c43aac64"}
 
   juxt.apex/webdav {:local/root "../../modules/webdav"}
 
