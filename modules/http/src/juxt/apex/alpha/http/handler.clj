@@ -64,7 +64,7 @@
   (fn [request respond raise]
     (let [resource (:juxt.http/resource request)
           method (:request-method request)]
-      (if-not ((or (:juxt.http/methods resource) #{:get :head}) method)
+      (if-not (find (or (:juxt.http/methods resource) #{:get :head}) method)
         ;; Method Not Allowed!
         (respond {:status 405})
         ;; Proceed to invoke method...
