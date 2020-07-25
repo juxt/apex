@@ -7,7 +7,9 @@
    [juxt.apex.alpha.http.core :as http]
    [juxt.apex.alpha.http.resource :as resource]
    [juxt.apex.alpha.http.server :as server]
-   [juxt.apex.alpha.http.handler :refer [handler]]))
+   [juxt.apex.alpha.http.handler :refer [handler]]
+   [juxt.reap.alpha.graphql :as reap-graphql]
+   [juxt.reap.alpha.api :as reap]))
 
 (defmulti graphql-invoke-method
   (fn [resource-provider
@@ -55,10 +57,11 @@
               variables "variables"
               :as body}
              (json/read-value body-as-byte-stream)]
+
          (respond
           (conj
            response
-           [:body (format "Thanks! query was %s\n" query)])))
+           [:body (pr-str (reap/decode reap-graphql/OperationDefinition query))])))
        (catch Throwable t
          (raise (ex-info "Failed to parse request body as json" {} t)))))))
 
