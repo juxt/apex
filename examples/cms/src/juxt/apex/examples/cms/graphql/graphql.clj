@@ -49,15 +49,18 @@
    server-provider
    request
    (fn [body-as-byte-stream]
-     (let [{query "query"
-            operation-name "operationName"
-            variables "variables"
-            :as body}
-           (json/read-value body-as-byte-stream)]
-       (respond
-        (conj
-         response
-         [:body (format "Thanks! query was %s\n" query)]))))))
+     (try
+       (let [{query "query"
+              operation-name "operationName"
+              variables "variables"
+              :as body}
+             (json/read-value body-as-byte-stream)]
+         (respond
+          (conj
+           response
+           [:body (format "Thanks! query was %s\n" query)])))
+       (catch Throwable t
+         (raise (ex-info "Failed to parse request body as json" {} t)))))))
 
 (defn graphql-router [server]
   (handler
