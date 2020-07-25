@@ -21,16 +21,16 @@
   (when-let [resource (locate-resource provider uri)]
     (conj resource [:juxt.http/uri uri])))
 
-(defmulti http-method (fn [resource-provider server-provider resource request respond raise] (:request-method request)))
+(defmulti http-method (fn [resource-provider server-provider resource response request respond raise] (:request-method request)))
 
-(defmethod http-method :default [resource-provider server-provider resource request respond raise]
+(defmethod http-method :default [resource-provider server-provider resource response request respond raise]
   (respond {:status 501}))
 
 ;; TODO: Most :apex ns keywords should be in :juxt.http ns. Refactor!
 
 ;;(defn uri? [i] (instance? java.net.URI i))
 
-(defn- GET-or-HEAD [resource-provider server-provider resource request respond raise]
+(defn- GET-or-HEAD [resource-provider server-provider resource response request respond raise]
   (let [{:juxt.http/keys [variants vary]}
         (if (satisfies? ContentNegotiation resource-provider)
           (best-representation
@@ -44,7 +44,7 @@
        (nil? representations)
        (and (sequential? representations)
             (zero? (count representations))))
-      (respond {:status 406})
+      (respond (merge response {:status 406}))
 
       (and (sequential? representations)
            (>= (count representations) 2))
@@ -84,7 +84,7 @@
 
             response
             {:status status
-             :headers headers}]
+             :headers (merge (:headers response) headers)}]
 
         ;; TODO: Check condition (Last-Modified, If-None-Match)
 
@@ -96,27 +96,27 @@
           :else (respond response))))))
 
 ;; Section 4.3.1
-(defmethod http-method :get [resource-provider server-provider resource request respond raise]
-  (GET-or-HEAD resource-provider server-provider resource request respond raise))
+(defmethod http-method :get [resource-provider server-provider resource response request respond raise]
+  (GET-or-HEAD resource-provider server-provider resource response request respond raise))
 
 ;; Section 4.3.2
-(defmethod http-method :head [resource-provider server-provider resource request respond raise]
-  (GET-or-HEAD resource-provider server-provider resource request respond raise))
+(defmethod http-method :head [resource-provider server-provider resource response request respond raise]
+  (GET-or-HEAD resource-provider server-provider resource response request respond raise))
 
 ;; Section 4.3.3
-(defmethod http-method :post [resource-provider server-provider resource request respond raise]
+(defmethod http-method :post [resource-provider server-provider resource response request respond raise]
   (invoke-method resource-provider server-provider resource {:status 201} request respond raise))
 
 ;; Section 4.3.4
-(defmethod http-method :put [resource-provider server-provider resource request respond raise]
+(defmethod http-method :put [resource-provider server-provider resource response request respond raise]
   (invoke-method resource-provider server-provider resource {} request respond raise))
 
 ;; Section 4.3.5
-(defmethod http-method :delete [resource-provider server-provider resource request respond raise]
+(defmethod http-method :delete [resource-provider server-provider resource response request respond raise]
   (invoke-method resource-provider server-provider resource {} request respond raise))
 
 ;; Section 4.3.7
-(defmethod http-method :options [resource-provider server-provider resource request respond raise]
+(defmethod http-method :options [resource-provider server-provider resource response request respond raise]
   (respond
    {:status 200
-    :headers (resource-options-headers resource-provider resource)}))
+    :headers (merge (:headers response) (resource-options-headers resource-provider resource))}))

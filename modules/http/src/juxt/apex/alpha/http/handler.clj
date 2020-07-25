@@ -85,17 +85,18 @@
                        allow (conj [:headers
                                     {"allow" (str/join ", " (map (comp str/upper-case name) allow))}])))
             ;; Proceed to invoke method...
-            (try
-              (http/http-method resource-provider server resource request respond raise)
-              (catch Throwable t
-                (raise
-                 (ex-info
-                  (format
-                   "Error on %s of %s"
-                   (str/upper-case (name method))
-                   (:uri request))
-                  {:request request}
-                  t))))))
+            (let [response {:headers {"allow" (str/join ", " (map (comp str/upper-case name) allow))}}]
+              (try
+                (http/http-method resource-provider server resource response request respond raise)
+                (catch Throwable t
+                  (raise
+                   (ex-info
+                    (format
+                     "Error on %s of %s"
+                     (str/upper-case (name method))
+                     (:uri request))
+                    {:request request}
+                    t)))))))
 
         ;; Method Not Implemented!
         (respond {:status 501})))))
