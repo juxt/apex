@@ -56,14 +56,166 @@
               operation-name "operationName"
               variables "variables"
               :as body}
-             (json/read-value body-as-byte-stream)]
+             (json/read-value body-as-byte-stream)
 
-         (respond
-          (conj
-           response
-           [:body (pr-str (reap/decode reap-graphql/OperationDefinition query))])))
+             document (reap/decode reap-graphql/Document query)
+             schema (:crux.eql/schema resource)
+             ]
+
+         (assert document)
+         (assert schema)
+
+         ;; TODO: Apply document to :crux.eql/schema resource
+         (if (and
+              (= (count document) 1)
+              (= (get-in document [0 :name]) "IntrospectionQuery"))
+           (respond
+            (-> response
+                (assoc :status 200)
+                (conj
+                 [:body
+                  (json/write-value-as-string
+                   {"data"
+                    {"__schema"
+                     {"queryType"
+                      {"name" "Root"}
+                      "mutationType" nil
+                      "subscriptionType" nil
+                      "types"
+                      [{"kind" "OBJECT"
+                         "name" "Root"
+                         "description" nil
+                         "fields"
+                         [{"name" "title"
+                           "description" "Dashboard title"
+                           "args" []
+                           "type" {"kind" "SCALAR"
+                                   "name" "String"
+                                   "ofType" nil}
+                           "isDeprecated" false
+                           "deprecationReason" nil
+                           }]
+                        "inputFields" nil
+                        "interfaces" []
+                        "enumValues" nil
+                        "possibleTypes" nil
+                        }
+                       {"kind" "SCALAR"
+                        "name" "String"
+                        "description" "blah"
+                        "fields" nil
+                        "inputFields" nil
+                        "interfaces" nil
+                        "enumValues" nil
+                        "possibleTypes" nil}]
+                      "directives"
+                      []}}})])
+                (assoc-in [:headers "content-type"] "application/json")))
+           (respond
+            (-> response
+                {:status 500}
+              ))
+           )
+
+         )
        (catch Throwable t
          (raise (ex-info "Failed to parse request body as json" {} t)))))))
+
+(reap/decode reap-graphql/Document
+             "query IntrospectionQuery {
+      __schema {
+
+        queryType { name }
+        mutationType { name }
+        subscriptionType { name }
+        types {
+          ...FullType
+        }
+        directives {
+          name
+          description
+
+          locations
+          args {
+            ...InputValue
+          }
+        }
+      }
+    }
+
+    fragment FullType on __Type {
+      kind
+      name
+      description
+      fields(includeDeprecated: true) {
+        name
+        description
+        args {
+          ...InputValue
+        }
+        type {
+          ...TypeRef
+        }
+        isDeprecated
+        deprecationReason
+      }
+      inputFields {
+        ...InputValue
+      }
+      interfaces {
+        ...TypeRef
+      }
+      enumValues(includeDeprecated: true) {
+        name
+        description
+        isDeprecated
+        deprecationReason
+      }
+      possibleTypes {
+        ...TypeRef
+      }
+    }
+
+    fragment InputValue on __InputValue {
+      name
+      description
+      type { ...TypeRef }
+      defaultValue
+    }
+
+    fragment TypeRef on __Type {
+      kind
+      name
+      ofType {
+        kind
+        name
+        ofType {
+          kind
+          name
+          ofType {
+            kind
+            name
+            ofType {
+              kind
+              name
+              ofType {
+                kind
+                name
+                ofType {
+                  kind
+                  name
+                  ofType {
+                    kind
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ")
 
 (defn graphql-router [server]
   (assert server)
@@ -84,7 +236,7 @@
            :head nil
            :post :graphql-query}
           :crux.eql/schema
-          '[{:app/dashboard
+          '[{:dashboard
              [:title
               {(:user
                 {:resolver
