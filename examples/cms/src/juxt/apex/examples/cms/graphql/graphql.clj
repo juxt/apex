@@ -225,7 +225,9 @@
      (locate-resource [_ uri]
        (case (str uri)
          "http://localhost:8000/"
-         {:juxt.http/content (slurp (io/resource "juxt/apex/examples/cms/graphql/index.html"))
+         {:juxt.http/content
+          (slurp
+           (io/resource "juxt/apex/examples/cms/graphql/index.html"))
           :juxt.http/methods
           {:get :juxt.http/content
            :head nil}}

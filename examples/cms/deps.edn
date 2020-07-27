@@ -19,6 +19,9 @@
 
   ;; ring-middleware-params
   ring/ring-core {:mvn/version "1.8.1"}
+
+  ;; EQL query
+  edn-query-language/eql {:mvn/version "1.0.0"}
   }
 
  :aliases

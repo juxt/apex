@@ -46,6 +46,9 @@
   #_:juxt.apex.examples.cms.populate/seeder
   #_{:node #ig/ref :juxt.apex.examples.cms.db/node}
 
+  :juxt.apex.examples.cms.graphql.seeder/data
+  {:node #ig/ref :juxt.apex.examples.cms.db/node}
+
   :juxt.apex.examples.cms.db/node
   {}
 
