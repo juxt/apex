@@ -110,54 +110,21 @@
      (for [ent ents]
        [:crux.tx/put ent])))))
 
-(with-open
-  [node (crux/start-node {:crux.node/topology '[crux.standalone/topology]})]
-  (load-data
-   node
-   (seeder/data))
+(def eql-query
+  '[{(:drivers
+      {:resolver
+       {:crux/query
+        {:find [?p]
+         :where [[?p :person/name ?name]]}
+        :debug false}})
+     [:person/name :person/email]}])
 
-  (let [db (crux/db node)
-        ast (eql/query->ast
-             '[{(:drivers
-                 {:resolver
-                  {:crux/query
-                   {:find [?p]
-                    :where [[?p :person/name ?name]]}
-                   :debug false
-                   }})
-                [:person/name :person/email]
-                }])]
-    ;;ast
-    (query
-     db nil ast
-     {:subject :jdt
-      :action :read
-      :rules
-      '[
-        ;; RBAC
-        ;; Is the subject in the 'admin' role?
-        [(authorized? ?subject ?resource ?action)
-         (hasRole? ?subject :admin)
-         [(identity ?resource)]
-         [(identity ?action)]]
-
-        ;; ABAC
-
-        ;; Is the subject looking at themselves?
-        [(authorized? ?subject ?resource ?action)
-         [(= ?subject ?resource)]
-         [(identity ?action)]
-         ]
-
-        ;; Is the subject accessing a resource which requires them to have a role?
-        [(authorized? ?subject ?resource ?action)
-         [?resource :role ?required-role]
-         (hasRole? ?subject ?required-role)
-         [(identity ?action)]]
-
-        ;; Transitive property chain
-        [(hasRole? ?subject ?role)
-         [?subject :role ?role]]
-        [(hasRole? ?subject ?role)
-         [?subrole :subrole ?role]
-         (hasRole? ?subject ?subrole)]]})))
+(comment
+  (with-open
+    [node (crux/start-node {:crux.node/topology '[crux.standalone/topology]})]
+    (load-data
+     node
+     (seeder/data))
+    (let [db (crux/db node)
+          ast (eql/query->ast eql-query)]
+      (query db nil ast {}))))
