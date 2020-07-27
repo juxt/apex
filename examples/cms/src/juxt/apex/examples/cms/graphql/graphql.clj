@@ -4,12 +4,15 @@
   (:require
    [clojure.java.io :as io]
    [jsonista.core :as json]
+   edn-query-language.core
    [juxt.apex.alpha.http.core :as http]
+   [juxt.apex.examples.cms.graphql.eql :as eql]
    [juxt.apex.alpha.http.resource :as resource]
    [juxt.apex.alpha.http.server :as server]
    [juxt.apex.alpha.http.handler :refer [handler]]
    [juxt.reap.alpha.graphql :as reap-graphql]
-   [juxt.reap.alpha.api :as reap]))
+   [juxt.reap.alpha.api :as reap]
+   [crux.api :as crux]))
 
 (defmulti graphql-invoke-method
   (fn [resource-provider
@@ -47,12 +50,15 @@
    server-provider
    resource response request respond raise]
 
+  (println "Graphql query!")
+
   (server/request-body-as-stream
    server-provider
    request
    (fn [body-as-byte-stream]
      (try
-       (let [{query "query"
+       (let [db (:crux/db resource)
+             {query "query"
               operation-name "operationName"
               variables "variables"
               :as body}
@@ -62,8 +68,15 @@
              schema (:crux.eql/schema resource)
              ]
 
+         (assert db)
+         (assert body)
+         (prn "body is" body)
          (assert document)
          (assert schema)
+
+         (def document document)
+         (def schema schema)
+         (def update-time (java.time.ZonedDateTime/now))
 
          ;; TODO: Apply document to :crux.eql/schema resource
          (if (and
@@ -83,23 +96,43 @@
                       "subscriptionType" nil
                       "types"
                       [{"kind" "OBJECT"
-                         "name" "Root"
-                         "description" nil
-                         "fields"
-                         [{"name" "title"
-                           "description" "Dashboard title"
-                           "args" []
-                           "type" {"kind" "SCALAR"
-                                   "name" "String"
-                                   "ofType" nil}
-                           "isDeprecated" false
-                           "deprecationReason" nil
-                           }]
+                        "name" "Root"
+                        "description" nil
+                        "fields"
+                        (concat
+                         (for [property schema]
+                           (if (and (map? property) (= (count property) 1))
+                             ;; It's a join
+                             (let [[k v]
+                                   ;; We call first to get the single entry out of a single-entry map
+                                   (first property)]
+                               (cond
+                                 (keyword? k)
+                                 (throw (ex-info "TODO" {}))
+                                 (list? k)
+                                 (let [[_ params] k
+                                       {:keys [graphql/name graph/description graphql/type]} params]
+                                   {"name" name
+                                    "description" description
+                                    "args" []
+                                    "type" {"kind" "OBJECT"
+                                            "name" type
+                                            "ofType" nil}
+                                    }
+                                   ))
+
+                               )
+                             :todo
+                             )
+                           )
+
+                         )
                         "inputFields" nil
                         "interfaces" []
                         "enumValues" nil
                         "possibleTypes" nil
                         }
+
                        {"kind" "SCALAR"
                         "name" "String"
                         "description" "blah"
@@ -107,22 +140,61 @@
                         "inputFields" nil
                         "interfaces" nil
                         "enumValues" nil
-                        "possibleTypes" nil}]
+                        "possibleTypes" nil}
+
+
+                       {"kind" "OBJECT"
+                        "name" "Person"
+                        "description" "A person"
+                        "fields" [{"name" "person_name"
+                                   "description" "A person's name"
+                                   "args" []
+                                   "type" {"kind" "SCALAR" "name" "String" "ofType" nil}
+                                   "isDeprecated" false
+                                   "deprecationReason" nil}
+
+                                  {"name" "person_email"
+                                   "description" "A person's email address"
+                                   "args" []
+                                   "type" {"kind" "SCALAR" "name" "String" "ofType" nil}
+                                   "isDeprecated" false
+                                   "deprecationReason" nil}]
+                        "inputFields" nil
+                        "interfaces" []
+                        "enumValues" nil
+                        "possibleTypes" nil
+                        }
+
+                       ]
                       "directives"
                       []}}})])
                 (assoc-in [:headers "content-type"] "application/json")))
-           (respond
-            (-> response
-                {:status 500}
-              ))
+
+           (let [query (first document)
+                 ;; TODO: Replace eql/eql-query with the parsed incoming query
+                 ast (edn-query-language.core/query->ast eql/eql-query)
+                 #_results #_(let [db (crux/db node)
+                                   ast (eql/query->ast eql-query)]
+                               (query db nil ast {}))]
+             (respond
+              (-> response
+                  (merge {:status 200
+                          :body (json/write-value-as-string
+                                 {"data"
+                                  {"allPeople" (get (first (eql/query db nil ast {})) :all-people)}
+                                  }
+                                 )})
+                  )))
            )
 
          )
        (catch Throwable t
+         (println "ERROR" t)
          (raise (ex-info "Failed to parse request body as json" {} t)))))))
 
-(reap/decode reap-graphql/Document
-             "query IntrospectionQuery {
+(comment
+  (reap/decode reap-graphql/Document
+               "query IntrospectionQuery {
       __schema {
 
         queryType { name }
@@ -215,9 +287,9 @@
         }
       }
     }
-  ")
+  "))
 
-(defn graphql-router [server]
+(defn graphql-router [server crux-node]
   (assert server)
   (handler
    (reify
@@ -233,53 +305,16 @@
            :head nil}}
 
          "http://localhost:8000/graphql"
-         {:juxt.http/methods
-          {:get :crux.eql/schema
-           :head nil
-           :post :graphql-query}
-          :crux.eql/schema
-          '[{:dashboard
-             [:title
-              {(:user
-                {:resolver
-                 {:crux/query
-                  {:find [?u]
-                   :where [[?u :crux.db/id ?subject]
-                           ;; For this entity, the resource IS the subject!
-                           (authorized? ?subject ?subject ?action)]}
-                  :debug false
-                  }})
-               [:role :name]}
-              {(:sidebar
-                {:resolver
-                 {:crux/query
-                  {:find [?sb]
-                   :where [[?sb :container %]
-                           (authorized? ?subject ?sb ?action)]}
-                  :debug false
-                  }})
-               [:label
-                (:description {:default "None"})
-                :role]}
+         (let [db (crux/db crux-node)]
+           {:juxt.http/methods
+            {:get :crux.eql/schema
+             :head nil
+             :post :graphql-query}
+            :crux.eql/schema eql/eql-query
+            :crux/db db
+            })
 
-              {(:customer-table
-                {:resolver
-                 {:crux/query
-                  {:find [?customer]
-                   :where [[?customer :juxt/type :customer]]}
-                  }})
-
-               [:crux.db/id
-                :juxt/type
-                {(:health-record
-                  {:resolver
-                   { ;;:debug :dry-run
-                    :crux/query
-                    {:find [?r]
-                     :where [[?r :crux.db/id _]]}}})
-                 [:weight :conditions]}
-                ]}]}]}
-
+         ;; 404!
          nil))
 
      resource/Resource
@@ -296,3 +331,117 @@
      (resource-options-headers [_ resource] {}))
 
    server))
+
+
+(comment
+ (let [
+
+       query (first document)
+
+
+       ]
+
+   schema
+
+   ))
+
+(identity schema)
+(identity update-time)
+
+(let [schema '[{(:all-people
+                 {:resolver
+                  {:crux/query
+                   {:find [?p]
+                    :where [[?p :person/name ?name]]}
+                   :debug false}
+                  :graphql/name "allPeople"
+                  :graphql/description "Get all the people"
+                  :graphql/type "People"
+                  })
+                [(:person/name {:description "A person's name"
+                                :graphql/name "person_name"})
+                 (:person/email {:description "A person's email"
+                                 :graphql/name "person_email"})]}]
+      incoming-query {:operation-type "query",
+                      :name "IntrospectionQuery",
+                      :directives (),
+                      :selection-set
+                      [[:field
+                        {:name "__schema",
+                         :arguments (),
+                         :selection-set
+                         [[:field
+                           {:name "queryType",
+                            :arguments (),
+                            :selection-set [[:field {:name "name", :arguments ()}]]}]
+                          [:field
+                           {:name "mutationType",
+                            :arguments (),
+                            :selection-set [[:field {:name "name", :arguments ()}]]}]
+                          [:field
+                           {:name "subscriptionType",
+                            :arguments (),
+                            :selection-set [[:field {:name "name", :arguments ()}]]}]
+                          [:field {:name "types", :arguments (), :selection-set []}]
+                          [:field
+                           {:name "directives",
+                            :arguments (),
+                            :selection-set
+                            [[:field {:name "name", :arguments ()}]
+                             [:field {:name "description", :arguments ()}]
+                             [:field {:name "locations", :arguments ()}]
+                             [:field {:name "args", :arguments (), :selection-set []}]]}]]}]]}
+      ]
+
+
+
+  {"__schema"
+   {"queryType"
+    {"name" "Root"}
+    "mutationType" nil
+    "subscriptionType" nil
+    "types"
+    [{"kind" "OBJECT"
+      "name" "Root"
+      "description" nil
+      "fields"
+      (for [property schema]
+        (if (and (map? property) (= (count property) 1))
+          ;; It's a join
+          (let [[k v]
+                ;; We call first to get the single entry out of a single-entry map
+                (first property)]
+            (cond
+              (keyword? k)
+              (throw (ex-info "TODO" {}))
+              (list? k)
+              (let [[_ params] k
+                    {:keys [graphql/name graph/description graphql/type]} params]
+                {"name" name
+                 "description" description
+                 "args" []
+                 "type" {"kind" "OBJECT"
+                         "name" type
+                         "ofType" nil}
+                 }
+                ))
+
+            )
+          :todo
+          )
+        )
+      "inputFields" nil
+      "interfaces" []
+      "enumValues" nil
+      "possibleTypes" nil
+      }
+     {"kind" "SCALAR"
+      "name" "String"
+      "description" "blah"
+      "fields" nil
+      "inputFields" nil
+      "interfaces" nil
+      "enumValues" nil
+      "possibleTypes" nil}]
+    "directives"
+    []}})

@@ -17,7 +17,8 @@
 
   :juxt.apex.examples.cms.router/router
   {:cms-router #ig/ref :juxt.apex.examples.cms.cms/router
-   :server #ig/ref :juxt.apex.examples.cms.vertx/server}
+   :server #ig/ref :juxt.apex.examples.cms.vertx/server
+   :crux-node #ig/ref :juxt.apex.examples.cms.db/node}
 
   :juxt.apex.examples.cms.vertx/server
   {:vertx #ig/ref :juxt.apex.examples.cms.vertx/vertx}

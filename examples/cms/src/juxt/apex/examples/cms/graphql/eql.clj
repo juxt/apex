@@ -111,13 +111,20 @@
        [:crux.tx/put ent])))))
 
 (def eql-query
-  '[{(:drivers
+  '[{(:all-people
       {:resolver
        {:crux/query
         {:find [?p]
          :where [[?p :person/name ?name]]}
-        :debug false}})
-     [:person/name :person/email]}])
+        :debug false}
+       :graphql/name "allPeople"
+       :graphql/description "Get all the people"
+       :graphql/type "Person"
+       })
+     [(:person/name {:description "A person's name"
+                     :graphql/name "person_name"})
+      (:person/email {:description "A person's email"
+                      :graphql/name "person_email"})]}])
 
 (comment
   (with-open
