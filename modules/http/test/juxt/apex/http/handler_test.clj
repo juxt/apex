@@ -55,7 +55,7 @@
               (wrap-remove-header "date"))]
     (is (=
          {:status 200
-          :headers {}
+          :headers {"allow" "GET, HEAD, OPTIONS"}
           :body "Hello World!"}
          (h {:request-method :get
              :uri "/hello.txt"
@@ -128,7 +128,8 @@
 
     (is (=
          {:status 200
-          :headers {"content-location" "/hello.html"}
+          :headers {"content-location" "/hello.html"
+                    "allow" "GET, HEAD, OPTIONS"}
           :body "<h1>Hello World!</h1>"}
          (h {:request-method :get
              :scheme :https
