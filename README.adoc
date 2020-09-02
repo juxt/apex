@@ -69,7 +69,7 @@ have been a number of external developments:
   without sacrificing the composeability of middleware.
 
 * https://www.openapis.org/[OpenAPI] (formerly Swagger) continues to
-  attact users, adopted by large organisations, and has now matured
+  attract users, adopted by large organisations, and has now matured
   and is now governed by The Linux Foundation.
 
 * https://json-schema.org/[JSON Schema] continues to mature. (We like
