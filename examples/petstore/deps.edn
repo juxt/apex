@@ -17,13 +17,14 @@
  {:dev
   {:extra-paths ["dev" "test"]
    :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
-   :override-deps {juxt.edge/logging.dev {:local/root "dev/logging"}}
+   :override-deps {com.stuartsierra/log.dev {:mvn/version "0.2.0"}}
    :extra-deps
-   {
-    ;; TODO: Replace ../edge with a git dep with :deps/root
-    ;; of 'lib/edge.app.dev':
-    juxt.edge/lib.app.dev {:local/root "../../../edge/lib/edge.app.dev"}
-    juxt.edge/lib.app.logging {:local/root "../../../edge/lib/edge.app.logging"}
+   {io.dominic/wedge {:mvn/version "0.6.0"}
+    io.dominic/wedge-mise {:git/url "https://git.sr.ht/~severeoverfl0w/wedge-mise"
+                           :sha "670720d43c24495284dcce1db98cdd4269109b6e"}
+    org.clojure/tools.namespace {:mvn/version "1.0.0"}
+    integrant/repl {:mvn/version "0.3.2"}
+    aero/aero {:mvn/version "1.1.6"}
 
     org.clojure/tools.logging {:mvn/version "0.5.0-alpha"}
 
