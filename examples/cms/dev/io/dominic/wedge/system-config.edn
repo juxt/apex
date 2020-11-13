@@ -1,0 +1,2 @@
+{:system io.dominic.wedge.integrant-aero
+ :dev {:profile :dev}}

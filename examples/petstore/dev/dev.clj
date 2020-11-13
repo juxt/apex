@@ -2,6 +2,6 @@
 
 (ns dev
   (:require
-   [dev-extras :refer :all]))
+   [io.dominic.wedge.dev :refer :all]))
 
 ;; Add your helpers here
